@@ -1,58 +1,61 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../context/AuthContext'
 import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react'
-import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import '../../App.css'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
-
+ 
   const handleSubmit = (e) => {
     e.preventDefault()
     setError('')
-
-    if (!email || !password) {
+ 
+    if (!identifier || !password) {
       setError('Por favor complete todos los campos')
       return
     }
-
-    const success = login(email, password)
-    if (success) {
-      navigate('/admin/dashboard')
+ 
+    const result = login(identifier, password)
+    if (result.success) {
+      if (result.rol === 'admin') {
+        navigate('/admin/dashboard')
+      } else if (result.rol === 'cliente') {
+        navigate('/cliente/dashboard')
+      }
     } else {
-      setError('Credenciales incorrectas')
+      setError(result.message || 'Credenciales incorrectas')
     }
   }
-
+ 
   return (
     <div className="login-container">
       <div className="login-box">
         <img src="/MOVI_LOGO.svg" alt="MOVI" className="login-logo" />
-        
+         
         <h1>Bienvenido a MOVI</h1>
-        <p>Inicia sesión para acceder al panel de administración</p>
-
+        <p>Inicia sesión para acceder al sistema</p>
+ 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email">
+            <label htmlFor="identifier">
               <Mail size={16} />
-              Email
+              Email / DNI / Teléfono
             </label>
             <div style={{ position: 'relative' }}>
               <input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@dance.com"
+                id="identifier"
+                name="identifier"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="admin@dance.com o 12345678"
                 required
                 style={{ paddingLeft: '2.5rem', width: '100%' }}
               />
