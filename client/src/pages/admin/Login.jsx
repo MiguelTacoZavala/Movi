@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import '../../App.css'
 
@@ -9,96 +9,124 @@ export default function Login() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
- 
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
- 
-    if (!identifier || !password) {
-      setError('Por favor complete todos los campos')
+    setSuccess('')
+
+    if (!identifier.trim() || !password) {
+      setError('Por favor completa todos los campos')
       return
     }
- 
-    const result = login(identifier, password)
-    if (result.success) {
-      if (result.rol === 'admin') {
-        navigate('/admin/dashboard')
-      } else if (result.rol === 'cliente') {
-        navigate('/cliente/dashboard')
+
+    setIsLoading(true)
+
+    try {
+      const result = login(identifier.trim(), password)
+
+      if (result.success) {
+        setSuccess('¡Bienvenido! Redirigiendo...')
+
+        setTimeout(() => {
+          if (result.rol === 'admin') {
+            navigate('/admin/dashboard')
+          } else if (result.rol === 'cliente') {
+            navigate('/cliente/dashboard')
+          }
+        }, 1500)
+      } else {
+        setError(result.message || 'Credenciales incorrectas. Inténtalo de nuevo.')
       }
-    } else {
-      setError(result.message || 'Credenciales incorrectas')
+    } catch {
+      setError('Ocurrió un error. Inténtalo de nuevo.')
+    } finally {
+      setIsLoading(false)
     }
   }
- 
+
   return (
     <div className="login-container">
       <div className="login-box">
         <img src="/MOVI_LOGO.svg" alt="MOVI" className="login-logo" />
-         
-        <h1>Bienvenido a MOVI</h1>
-        <p>Inicia sesión para acceder al sistema</p>
- 
-        <form onSubmit={handleSubmit}>
+
+        <h1>Bienvenido</h1>
+        <p className="login-subtitle">Inicia sesión para acceder al sistema</p>
+
+        <form onSubmit={handleSubmit} className="login-form">
+          {error && (
+            <div className="alert alert-danger" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <CheckCircle size={18} />
+              <span>{success}</span>
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="identifier">
               <Mail size={16} />
-              Email / DNI / Teléfono
+              Usuario
             </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                id="identifier"
-                name="identifier"
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="admin@dance.com o 12345678"
-                required
-                style={{ paddingLeft: '2.5rem', width: '100%' }}
-              />
-              <Mail size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-            </div>
+            <input
+              id="identifier"
+              name="identifier"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Email, DNI o teléfono"
+              required
+              autoComplete="username"
+              style={{ width: '100%' }}
+            />
           </div>
 
-          <div className="form-group" style={{ marginTop: '1.25rem' }}>
+          <div className="form-group">
             <label htmlFor="password">
               <Lock size={16} />
               Contraseña
             </label>
-            <div style={{ position: 'relative' }}>
+            <div className="input-with-icon">
               <input
                 id="password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Ingresa tu contraseña"
                 required
-                style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem', width: '100%' }}
+                autoComplete="current-password"
+                className="password-input"
+                style={{ width: '100%' }}
               />
-              <Lock size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}
+                className="password-toggle"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
-          {error && (
-            <div className="alert alert-warning" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {error}
-            </div>
-          )}
-
-          <Button type="submit" style={{ width: '100%', marginTop: '1.5rem', justifyContent: 'center', gap: '0.5rem' }}>
+          <Button
+            type="submit"
+            className="btn-primary login-submit-btn"
+            disabled={isLoading}
+          >
             <LogIn size={18} />
-            Iniciar Sesión
+            {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
           </Button>
         </form>
 
