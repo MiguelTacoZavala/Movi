@@ -1,11 +1,17 @@
-import { Music, Calendar, CreditCard, TrendingUp } from 'lucide-react'
+import { Music, Calendar } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import '../../App.css'
+
+function generarFechaRelativa(dias) {
+  const f = new Date()
+  f.setDate(f.getDate() + dias)
+  return f.toISOString().split('T')[0]
+}
 
 const mockReservaProxima = {
   id: 1,
   clase: 'Salsa Intermedio',
-  fecha: '2026-05-05',
+  fecha: generarFechaRelativa(1),
   hora_inicio: '10:00',
   hora_fin: '11:30',
   instructor: 'María García'
@@ -22,12 +28,9 @@ export default function Dashboard() {
   return (
     <div>
       <div className="client-card">
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--gray-900)' }}>
           ¡Hola, {user?.nombres}!
         </h2>
-        <p style={{ color: 'var(--gray-600)', fontSize: '0.95rem' }}>
-          Bienvenido a tu panel de control
-        </p>
       </div>
 
       <div className="client-stats">
@@ -36,16 +39,8 @@ export default function Dashboard() {
           <div className="client-stat-label">Créditos</div>
         </div>
         <div className="client-stat-card">
-          <div className="client-stat-value">12</div>
-          <div className="client-stat-label">Reservas</div>
-        </div>
-        <div className="client-stat-card">
-          <div className="client-stat-value">8</div>
-          <div className="client-stat-label">Asistidas</div>
-        </div>
-        <div className="client-stat-card">
           <div className="client-stat-value">3</div>
-          <div className="client-stat-label">Próximas</div>
+          <div className="client-stat-label">Clases Pendientes</div>
         </div>
       </div>
 
@@ -82,7 +77,7 @@ export default function Dashboard() {
       <div className="client-card">
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <TrendingUp size={20} className="icon-primary" />
+            <Music size={20} className="icon-primary" />
             Clases destacadas
           </div>
         </div>

@@ -1,10 +1,21 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Music, Calendar, User, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import Modal from '../common/Modal'
+import Button from '../common/Button'
 import '../../App.css'
 
 export default function ClientLayout() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+    setShowLogoutModal(false)
+    navigate('/login')
+  }
 
   return (
     <div className="client-layout">
@@ -13,12 +24,24 @@ export default function ClientLayout() {
           <h1 className="client-logo">MOVI</h1>
           <div className="client-user-menu">
             <span className="client-user-name">{user?.nombres}</span>
-            <button onClick={logout} className="btn btn-ghost btn-small" title="Cerrar sesión">
+            <button onClick={() => setShowLogoutModal(true)} className="btn btn-ghost btn-small" title="Cerrar sesión">
               <LogOut size={18} />
             </button>
           </div>
         </div>
       </header>
+
+      <Modal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="¿Cerrar sesión?">
+        <p className="modal-subtitle">¿Estás seguro de que deseas cerrar sesión?</p>
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setShowLogoutModal(false)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={handleLogout}>
+            Cerrar sesión
+          </Button>
+        </div>
+      </Modal>
 
       <main className="client-content">
         <Outlet />

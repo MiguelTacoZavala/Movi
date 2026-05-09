@@ -1,4 +1,4 @@
-import { User, CreditCard, Calendar, TrendingUp } from 'lucide-react'
+import { User, Calendar } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Button from '../../components/common/Button'
 import '../../App.css'
@@ -32,24 +32,13 @@ export default function MiPerfil() {
       </div>
 
       <div className="perfil-creditos">{mockStats.creditos}</div>
-      <div style={{ textAlign: 'center', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+      <div style={{ textAlign: 'center', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
         Créditos disponibles
       </div>
 
-      <div className="client-stats">
-        <div className="client-stat-card">
-          <div className="client-stat-value">{mockStats.totalReservas}</div>
-          <div className="client-stat-label">Total Reservas</div>
-        </div>
-        <div className="client-stat-card">
-          <div className="client-stat-value">{mockStats.clasesAsistidas}</div>
-          <div className="client-stat-label">Asistidas</div>
-        </div>
-        <div className="client-stat-card">
-          <div className="client-stat-value">{mockStats.proximasReservas}</div>
-          <div className="client-stat-label">Próximas</div>
-        </div>
-      </div>
+      <Button variant="secondary" style={{ width: '100%', marginBottom: '1.5rem' }}>
+        Editar Perfil
+      </Button>
 
       <div className="client-card">
         <div className="client-card-title">
@@ -110,9 +99,6 @@ export default function MiPerfil() {
         </div>
       </div>
 
-      <Button variant="secondary" style={{ width: '100%', marginTop: '1rem' }}>
-        Editar Perfil
-      </Button>
     </div>
   )
 }

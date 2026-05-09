@@ -1,68 +1,85 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import { Calendar, Clock, MapPin, Users, CreditCard, DollarSign, ArrowLeft } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User } from 'lucide-react'
 import Button from '../../components/common/Button'
+import { mockClases, SALONES, claseDisponible } from '../../data/mockData'
 import '../../App.css'
 
-const mockClaseDetalle = {
-  '1': {
-    id: 1,
-    categoria: 'Salsa',
-    instructor: 'María García',
-    instructorFoto: null, // Placeholder for now
-    especialidad: 'Salsa',
-    descripcion: 'Clase intermedia de salsa con enfoque en técnica y ritmo.',
-    fecha: '2026-05-05',
-    hora_inicio: '10:00',
-    hora_fin: '11:30',
-    salon: 'Salón Principal',
-    capacidad_maxima: 30,
-    inscritos: 25,
-    estado: 'PROGRAMADA'
-  },
-  '2': {
-    id: 2,
-    categoria: 'Bachata',
-    instructor: 'Carlos López',
-    instructorFoto: null,
-    especialidad: 'Bachata',
-    descripcion: 'Bachata básica para principiantes.',
-    fecha: '2026-05-05',
-    hora_inicio: '14:00',
-    hora_fin: '15:30',
-    salon: 'Salón 2',
-    capacidad_maxima: 20,
-    inscritos: 18,
-    estado: 'PROGRAMADA'
-  },
-  '3': {
-    id: 3,
-    categoria: 'Tango',
-    instructor: 'Ana Martínez',
-    instructorFoto: null,
-    especialidad: 'Tango',
-    descripcion: 'Tango avanzado con técnica de abrazo y desplazamiento.',
-    fecha: '2026-05-06',
-    hora_inicio: '18:00',
-    hora_fin: '19:30',
-    salon: 'Salón VIP',
-    capacidad_maxima: 15,
-    inscritos: 5,
-    estado: 'PROGRAMADA'
-  }
-}
+const HOLD_DURATION = 300
 
-const mockCreditos = 5
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
 
 export default function DetalleClase() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const clase = mockClaseDetalle[id]
-  
+  const [selectedSeat, setSelectedSeat] = useState(null)
+  const [metodoPago, setMetodoPago] = useState(null)
+  const [holdSeconds, setHoldSeconds] = useState(HOLD_DURATION)
+  const [holdActive, setHoldActive] = useState(false)
+  const [holdExpired, setHoldExpired] = useState(false)
+  const [reservaExitosa, setReservaExitosa] = useState(false)
+
+  const clase = useMemo(() => mockClases.find(c => c.id === Number(id)), [id])
+  const salonInfo = useMemo(() => clase ? SALONES.find(s => s.id === clase.salonId) : null, [clase])
+
+  const disponible = clase ? claseDisponible(clase) : false
+
+  useEffect(() => {
+    if (!holdActive) return
+
+    const t = setTimeout(() => {
+      setHoldSeconds(prev => {
+        if (prev <= 1) {
+          setSelectedSeat(null)
+          setMetodoPago(null)
+          setHoldActive(false)
+          setHoldExpired(true)
+          return HOLD_DURATION
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearTimeout(t)
+  }, [holdActive, holdSeconds])
+
+  const asientosAgrupados = useMemo(() => {
+    if (!clase?.asientos) return []
+    const filas = {}
+    clase.asientos.forEach(a => {
+      if (!filas[a.fila]) filas[a.fila] = []
+      filas[a.fila].push(a)
+    })
+    return Object.values(filas).map(f => f.sort((a, b) => a.columna - b.columna))
+  }, [clase])
+
+  const columnas = salonInfo?.columnas || 5
+
+  const handleSelectSeat = (seat) => {
+    if (seat.estado !== 'disponible' || holdActive) return
+    setSelectedSeat(seat)
+    setHoldExpired(false)
+  }
+
+  const handleSelectPago = (metodo) => {
+    if (holdActive) return
+    setMetodoPago(metodo)
+    setHoldExpired(false)
+  }
+
+  const handlePagar = () => {
+    setHoldActive(true)
+    setHoldSeconds(HOLD_DURATION)
+    setTimeout(() => setReservaExitosa(true), 2500)
+  }
+
   if (!clase) {
     return (
       <div className="empty-state">
-        <Calendar size={48} className="icon-muted" />
         <h3>Clase no encontrada</h3>
         <p>La clase solicitada no existe</p>
         <Button onClick={() => navigate('/cliente/clases')} style={{ marginTop: '1rem' }}>
@@ -71,52 +88,48 @@ export default function DetalleClase() {
       </div>
     )
   }
-  
-  const cuposDisponibles = clase.capacidad_maxima - clase.inscritos
-  const [metodoPago, setMetodoPago] = useState(null)
-  
-  const handleReservar = () => {
-    if (!metodoPago) {
-      alert('Por favor selecciona un método de pago')
-      return
-    }
-    
-    if (metodoPago === 'creditos') {
-      alert(`Reserva realizada usando créditos. Créditos restantes: ${mockCreditos - 1}`)
-    } else {
-      alert('Redirigiendo a pasarela de pago...')
-    }
-    navigate('/cliente/mis-reservas')
+
+  if (reservaExitosa) {
+    return (
+      <div className="empty-state" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+        <div style={{ background: '#d1fae5', borderRadius: '50%', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+          <CheckCircle size={40} color="#059669" />
+        </div>
+        <h3>Reserva confirmada</h3>
+        <p>Tu reserva para {clase.categoria} con {clase.instructor} ha sido registrada.</p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginTop: '1rem' }}>Redirigiendo a Mis Reservas...</p>
+      </div>
+    )
   }
-  
+
   return (
     <div className="detalle-clase">
-      <button 
-        onClick={() => navigate('/cliente/clases')} 
-        style={{ 
-          background: 'none', 
-          border: 'none', 
-          cursor: 'pointer', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.5rem',
-          color: 'var(--gray-600)',
-          fontSize: '0.9rem',
-          marginBottom: '1rem'
-        }}
-      >
+      <button onClick={() => navigate('/cliente/clases')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
         <ArrowLeft size={18} />
         Volver a Clases
       </button>
-      
+
       <div className="detalle-header">
         <h2>{clase.categoria}</h2>
-        <span className={`status-badge ${clase.estado === 'PROGRAMADA' ? 'status-active' : 'status-warning'}`}>
-          {clase.estado === 'PROGRAMADA' ? 'Disponible' : 'Completa'}
+        <span className={`status-badge ${!disponible ? 'status-warning' : 'status-active'}`}>
+          {!disponible ? 'No disponible' : 'Disponible'}
         </span>
       </div>
-      
-      {/* Instructor Section - MAIN REQUEST */}
+
+      {!disponible && (
+        <div className="reservation-closed-banner cancelled">
+          <AlertTriangle size={16} />
+          <span>Esta clase ya no está disponible para reserva</span>
+        </div>
+      )}
+
+      {holdExpired && (
+        <div className="reservation-closed-banner cancelled">
+          <Timer size={16} />
+          <span>Tiempo de reserva agotado. Selecciona un asiento nuevamente.</span>
+        </div>
+      )}
+
       <div className="instructor-section">
         <div className="instructor-photo">
           {clase.instructorFoto ? (
@@ -130,63 +143,94 @@ export default function DetalleClase() {
           <p>Especialista en {clase.especialidad}</p>
         </div>
       </div>
-      
-      {/* Class Details */}
-      <div className="detalle-info">
-        <div className="info-item">
-          <Calendar size={18} />
-          <span>Fecha: {clase.fecha}</span>
-        </div>
-        <div className="info-item">
-          <Clock size={18} />
-          <span>Hora: {clase.hora_inicio} - {clase.hora_fin}</span>
-        </div>
-        <div className="info-item">
-          <MapPin size={18} />
-          <span>Salón: {clase.salon}</span>
-        </div>
-        <div className="info-item">
-          <Users size={18} />
-          <span>Cupos: {cuposDisponibles} disponibles / {clase.capacidad_maxima} total</span>
-        </div>
-        {clase.descripcion && (
-          <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
-            <span style={{ fontWeight: 500 }}>Descripción:</span>
-            <span style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>{clase.descripcion}</span>
+
+      {disponible && (
+        <>
+          <div className="seat-map-section">
+            <div className="seat-stage">
+              <User size={16} />
+              <span>Instructor</span>
+            </div>
+
+            <div className="seat-legend">
+              <div className="seat-legend-item">
+                <div className="seat-legend-dot disponible" />
+                <span>Disponible</span>
+              </div>
+              <div className="seat-legend-item">
+                <div className="seat-legend-dot ocupado" />
+                <span>Ocupado</span>
+              </div>
+              <div className="seat-legend-item">
+                <div className="seat-legend-dot seleccionado" />
+                <span>Tu selección</span>
+              </div>
+            </div>
+
+            <div className="seat-grid" style={{ '--columnas': columnas }}>
+              {asientosAgrupados.map((fila, fi) =>
+                fila.map(asiento => {
+                  const isSelected = selectedSeat?.id === asiento.id
+                  const isOcupado = asiento.estado === 'ocupado'
+                  return (
+                    <button
+                      key={asiento.id}
+                      className={`seat ${isOcupado ? 'ocupado' : 'disponible'} ${isSelected ? 'selected' : ''}`}
+                      disabled={isOcupado || holdActive}
+                      onClick={() => !isOcupado && handleSelectSeat(asiento)}
+                      style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
+                    >
+                      <User size={22} />
+                    </button>
+                  )
+                })
+              )}
+            </div>
           </div>
-        )}
-      </div>
-      
-      {/* Payment Choice Section */}
-      <div className="pago-section">
-        <h3>¿Cómo deseas pagar?</h3>
-        <div className="pago-options">
-          <div 
-            className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''}`}
-            onClick={() => setMetodoPago('creditos')}
+
+          <div className="pago-section">
+            <h3>¿Cómo deseas pagar?</h3>
+            <div className="pago-options">
+              <div
+                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive ? 'disabled' : ''}`}
+                onClick={() => !holdActive && handleSelectPago('creditos')}
+              >
+                <CreditCard size={32} />
+                <span>Usar Créditos</span>
+                <small>5 disponibles</small>
+              </div>
+              <div
+                className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive ? 'disabled' : ''}`}
+                onClick={() => !holdActive && handleSelectPago('yape')}
+              >
+                <Smartphone size={32} />
+                <span>Yape</span>
+                <small>Pago móvil</small>
+              </div>
+            </div>
+          </div>
+
+          {holdActive && (
+            <div className="hold-timer">
+              <Timer size={18} />
+              <span>
+                {holdSeconds > 295
+                  ? 'Procesando pago...'
+                  : `Tiempo restante: ${formatTime(holdSeconds)}`
+                }
+              </span>
+            </div>
+          )}
+
+          <Button
+            className="btn-reservar"
+            onClick={handlePagar}
+            disabled={!selectedSeat || !metodoPago || holdActive || holdExpired}
           >
-            <CreditCard size={32} />
-            <span>Usar Créditos</span>
-            <small>{mockCreditos} disponibles</small>
-          </div>
-          <div 
-            className={`pago-option ${metodoPago === 'dinero' ? 'selected' : ''}`}
-            onClick={() => setMetodoPago('dinero')}
-          >
-            <DollarSign size={32} />
-            <span>Pagar con Dinero</span>
-            <small>Pasarela de pago</small>
-          </div>
-        </div>
-      </div>
-      
-      <Button 
-        className="btn-reservar"
-        onClick={handleReservar}
-        disabled={clase.estado === 'COMPLETA'}
-      >
-        {clase.estado === 'COMPLETA' ? 'Clase Completa' : 'Confirmar Reserva'}
-      </Button>
+            {holdActive ? 'Procesando...' : 'Pagar Reserva'}
+          </Button>
+        </>
+      )}
     </div>
   )
 }
