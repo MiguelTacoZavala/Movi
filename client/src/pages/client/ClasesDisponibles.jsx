@@ -62,7 +62,10 @@ function agruparPorFranja(clases) {
 
 export default function ClasesDisponibles() {
   const [selectedCategoria, setSelectedCategoria] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(diasSemana[0])
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const hoyStr = formatFecha(new Date()).full
+    return diasSemana.find(d => formatFecha(d).full === hoyStr) || diasSemana[0]
+  })
   const navigate = useNavigate()
 
   const selectedDateStr = selectedDate.toISOString().split('T')[0]
@@ -139,13 +142,15 @@ export default function ClasesDisponibles() {
           const isActive = full === selectedDateStr
           const hasClases = clasesEnFecha(selectedCategoria, full).length > 0
           const isToday = full === formatFecha(new Date()).full
+          const hoyStr = formatFecha(new Date()).full
+          const esPasado = full < hoyStr
 
           return (
             <button
               key={full}
-              className={`date-item${isActive ? ' active' : ''}${!hasClases ? ' disabled' : ''}${isToday ? ' today' : ''}`}
-              onClick={() => hasClases && setSelectedDate(fecha)}
-              disabled={!hasClases}
+              className={`date-item${isActive ? ' active' : ''}${!hasClases || esPasado ? ' disabled' : ''}${isToday ? ' today' : ''}`}
+              onClick={() => !esPasado && hasClases && setSelectedDate(fecha)}
+              disabled={!hasClases || esPasado}
             >
               <span className="date-item-day">{dia}</span>
               <span className="date-item-num">{numero}</span>

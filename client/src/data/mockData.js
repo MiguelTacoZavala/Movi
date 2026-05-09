@@ -75,10 +75,13 @@ function formatHoraAMPM(hora) {
 
 function generarProximosDias() {
   const hoy = new Date()
+  const diaSem = hoy.getDay()
+  const lunes = new Date(hoy)
+  lunes.setDate(hoy.getDate() - ((diaSem + 6) % 7))
   const dias = []
-  for (let i = 0; i < 7; i++) {
-    const fecha = new Date(hoy)
-    fecha.setDate(hoy.getDate() + i)
+  for (let i = 0; i < 6; i++) {
+    const fecha = new Date(lunes)
+    fecha.setDate(lunes.getDate() + i)
     dias.push(fecha)
   }
   return dias

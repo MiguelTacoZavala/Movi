@@ -14,7 +14,7 @@ function fechaRelativa(dias) {
 const mockReservas = [
   { 
     id: 1, 
-    clase: 'Salsa Intermedio', 
+    categoria: 'Salsa',
     fecha: fechaRelativa(1), 
     hora_inicio: '10:00', 
     hora_fin: '11:30',
@@ -24,7 +24,7 @@ const mockReservas = [
   },
   { 
     id: 2, 
-    clase: 'Bachata Básico', 
+    categoria: 'Bachata',
     fecha: fechaRelativa(2), 
     hora_inicio: '14:00', 
     hora_fin: '15:30',
@@ -34,7 +34,7 @@ const mockReservas = [
   },
   { 
     id: 3, 
-    clase: 'Salsa Intermedio', 
+    categoria: 'Salsa',
     fecha: fechaRelativa(3), 
     hora_inicio: '10:00', 
     hora_fin: '11:30',
@@ -68,7 +68,7 @@ export default function MisReservas() {
                 className="cancel-reserva-photo"
               />
               <div className="cancel-reserva-info">
-                <strong>{cancelandoReserva.clase}</strong>
+                <strong>{cancelandoReserva.categoria}</strong>
                 <span>{cancelandoReserva.fecha} — {formatHoraAMPM(cancelandoReserva.hora_inicio)}</span>
               </div>
             </div>
@@ -110,7 +110,7 @@ export default function MisReservas() {
             return (
               <div key={reserva.id} className="reserva-card proxima">
                 <div className="reserva-card-header">
-                  <h3 className="reserva-card-title">{reserva.clase}</h3>
+                  <h3 className="reserva-card-title">{reserva.categoria}</h3>
                   <span className={`status-badge ${
                     reserva.estado === 'CONFIRMADA' ? 'status-active' : 'status-warning'
                   }`}>
