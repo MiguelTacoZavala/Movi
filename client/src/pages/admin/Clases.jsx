@@ -28,6 +28,8 @@ export default function Clases() {
   const [filtroInstructor, setFiltroInstructor] = useState('')
   const [selectedClase, setSelectedClase] = useState(null)
   const [participantsOpen, setParticipantsOpen] = useState(false)
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
+  const [cancelTargetClase, setCancelTargetClase] = useState(null)
 
   const filteredClases = useMemo(() =>
     clases.filter(c => {
@@ -83,11 +85,11 @@ export default function Clases() {
         <Button size="small" variant="ghost" onClick={() => handleViewParticipants(row)} title="Ver participantes">
           <Users size={16} />
         </Button>
-        {row.estado === 'PROGRAMADA' && (
-          <Button size="small" variant="ghost" onClick={() => handleCancel(row)} title="Cancelar clase" className="icon-danger">
-            <XCircle size={16} />
-          </Button>
-        )}
+          {row.estado === 'PROGRAMADA' && (
+            <Button size="small" variant="ghost" onClick={() => openCancelConfirm(row)} title="Cancelar clase" className="icon-danger">
+              <XCircle size={16} />
+            </Button>
+          )}
       </div>
     )},
   ]
@@ -97,17 +99,20 @@ export default function Clases() {
     setParticipantsOpen(true)
   }
 
-  const handleCancel = (clase) => {
-    const confirmados = clase.posiciones.filter(p => p.estado === 'ocupado').length
-    let msg = `¿Cancelar la clase de ${clase.categoria} del ${clase.fecha}?`
-    if (confirmados > 0) msg += `\n\n⚠️ Hay ${confirmados} participante(s) registrados. Se generarán créditos automáticamente.`
-    if (!window.confirm(msg)) return
+  const openCancelConfirm = (clase) => {
+    setCancelTargetClase(clase)
+    setCancelConfirmOpen(true)
+  }
+
+  const confirmCancel = () => {
+    if (!cancelTargetClase) return
+    const confirmados = cancelTargetClase.posiciones.filter(p => p.estado === 'ocupado').length
 
     const nuevosCreditos = []
     for (let i = 0; i < confirmados; i++) {
       nuevosCreditos.push({
         id: creditos.length + i + 1,
-        claseId: clase.id,
+        claseId: cancelTargetClase.id,
         usado: false,
         fecha_creacion: new Date().toISOString().split('T')[0],
       })
@@ -115,8 +120,10 @@ export default function Clases() {
 
     setCreditos(prev => [...prev, ...nuevosCreditos])
     setClases(clases.map(c =>
-      c.id === clase.id ? { ...c, estado: 'CANCELADA' } : c
+      c.id === cancelTargetClase.id ? { ...c, estado: 'CANCELADA' } : c
     ))
+    setCancelConfirmOpen(false)
+    setCancelTargetClase(null)
   }
 
   const getSeatColumns = (total) => {
@@ -223,6 +230,51 @@ export default function Clases() {
               </div>
             </div>
           </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={cancelConfirmOpen}
+        onClose={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }}
+        title="Cancelar clase"
+      >
+        {cancelTargetClase && (
+          <>
+            <div className="cancel-reserva-preview">
+              <div className="cancel-reserva-info">
+                <strong>{cancelTargetClase.categoria}</strong>
+                <span>{cancelTargetClase.fecha} — {formatHoraAMPM(cancelTargetClase.hora_inicio)} a {formatHoraAMPM(cancelTargetClase.hora_fin)}</span>
+                <span>Instructor/a: {cancelTargetClase.instructor}</span>
+              </div>
+            </div>
+
+            <AlertTriangle size={48} style={{ display: 'block', margin: '1rem auto', color: 'var(--warning)' }} />
+
+            {(() => {
+              const confirmados = cancelTargetClase.posiciones.filter(p => p.estado === 'ocupado').length
+              return (
+                <>
+                  <p className="modal-subtitle" style={{ textAlign: 'center' }}>
+                    {confirmados > 0
+                      ? `Hay ${confirmados} participante(s) registrados. Se generarán créditos automáticamente.`
+                      : 'No hay participantes registrados para esta clase.'}
+                  </p>
+                  <p className="modal-subtitle" style={{ textAlign: 'center', fontWeight: 500, color: 'var(--danger-text)' }}>
+                    Esta acción no se puede deshacer.
+                  </p>
+                </>
+              )
+            })()}
+
+            <div className="modal-actions">
+              <Button variant="secondary" onClick={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }}>
+                No, mantener
+              </Button>
+              <Button variant="danger" onClick={confirmCancel}>
+                Sí, cancelar clase
+              </Button>
+            </div>
+          </>
         )}
       </Modal>
     </div>

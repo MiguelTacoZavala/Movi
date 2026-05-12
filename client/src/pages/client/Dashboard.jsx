@@ -1,4 +1,4 @@
-import { Music, Calendar } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import '../../App.css'
 
@@ -10,7 +10,7 @@ function generarFechaRelativa(dias) {
 
 const mockReservaProxima = {
   id: 1,
-  clase: 'Salsa Intermedio',
+  clase: 'Salsa',
   fecha: generarFechaRelativa(1),
   hora_inicio: '10:00',
   hora_fin: '11:30',
@@ -62,11 +62,9 @@ export default function Dashboard() {
                 {mockReservaProxima.fecha}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Music size={16} className="icon-muted" />
                 {mockReservaProxima.hora_inicio} - {mockReservaProxima.hora_fin}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Music size={16} className="icon-muted" />
                 {mockReservaProxima.instructor}
               </div>
             </div>
@@ -77,7 +75,7 @@ export default function Dashboard() {
       <div className="client-card">
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Music size={20} className="icon-primary" />
+            <Calendar size={20} className="icon-primary" />
             Clases destacadas
           </div>
         </div>
@@ -87,8 +85,7 @@ export default function Dashboard() {
               <div style={{ fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.25rem' }}>
                 {clase.categoria}
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Music size={14} className="icon-muted" />
+              <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>
                 {clase.instructor} • {clase.hora_inicio} • {clase.cupos} cupos
               </div>
             </div>

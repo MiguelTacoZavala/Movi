@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Calendar, Clock, Music, MapPin, X, CheckCircle } from 'lucide-react'
+import { Calendar, Clock, User, X, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { formatHoraAMPM } from '../../data/mockData'
@@ -19,7 +19,6 @@ const mockReservas = [
     hora_inicio: '10:00', 
     hora_fin: '11:30',
     instructor: 'María García',
-    salon: 'Salón Principal',
     estado: 'CONFIRMADA' 
   },
   { 
@@ -29,7 +28,6 @@ const mockReservas = [
     hora_inicio: '14:00', 
     hora_fin: '15:30',
     instructor: 'Carlos López',
-    salon: 'Salón 2',
     estado: 'PENDIENTE' 
   },
   { 
@@ -39,7 +37,6 @@ const mockReservas = [
     hora_inicio: '10:00', 
     hora_fin: '11:30',
     instructor: 'María García',
-    salon: 'Salón Principal',
     estado: 'CONFIRMADA' 
   },
 ]
@@ -132,12 +129,8 @@ export default function MisReservas() {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Music size={16} className="icon-muted" />
+                    <User size={16} className="icon-muted" />
                     {reserva.instructor}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <MapPin size={16} className="icon-muted" />
-                    {reserva.salon}
                   </div>
                 </div>
                 

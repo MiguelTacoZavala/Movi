@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User } from 'lucide-react'
 import Button from '../../components/common/Button'
-import { mockClases, SALONES, claseDisponible } from '../../data/mockData'
+import { mockClases, claseDisponible } from '../../data/mockData'
 import '../../App.css'
 
 const HOLD_DURATION = 300
@@ -24,8 +24,6 @@ export default function DetalleClase() {
   const [reservaExitosa, setReservaExitosa] = useState(false)
 
   const clase = useMemo(() => mockClases.find(c => c.id === Number(id)), [id])
-  const salonInfo = useMemo(() => clase ? SALONES.find(s => s.id === clase.salonId) : null, [clase])
-
   const disponible = clase ? claseDisponible(clase) : false
 
   useEffect(() => {
@@ -57,7 +55,7 @@ export default function DetalleClase() {
     return Object.values(filas).map(f => f.sort((a, b) => a.columna - b.columna))
   }, [clase])
 
-  const columnas = salonInfo?.columnas || 5
+  const columnas = clase.capacidad_maxima <= 10 ? 4 : clase.capacidad_maxima <= 20 ? 5 : 6
 
   const handleSelectSeat = (seat) => {
     if (seat.estado !== 'disponible' || holdActive) return
@@ -140,7 +138,7 @@ export default function DetalleClase() {
         </div>
         <div className="instructor-info">
           <h3>{clase.instructor}</h3>
-          <p>Especialista en {clase.especialidad}</p>
+          <p>Instructor/a de {clase.categoria}</p>
         </div>
       </div>
 

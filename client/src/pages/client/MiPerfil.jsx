@@ -14,9 +14,9 @@ export default function MiPerfil() {
   }
 
   const mockHistorial = [
-    { id: 1, clase: 'Salsa Intermedio', fecha: '2026-04-28', estado: 'asistida' },
-    { id: 2, clase: 'Bachata Básico', fecha: '2026-04-25', estado: 'asistida' },
-    { id: 3, clase: 'Tango Avanzado', fecha: '2026-04-20', estado: 'cancelada' },
+    { id: 1, clase: 'Salsa', fecha: '2026-04-28', estado: 'asistida' },
+    { id: 2, clase: 'Bachata', fecha: '2026-04-25', estado: 'asistida' },
+    { id: 3, clase: 'Tango', fecha: '2026-04-20', estado: 'cancelada' },
   ]
 
   return (
@@ -27,7 +27,7 @@ export default function MiPerfil() {
         </div>
         <h2 className="perfil-name">{user?.nombres} {user?.apellidos}</h2>
         <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>
-          Cliente desde Marzo 2026
+          Bienvenido a MOVI
         </p>
       </div>
 
