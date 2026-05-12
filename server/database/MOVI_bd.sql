@@ -13,6 +13,7 @@ USE movi_db;
 
 CREATE TABLE roles (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    
     nombre VARCHAR(50) NOT NULL UNIQUE
 );
 
@@ -65,22 +66,6 @@ CREATE TABLE instructores (
 );
 
 -- =====================================================
--- TABLA: salones
--- =====================================================
-
-CREATE TABLE salones (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    
-    nombre VARCHAR(100) NOT NULL,
-    
-    capacidad_default INT NOT NULL,
-    
-    descripcion TEXT,
-    
-    estado BOOLEAN DEFAULT TRUE
-);
-
--- =====================================================
 -- TABLA: categorias_baile
 -- =====================================================
 
@@ -93,54 +78,106 @@ CREATE TABLE categorias_baile (
 );
 
 -- =====================================================
+-- TABLA: horarios_semanales
+-- Representa la programación semanal fija
+-- de cada instructor
+-- =====================================================
+
+CREATE TABLE horarios_semanales (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    categoria_id INT NOT NULL,
+    instructor_id INT NOT NULL,
+
+    dia_semana ENUM(
+        'LUNES',
+        'MARTES',
+        'MIERCOLES',
+        'JUEVES',
+        'VIERNES',
+        'SABADO',
+        'DOMINGO'
+    ) NOT NULL,
+
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+
+    capacidad_maxima INT NOT NULL,
+
+    minimo_participantes INT NOT NULL,
+
+    activo BOOLEAN DEFAULT TRUE,
+
+    created_by INT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_horario_categoria
+        FOREIGN KEY (categoria_id)
+        REFERENCES categorias_baile(id),
+
+    CONSTRAINT fk_horario_instructor
+        FOREIGN KEY (instructor_id)
+        REFERENCES instructores(id),
+
+    CONSTRAINT fk_horario_admin
+        FOREIGN KEY (created_by)
+        REFERENCES usuarios(id)
+);
+
+-- =====================================================
 -- TABLA: clases
+-- Representa ocurrencias reales generadas
+-- automáticamente desde horarios_semanales
 -- =====================================================
 
 CREATE TABLE clases (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    
-    categoria_id INT NOT NULL,
-    instructor_id INT NOT NULL,
-    salon_id INT NOT NULL,
-    
-    titulo VARCHAR(150) NOT NULL,
-    descripcion TEXT,
-    
+
+    horario_semanal_id INT NOT NULL,
+
     fecha DATE NOT NULL,
-    
-    hora_inicio TIME NOT NULL,
-    hora_fin TIME NOT NULL,
-    
-    capacidad_maxima INT NOT NULL,
-    
-    minimo_participantes INT NOT NULL,
-    
+
     estado ENUM(
         'PROGRAMADA',
         'EN_CURSO',
         'CANCELADA',
         'FINALIZADA'
     ) DEFAULT 'PROGRAMADA',
-    
-    created_by INT,
-    
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_clase_categoria
-        FOREIGN KEY (categoria_id)
-        REFERENCES categorias_baile(id),
+    CONSTRAINT fk_clase_horario
+        FOREIGN KEY (horario_semanal_id)
+        REFERENCES horarios_semanales(id)
+        ON DELETE CASCADE
+);
 
-    CONSTRAINT fk_clase_instructor
-        FOREIGN KEY (instructor_id)
-        REFERENCES instructores(id),
+-- =====================================================
+-- TABLA: posiciones_clase
+-- Representa espacios físicos numerados
+-- dentro de una clase
+-- =====================================================
 
-    CONSTRAINT fk_clase_salon
-        FOREIGN KEY (salon_id)
-        REFERENCES salones(id),
+CREATE TABLE posiciones_clase (
+    id INT AUTO_INCREMENT PRIMARY KEY,
 
-    CONSTRAINT fk_clase_admin
-        FOREIGN KEY (created_by)
-        REFERENCES usuarios(id)
+    clase_id INT NOT NULL,
+
+    numero INT NOT NULL,
+
+    fila INT NULL,
+    columna INT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_posicion_clase
+        FOREIGN KEY (clase_id)
+        REFERENCES clases(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT uq_clase_numero
+        UNIQUE (clase_id, numero)
 );
 
 -- =====================================================
@@ -152,6 +189,7 @@ CREATE TABLE reservas (
     
     usuario_id INT NOT NULL,
     clase_id INT NOT NULL,
+    posicion_clase_id INT NOT NULL,
     
     estado ENUM(
         'PENDIENTE',
@@ -174,8 +212,12 @@ CREATE TABLE reservas (
         FOREIGN KEY (clase_id)
         REFERENCES clases(id),
 
-    CONSTRAINT uq_usuario_clase
-        UNIQUE (usuario_id, clase_id)
+    CONSTRAINT fk_reserva_posicion
+        FOREIGN KEY (posicion_clase_id)
+        REFERENCES posiciones_clase(id),
+
+    CONSTRAINT uq_reserva_posicion
+        UNIQUE (posicion_clase_id)
 );
 
 -- =====================================================
@@ -205,7 +247,7 @@ CREATE TABLE pagos (
 
 -- =====================================================
 -- TABLA: creditos
--- Un crédito = una clase gratuita futura
+-- Un crédito representa una clase gratuita
 -- =====================================================
 
 CREATE TABLE creditos (

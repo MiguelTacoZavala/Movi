@@ -14,7 +14,7 @@ export default function Header({ user, onLogout }) {
     <header className="header">
       <h1>Panel de Administración</h1>
       <div className="header-actions">
-        <span className="user-name">{user?.nombre}</span>
+        <span className="user-name">{user?.nombres || user?.nombre || ''}</span>
         <Button variant="logout" onClick={handleLogout}>Cerrar Sesión</Button>
       </div>
     </header>

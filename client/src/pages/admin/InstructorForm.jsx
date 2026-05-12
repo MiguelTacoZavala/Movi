@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Select from '../../components/common/Select'
+import { User } from 'lucide-react'
 import '../../App.css'
 
 const ESPECIALIDADES = ['Salsa', 'Bachata', 'Tango', 'Merengue', 'Cumbia', 'Reggaeton', 'Hip Hop', 'Ballet']
@@ -14,10 +15,23 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
     email: initialData?.email || '',
     foto: initialData?.foto || '',
   })
+  const [fotoPreview, setFotoPreview] = useState(initialData?.foto || '')
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result
+      setFotoPreview(dataUrl)
+      setFormData({ ...formData, foto: dataUrl })
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = (e) => {
@@ -64,13 +78,24 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
         onChange={handleChange}
       />
 
-      <Input
-        label="Foto URL"
-        name="foto"
-        value={formData.foto}
-        onChange={handleChange}
-        placeholder="https://..."
-      />
+      <div className="form-group">
+        <label>Foto</label>
+        <div className="file-upload-wrapper">
+          <div className="file-upload-preview">
+            {fotoPreview ? (
+              <img src={fotoPreview} alt="Preview" className="file-upload-img" />
+            ) : (
+              <div className="file-upload-placeholder">
+                <User size={24} />
+              </div>
+            )}
+          </div>
+          <label className="file-upload-btn">
+            <input type="file" accept="image/*" onChange={handleFileChange} />
+            {fotoPreview ? 'Cambiar foto' : 'Seleccionar foto'}
+          </label>
+        </div>
+      </div>
 
       <div className="form-actions">
         <Button type="submit">{initialData ? 'Actualizar' : 'Crear'}</Button>

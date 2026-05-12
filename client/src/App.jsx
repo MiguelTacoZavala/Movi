@@ -5,10 +5,10 @@ import ClientLayout from './components/layout/ClientLayout'
 import Login from './pages/admin/Login'
 import Dashboard from './pages/admin/Dashboard'
 import Clases from './pages/admin/Clases'
+import HorariosSemanales from './pages/admin/HorariosSemanales'
 import Instructores from './pages/admin/Instructores'
-import Salones from './pages/admin/Salones'
+import Categorias from './pages/admin/Categorias'
 import Clientes from './pages/admin/Clientes'
-import HistorialClases from './pages/admin/HistorialClases'
 import ClientDashboard from './pages/client/Dashboard'
 import ClasesDisponibles from './pages/client/ClasesDisponibles'
 import DetalleClase from './pages/client/DetalleClase'
@@ -29,10 +29,10 @@ function App() {
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="clases" element={<Clases />} />
+            <Route path="horarios" element={<HorariosSemanales />} />
             <Route path="instructores" element={<Instructores />} />
-            <Route path="salones" element={<Salones />} />
+            <Route path="categorias" element={<Categorias />} />
             <Route path="clientes" element={<Clientes />} />
-            <Route path="historial" element={<HistorialClases />} />
           </Route>
           
           {/* Client Routes */}

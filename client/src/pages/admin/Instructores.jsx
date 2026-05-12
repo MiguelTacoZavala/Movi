@@ -1,27 +1,29 @@
 import { useState } from 'react'
-import { Plus, Search, Edit2, Trash2, Users, Music2, Phone, UserCheck, UserX } from 'lucide-react'
+import { Plus, Edit2, Users, Phone, UserCheck, UserX, Calendar } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import InstructorForm from './InstructorForm'
+import { instructores as instructoresData, mockHorariosSemanales } from '../../data/mockData'
 import '../../App.css'
 
-const mockInstructores = [
-  { id: 1, nombre: 'María García', especialidad: 'Salsa', contacto: '999888777', foto: '', estado: 'Activo', clases: 5 },
-  { id: 2, nombre: 'Carlos López', especialidad: 'Bachata', contacto: '999777666', foto: '', estado: 'Activo', clases: 3 },
-  { id: 3, nombre: 'Ana Martínez', especialidad: 'Tango', contacto: '999666555', foto: '', estado: 'Inactivo', clases: 0 },
-]
-
 export default function Instructores() {
-  const [instructores, setInstructores] = useState(mockInstructores)
+  const [instructores, setInstructores] = useState(instructoresData)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingInstructor, setEditingInstructor] = useState(null)
+
+  const getHorariosCount = (id) =>
+    mockHorariosSemanales.filter(h => h.instructorId === id && h.activo).length
 
   const columns = [
     { key: 'nombre', label: 'Instructor', render: (val, row) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Users size={20} className="icon-primary" />
+        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          {row.foto ? (
+            <img src={row.foto} alt={val} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <Users size={20} className="icon-primary" />
+          )}
         </div>
         <div>
           <div style={{ fontWeight: 600 }}>{val}</div>
@@ -34,11 +36,14 @@ export default function Instructores() {
         <Phone size={14} className="icon-muted" /> {val}
       </span>
     )},
-    { key: 'clases', label: 'Clases', render: (val) => (
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-        <Music2 size={14} className="icon-muted" /> {val}
-      </span>
-    )},
+    { key: 'horarios', label: 'Horarios', render: (_, row) => {
+      const count = getHorariosCount(row.id)
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <Calendar size={14} className="icon-muted" /> {count} activo(s)
+        </span>
+      )
+    }},
     { key: 'estado', label: 'Estado', render: (val) => (
       <span className={`status-badge ${val === 'Activo' ? 'status-active' : 'status-inactive'}`}>
         {val === 'Activo' ? <UserCheck size={12} /> : <UserX size={12} />}
@@ -81,7 +86,7 @@ export default function Instructores() {
         inst.id === editingInstructor.id ? { ...inst, ...formData } : inst
       ))
     } else {
-      setInstructores([...instructores, { ...formData, id: Date.now(), clases: 0 }])
+      setInstructores([...instructores, { ...formData, id: Date.now() }])
     }
     setModalOpen(false)
   }

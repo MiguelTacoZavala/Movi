@@ -1,10 +1,10 @@
-import { LayoutDashboard, Music, Users, Building2, TrendingUp, Clock, CheckCircle } from 'lucide-react'
+import { Music, Users, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react'
 import '../../App.css'
 
 const stats = [
   { title: 'Clases Activas', value: '12', icon: Music, color: '#662222' },
   { title: 'Clases Llenas', value: '3', icon: TrendingUp, color: '#842A3B' },
-  { title: 'Clases Canceladas', value: '1', icon: TrendingUp, color: '#A3485A' },
+  { title: 'Clases Canceladas', value: '1', icon: XCircle, color: '#A3485A' },
   { title: 'Participantes', value: '48', icon: Users, color: '#662222' },
 ]
 

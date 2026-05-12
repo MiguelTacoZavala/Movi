@@ -36,7 +36,7 @@ export default function MiPerfil() {
         Créditos disponibles
       </div>
 
-      <Button variant="secondary" style={{ width: '100%', marginBottom: '1.5rem' }}>
+      <Button variant="secondary" style={{ width: '100%', marginBottom: '1.5rem' }} onClick={() => alert('Funcionalidad próximamente disponible')}>
         Editar Perfil
       </Button>
 

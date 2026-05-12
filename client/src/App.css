@@ -715,6 +715,11 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
+  align-items: start;
+}
+
+.form-row > .form-group {
+  margin-top: 0;
 }
 
 .form-group {
@@ -724,7 +729,7 @@ body {
   width: 100%;
 }
 
-.form-group + .form-group {
+.login-form .form-group + .form-group {
   margin-top: 1.5rem;
 }
 
@@ -782,6 +787,272 @@ body {
   border-top: 1px solid var(--gray-200);
 }
 
+/* ── File Upload ── */
+
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.file-upload-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--gray-200);
+  flex-shrink: 0;
+}
+
+.file-upload-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-upload-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-100);
+  color: var(--gray-400);
+}
+
+.file-upload-btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: var(--primary-text);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.file-upload-btn:hover {
+  background: var(--primary-dark);
+}
+
+.file-upload-btn input {
+  display: none;
+}
+
+/* ── Horario Grid ── */
+
+.modal-large {
+  max-width: 950px;
+}
+
+/* Horario instructor header */
+.horario-instructor-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--gray-100);
+  margin-bottom: 1rem;
+}
+
+.horario-instructor-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.horario-instructor-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.horario-instructor-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--gray-900);
+}
+
+.horario-instructor-specialty {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 2px;
+}
+
+.horario-week-picker {
+  margin-bottom: 1rem;
+}
+
+.horario-week-picker .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.horario-grid {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.horario-grid-header,
+.horario-grid-row {
+  display: grid;
+  grid-template-columns: 120px 60px 1fr 130px 130px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+}
+
+.horario-grid-header {
+  background: var(--gray-100);
+  font-weight: 600;
+  color: var(--gray-600);
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.horario-grid-row {
+  border-bottom: 1px solid var(--gray-100);
+  transition: background 0.15s ease;
+}
+
+.horario-grid-row:last-child {
+  border-bottom: none;
+}
+
+.horario-grid-row:nth-child(even):not(.pasado) {
+  background: var(--gray-50);
+}
+
+.horario-grid-row:not(.pasado):hover {
+  background: var(--primary-soft);
+}
+
+.horario-grid-row.pasado {
+  background: #fef2f2;
+  color: var(--gray-400);
+  cursor: not-allowed;
+}
+
+.horario-col-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.3;
+}
+
+.horario-dia-nombre {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--gray-800);
+}
+
+.horario-grid-row.pasado .horario-dia-nombre {
+  color: var(--gray-400);
+}
+
+.horario-dia-fecha {
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+
+.horario-col-check {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.horario-col-check input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--primary-medium);
+}
+
+.horario-col-check .icon-muted {
+  opacity: 0.4;
+}
+
+.horario-select,
+.horario-time-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: var(--white);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.horario-select:focus,
+.horario-time-input:focus {
+  outline: none;
+  border-color: var(--primary-medium);
+  box-shadow: 0 0 0 3px rgba(184, 90, 106, 0.12);
+}
+
+.horario-select:hover:not(:focus),
+.horario-time-input:hover:not(:focus) {
+  border-color: var(--gray-300);
+}
+
+.horario-empty {
+  color: var(--gray-300);
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .modal-large {
+    max-width: 100%;
+  }
+
+  .horario-grid-header,
+  .horario-grid-row {
+    grid-template-columns: 70px 44px 1fr 95px 95px 1fr;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.75rem;
+    gap: 0.3rem;
+  }
+
+  .horario-select,
+  .horario-time-input {
+    padding: 0.4rem 0.35rem;
+    font-size: 0.75rem;
+  }
+
+  .horario-col-check input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .horario-dia-nombre {
+    font-size: 0.75rem;
+  }
+}
+
 /* ==============================
    STATUS BADGES
    ============================== */
@@ -814,7 +1085,7 @@ body {
 
 .status-info {
   background-color: var(--primary-medium);
-  color: var(--primary-text);
+  color: #ffffff;
 }
 
 /* ==============================
@@ -1009,12 +1280,15 @@ body {
 }
 
 .filter-date {
-  padding: 0.625rem;
+  padding: 0.75rem;
   border: 2px solid var(--gray-200);
   border-radius: 8px;
   font-family: 'Inter', Arial, sans-serif;
   font-size: 0.95rem;
   transition: var(--transition);
+  background-color: var(--white);
+  color: var(--gray-900);
+  box-sizing: border-box;
 }
 
 .filter-date:focus {
@@ -1193,10 +1467,6 @@ body {
     min-height: 56px;
   }
 
-  .form-group + .form-group {
-    margin-top: 0;
-  }
-
   .login-submit-btn {
     padding: 1rem 1.25rem;
     font-size: 1.05rem;
@@ -1255,10 +1525,6 @@ body {
   .form-group select,
   .form-group textarea {
     min-height: 56px;
-  }
-
-  .form-group + .form-group {
-    margin-top: 0;
   }
 
   .login-submit-btn {
@@ -2450,4 +2716,74 @@ body {
 .btn-reservar:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ── Form error ── */
+
+.form-error {
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ── Clase info summary (participant modal) ── */
+
+.clase-info-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--gray-50);
+  border-radius: 12px;
+  margin-bottom: 0.5rem;
+}
+
+.clase-info-summary p {
+  font-size: 0.9rem;
+  color: var(--gray-700);
+}
+
+/* ── Stats summary row adjustments ── */
+
+.stats-summary .stat-card p {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+/* ── Seat grid (participant modal) ── */
+
+.seat-grid {
+  display: inline-grid;
+  grid-template-columns: repeat(var(--columnas, 6), 1fr);
+  gap: 0.5rem;
+  padding: 0.75rem;
+  max-width: 420px;
+  width: 100%;
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.5rem 0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'Inter', Arial, sans-serif;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.seat--available {
+  background: #e5e7eb;
+  color: #9ca3af;
+  border-color: #d1d5db;
+}
+
+.seat--occupied {
+  background: #27AE60;
+  color: #ffffff;
+  border-color: #1e8449;
 }

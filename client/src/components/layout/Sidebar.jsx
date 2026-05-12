@@ -1,16 +1,25 @@
-import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Music, Users, Building2, UserCircle, History, LogOut } from 'lucide-react'
+import { useNavigate, NavLink } from 'react-router-dom'
+import { LayoutDashboard, Music, Users, BookOpen, Calendar, UserCircle, LogOut } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 const menuItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/clases', label: 'Clases', icon: Music },
+  { path: '/admin/horarios', label: 'Horarios', icon: Calendar },
   { path: '/admin/instructores', label: 'Instructores', icon: Users },
-  { path: '/admin/salones', label: 'Salones', icon: Building2 },
+  { path: '/admin/categorias', label: 'Categorías', icon: BookOpen },
   { path: '/admin/clientes', label: 'Clientes', icon: UserCircle },
-  { path: '/admin/historial', label: 'Historial', icon: History },
 ]
 
 export default function Sidebar() {
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <div className="sidebar">
       <div className="sidebar-header">
@@ -37,17 +46,21 @@ export default function Sidebar() {
         </ul>
       </nav>
       <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-        <NavLink
-          to="/login"
-          className=""
-          onClick={() => localStorage.removeItem('user')}
+        <button
+          onClick={handleLogout}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.75rem',
             color: 'rgba(255,255,255,0.8)',
+            background: 'none',
+            border: 'none',
             textDecoration: 'none',
             padding: '0.875rem 0',
+            width: '100%',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            fontSize: '1rem',
             transition: 'all 0.2s',
           }}
           onMouseEnter={(e) => {
@@ -63,7 +76,7 @@ export default function Sidebar() {
         >
           <LogOut size={20} />
           Cerrar Sesión
-        </NavLink>
+        </button>
       </div>
     </div>
   )

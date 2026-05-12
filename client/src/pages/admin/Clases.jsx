@@ -1,103 +1,128 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Edit2, Trash2, Music, Users, MapPin, Clock } from 'lucide-react'
-import Button from '../../components/common/Button'
+import { useState, useMemo } from 'react'
+import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle } from 'lucide-react'
 import Table from '../../components/common/Table'
+import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
-import ClaseForm from './ClaseForm'
 import Select from '../../components/common/Select'
+import {
+  mockClasesGeneradas,
+  instructores,
+  ESTADOS_CLASE,
+  formatHoraAMPM,
+  mockCreditos,
+} from '../../data/mockData'
 import '../../App.css'
 
-const mockClases = [
-  { id: 1, tipoBaile: 'Salsa', nivel: 'Intermedio', instructor: 'María García', salon: 'Salón Principal', fecha: '2026-05-05', horaInicio: '10:00', capacidad: 30, inscritos: 25, estado: 'Activa' },
-  { id: 2, tipoBaile: 'Bachata', nivel: 'Básico', instructor: 'Carlos López', salon: 'Salón 2', fecha: '2026-05-05', horaInicio: '14:00', capacidad: 20, inscritos: 18, estado: 'Activa' },
-  { id: 3, tipoBaile: 'Tango', nivel: 'Avanzado', instructor: 'Ana Martínez', salon: 'Salón VIP', fecha: '2026-05-06', horaInicio: '18:00', capacidad: 15, inscritos: 5, estado: 'Activa' },
-  { id: 4, tipoBaile: 'Salsa', nivel: 'Básico', instructor: 'María García', salon: 'Salón Principal', fecha: '2026-05-04', horaInicio: '10:00', capacidad: 30, inscritos: 30, estado: 'Llena' },
-]
+const estadoConfig = {
+  PROGRAMADA: { label: 'Programada', className: 'status-info' },
+  EN_CURSO: { label: 'En Curso', className: 'status-active' },
+  CANCELADA: { label: 'Cancelada', className: 'status-inactive' },
+  FINALIZADA: { label: 'Finalizada', className: 'status-warning' },
+}
 
 export default function Clases() {
-  const navigate = useNavigate()
-  const [clases, setClases] = useState(mockClases)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingClase, setEditingClase] = useState(null)
+  const [clases, setClases] = useState(mockClasesGeneradas)
+  const [creditos, setCreditos] = useState(mockCreditos)
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroFecha, setFiltroFecha] = useState('')
+  const [filtroInstructor, setFiltroInstructor] = useState('')
+  const [selectedClase, setSelectedClase] = useState(null)
+  const [participantsOpen, setParticipantsOpen] = useState(false)
 
-  const filteredClases = clases.filter(c => {
-    if (filtroEstado && c.estado !== filtroEstado) return false
-    return true
-  })
+  const filteredClases = useMemo(() =>
+    clases.filter(c => {
+      if (filtroEstado && c.estado !== filtroEstado) return false
+      if (filtroFecha && c.fecha !== filtroFecha) return false
+      if (filtroInstructor && c.instructorId !== parseInt(filtroInstructor)) return false
+      return true
+    }), [clases, filtroEstado, filtroFecha, filtroInstructor]
+  )
 
   const columns = [
-    { key: 'tipoBaile', label: 'Clase', render: (val, row) => (
+    { key: 'categoria', label: 'Clase', render: (val, row) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <Music size={16} className="icon-primary" />
         <div>
           <div style={{ fontWeight: 600 }}>{val}</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>{row.nivel}</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>{row.instructor}</div>
         </div>
       </div>
     )},
-    { key: 'instructor', label: 'Instructor' },
-    { key: 'salon', label: 'Salón', render: (val) => (
+    { key: 'fecha', label: 'Fecha', render: (val) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-        <MapPin size={14} className="icon-muted" /> {val}
+        <Calendar size={14} className="icon-muted" /> {val}
       </span>
     )},
-    { key: 'fecha', label: 'Fecha' },
-    { key: 'horaInicio', label: 'Hora', render: (val) => (
+    { key: 'horario', label: 'Horario', render: (_, row) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-        <Clock size={14} className="icon-muted" /> {val}
+        <Clock size={14} className="icon-muted" />
+        {formatHoraAMPM(row.hora_inicio)} — {formatHoraAMPM(row.hora_fin)}
       </span>
     )},
-    { key: 'ocupacion', label: 'Cupos', render: (_, row) => (
+    { key: 'cupos', label: 'Cupos', render: (_, row) => (
       <div>
-        <div>{row.inscritos}/{row.capacidad}</div>
+        <div>{row.inscritos}/{row.capacidad_maxima}</div>
         <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
-          {Math.round((row.inscritos / row.capacidad) * 100)}%
+          {Math.round((row.inscritos / row.capacidad_maxima) * 100)}%
         </div>
       </div>
     )},
-    { key: 'estado', label: 'Estado', render: (val) => (
-      <span className={`status-badge ${val === 'Activa' ? 'status-active' : val === 'Llena' ? 'status-warning' : 'status-inactive'}`}>
-        {val === 'Llena' && <span style={{ marginRight: '0.25rem' }}>⚠</span>}
-        {val}
-      </span>
-    )},
+    { key: 'estado', label: 'Estado', render: (val) => {
+      const cfg = estadoConfig[val] || { label: val, className: '' }
+      return (
+        <span className={`status-badge ${cfg.className}`}>
+          {val === 'CANCELADA' && <XCircle size={12} />}
+          {val === 'EN_CURSO' && <UserCheck size={12} />}
+          {val === 'FINALIZADA' && <AlertTriangle size={12} />}
+          {cfg.label}
+        </span>
+      )
+    }},
     { key: 'acciones', label: 'Acciones', render: (_, row) => (
       <div className="action-buttons">
-        <Button size="small" variant="ghost" onClick={() => handleEdit(row)} title="Editar">
-          <Edit2 size={16} />
+        <Button size="small" variant="ghost" onClick={() => handleViewParticipants(row)} title="Ver participantes">
+          <Users size={16} />
         </Button>
-        <Button size="small" variant="ghost" onClick={() => handleCancel(row.id)} title="Cancelar" className="icon-danger">
-          <Trash2 size={16} />
-        </Button>
+        {row.estado === 'PROGRAMADA' && (
+          <Button size="small" variant="ghost" onClick={() => handleCancel(row)} title="Cancelar clase" className="icon-danger">
+            <XCircle size={16} />
+          </Button>
+        )}
       </div>
     )},
   ]
 
-  const handleCreate = () => {
-    setEditingClase(null)
-    setModalOpen(true)
+  const handleViewParticipants = (clase) => {
+    setSelectedClase(clase)
+    setParticipantsOpen(true)
   }
 
-  const handleEdit = (clase) => {
-    setEditingClase(clase)
-    setModalOpen(true)
-  }
+  const handleCancel = (clase) => {
+    const confirmados = clase.posiciones.filter(p => p.estado === 'ocupado').length
+    let msg = `¿Cancelar la clase de ${clase.categoria} del ${clase.fecha}?`
+    if (confirmados > 0) msg += `\n\n⚠️ Hay ${confirmados} participante(s) registrados. Se generarán créditos automáticamente.`
+    if (!window.confirm(msg)) return
 
-  const handleCancel = (id) => {
-    if (window.confirm('¿Está seguro de cancelar esta clase?')) {
-      setClases(clases.map(c => c.id === id ? { ...c, estado: 'Cancelada' } : c))
+    const nuevosCreditos = []
+    for (let i = 0; i < confirmados; i++) {
+      nuevosCreditos.push({
+        id: creditos.length + i + 1,
+        claseId: clase.id,
+        usado: false,
+        fecha_creacion: new Date().toISOString().split('T')[0],
+      })
     }
+
+    setCreditos(prev => [...prev, ...nuevosCreditos])
+    setClases(clases.map(c =>
+      c.id === clase.id ? { ...c, estado: 'CANCELADA' } : c
+    ))
   }
 
-  const handleSave = (formData) => {
-    if (editingClase) {
-      setClases(clases.map(c => c.id === editingClase.id ? { ...c, ...formData } : c))
-    } else {
-      setClases([...clases, { ...formData, id: Date.now(), inscritos: 0, estado: 'Activa' }])
-    }
-    setModalOpen(false)
+  const getSeatColumns = (total) => {
+    if (total <= 10) return 4
+    if (total <= 20) return 5
+    return 6
   }
 
   return (
@@ -105,41 +130,100 @@ export default function Clases() {
       <div className="page-header">
         <h1>
           <Music size={28} />
-          Gestión de Clases
+          Clases Generadas
         </h1>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="filters">
+          <div className="form-group">
+            <label>Fecha</label>
+            <input
+              type="date"
+              value={filtroFecha}
+              onChange={(e) => setFiltroFecha(e.target.value)}
+              className="filter-date"
+            />
+          </div>
           <Select
+            label="Instructor"
+            value={filtroInstructor}
+            onChange={(e) => setFiltroInstructor(e.target.value)}
+            options={[
+              { value: '', label: 'Todos los instructores' },
+              ...instructores.map(i => ({ value: i.id, label: i.nombre })),
+            ]}
+          />
+          <Select
+            label="Estado"
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
             options={[
               { value: '', label: 'Todos los estados' },
-              { value: 'Activa', label: 'Activas' },
-              { value: 'Llena', label: 'Llenas' },
-              { value: 'Cancelada', label: 'Canceladas' },
+              ...ESTADOS_CLASE.map(e => ({ value: e, label: e.charAt(0) + e.slice(1).toLowerCase() })),
             ]}
           />
-          <Button onClick={handleCreate}>
-            <Plus size={18} />
-            Nueva Clase
-          </Button>
         </div>
       </div>
 
-      <Table columns={columns} data={filteredClases} />
+      <div className="stats-summary">
+        <div className="stat-card">
+          <h3>Total</h3>
+          <p>{clases.length}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Programadas</h3>
+          <p style={{ color: 'var(--info)' }}>{clases.filter(c => c.estado === 'PROGRAMADA').length}</p>
+        </div>
+        <div className="stat-card">
+          <h3>En Curso</h3>
+          <p style={{ color: 'var(--success-text)' }}>{clases.filter(c => c.estado === 'EN_CURSO').length}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Canceladas</h3>
+          <p style={{ color: 'var(--danger-text)' }}>{clases.filter(c => c.estado === 'CANCELADA').length}</p>
+        </div>
+      </div>
+
+      <Table columns={columns} data={filteredClases} emptyMessage="No hay clases generadas" />
 
       <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingClase ? 'Editar Clase' : 'Nueva Clase'}
+        isOpen={participantsOpen}
+        onClose={() => setParticipantsOpen(false)}
+        title={`Participantes: ${selectedClase?.categoria || ''}`}
+        size="large"
       >
-        <p className="modal-subtitle">
-          {editingClase ? 'Modifica los datos de la clase' : 'Completa la información para crear una nueva clase'}
-        </p>
-        <ClaseForm
-          initialData={editingClase}
-          onSave={handleSave}
-          onCancel={() => setModalOpen(false)}
-        />
+        {selectedClase && (
+          <div>
+            <div className="clase-info-summary">
+              <p><strong>Instructor:</strong> {selectedClase.instructor}</p>
+              <p><strong>Fecha:</strong> {selectedClase.fecha}</p>
+              <p><strong>Horario:</strong> {formatHoraAMPM(selectedClase.hora_inicio)} — {formatHoraAMPM(selectedClase.hora_fin)}</p>
+              <p><strong>Ocupación:</strong> {selectedClase.inscritos}/{selectedClase.capacidad_maxima}</p>
+            </div>
+
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginRight: '1rem' }}>
+                  <span style={{ width: 14, height: 14, borderRadius: 3, background: '#e5e7eb', display: 'inline-block' }} /> Disponible
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ width: 14, height: 14, borderRadius: 3, background: '#27AE60', display: 'inline-block' }} /> Ocupado
+                </span>
+              </p>
+              <div
+                className="seat-grid"
+                style={{ '--columnas': getSeatColumns(selectedClase.capacidad_maxima) }}
+              >
+                {selectedClase.posiciones.map(pos => (
+                  <div
+                    key={pos.id}
+                    className={`seat ${pos.estado === 'ocupado' ? 'seat--occupied' : 'seat--available'}`}
+                  >
+                    {pos.numero}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )
