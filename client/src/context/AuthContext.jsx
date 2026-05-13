@@ -17,6 +17,14 @@ export function AuthProvider({ children }) {
       return { success: true, rol: 'admin' }
     }
     
+    // Instructor login
+    if (identifier === 'maria@dance.com' && password === 'instructor123') {
+      const userData = { id: 1, email: identifier, nombres: 'María', apellidos: 'García', especialidad: 'Salsa', contacto: '999888777', rol: 'instructor' }
+      setUser(userData)
+      localStorage.setItem('user', JSON.stringify(userData))
+      return { success: true, rol: 'instructor' }
+    }
+    
     // Client login (can use DNI or telefono)
     if ((identifier === '12345678' || identifier === '999111222') && password === 'cliente123') {
       const userData = { 
@@ -44,9 +52,10 @@ export function AuthProvider({ children }) {
   
   const isAdmin = user?.rol === 'admin'
   const isCliente = user?.rol === 'cliente'
+  const isInstructor = user?.rol === 'instructor'
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isAdmin, isCliente }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isAdmin, isCliente, isInstructor }}>
       {children}
     </AuthContext.Provider>
   )

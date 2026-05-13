@@ -363,6 +363,69 @@ const mockHorariosSemanales = [
 let mockClasesGeneradas = generarClasesDesdeHorarios(mockHorariosSemanales, 4)
 nextClaseId = mockClasesGeneradas.reduce((max, c) => Math.max(max, c.id), 100) + 1
 
+function generarPosicionesOcupadas(capacidad, ocupados) {
+  const posiciones = []
+  const ocupadosSet = new Set()
+  while (ocupadosSet.size < ocupados && ocupadosSet.size < capacidad) {
+    ocupadosSet.add(Math.floor(Math.random() * capacidad) + 1)
+  }
+  for (let i = 1; i <= capacidad; i++) {
+    posiciones.push({ id: i, numero: i, estado: ocupadosSet.has(i) ? 'ocupado' : 'disponible' })
+  }
+  return posiciones
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  return formatDateStr(d)
+}
+
+const hoy = formatDateStr(new Date())
+const demoClases = [
+  {
+    id: nextClaseId++, instructorId: 1, instructor: 'María García',
+    instructorFoto: 'https://i.pravatar.cc/150?u=Maria-Garcia',
+    categoriaId: 1, categoria: 'Salsa',
+    fecha: hoy, hora_inicio: '14:00', hora_fin: '15:30',
+    capacidad_maxima: 30, minimo_participantes: 7, inscritos: 22,
+    estado: 'PROGRAMADA', posiciones: generarPosicionesOcupadas(30, 22),
+  },
+  {
+    id: nextClaseId++, instructorId: 1, instructor: 'María García',
+    instructorFoto: 'https://i.pravatar.cc/150?u=Maria-Garcia',
+    categoriaId: 1, categoria: 'Salsa',
+    fecha: hoy, hora_inicio: '16:00', hora_fin: '17:30',
+    capacidad_maxima: 30, minimo_participantes: 7, inscritos: 15,
+    estado: 'PROGRAMADA', posiciones: generarPosicionesOcupadas(30, 15),
+  },
+  {
+    id: nextClaseId++, instructorId: 1, instructor: 'María García',
+    instructorFoto: 'https://i.pravatar.cc/150?u=Maria-Garcia',
+    categoriaId: 1, categoria: 'Salsa',
+    fecha: addDays(hoy, -1), hora_inicio: '14:00', hora_fin: '15:30',
+    capacidad_maxima: 30, minimo_participantes: 7, inscritos: 25,
+    estado: 'FINALIZADA', posiciones: generarPosicionesOcupadas(30, 25),
+  },
+  {
+    id: nextClaseId++, instructorId: 1, instructor: 'María García',
+    instructorFoto: 'https://i.pravatar.cc/150?u=Maria-Garcia',
+    categoriaId: 1, categoria: 'Salsa',
+    fecha: addDays(hoy, -2), hora_inicio: '14:00', hora_fin: '15:30',
+    capacidad_maxima: 30, minimo_participantes: 7, inscritos: 20,
+    estado: 'FINALIZADA', posiciones: generarPosicionesOcupadas(30, 20),
+  },
+  {
+    id: nextClaseId++, instructorId: 1, instructor: 'María García',
+    instructorFoto: 'https://i.pravatar.cc/150?u=Maria-Garcia',
+    categoriaId: 1, categoria: 'Salsa',
+    fecha: addDays(hoy, -3), hora_inicio: '10:00', hora_fin: '11:30',
+    capacidad_maxima: 30, minimo_participantes: 7, inscritos: 8,
+    estado: 'CANCELADA', posiciones: generarPosicionesOcupadas(30, 8),
+  },
+]
+mockClasesGeneradas.push(...demoClases)
+
 let mockReservas = []
 let mockCreditos = []
 let mockNotificaciones = []

@@ -38,6 +38,8 @@ export default function Login() {
             navigate('/admin/dashboard')
           } else if (result.rol === 'cliente') {
             navigate('/cliente/dashboard')
+          } else if (result.rol === 'instructor') {
+            navigate('/instructor/dashboard')
           }
         }, 1500)
       } else {
