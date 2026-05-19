@@ -52,7 +52,7 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Users size={18} className="icon-muted" />
-                {proximaClase.inscritos}/{proximaClase.capacidad_maxima} participantes ({Math.round((proximaClase.inscritos / proximaClase.capacidad_maxima) * 100)}%)
+                {proximaClase.inscritos}/{proximaClase.capacidad_maxima} participantes
               </div>
             </div>
           </div>

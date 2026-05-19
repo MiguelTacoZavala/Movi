@@ -62,7 +62,11 @@ export default function Clases() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Users size={16} className="icon-muted" />
-                  {clase.inscritos}/{clase.capacidad_maxima} participantes ({Math.round((clase.inscritos / clase.capacidad_maxima) * 100)}%)
+                  {clase.inscritos}/{clase.capacidad_maxima} participantes
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--gray-500)' }}>Temática:</span>
+                  <span style={{ fontWeight: 500, color: 'var(--gray-700)' }}>{clase.tematica || 'LIBRE'}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

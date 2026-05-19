@@ -14,12 +14,14 @@ import ClasesDisponibles from './pages/client/ClasesDisponibles'
 import DetalleClase from './pages/client/DetalleClase'
 import MisReservas from './pages/client/MisReservas'
 import MiPerfil from './pages/client/MiPerfil'
+import Registro from './pages/client/Registro'
 import InstructorLayout from './components/layout/InstructorLayout'
 import InstructorDashboard from './pages/instructor/Dashboard'
 import InstructorHorarios from './pages/instructor/Horarios'
 import InstructorClases from './pages/instructor/Clases'
 import InstructorDetalleClase from './pages/instructor/DetalleClase'
 import InstructorHistorial from './pages/instructor/Historial'
+import InstructorPerfil from './pages/instructor/Perfil'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import './App.css'
 
@@ -29,6 +31,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Registro />} />
           
           {/* Admin Routes */}
           <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
@@ -59,6 +62,7 @@ function App() {
             <Route path="clases" element={<InstructorClases />} />
             <Route path="clases/:id" element={<InstructorDetalleClase />} />
             <Route path="historial" element={<InstructorHistorial />} />
+            <Route path="perfil" element={<InstructorPerfil />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />

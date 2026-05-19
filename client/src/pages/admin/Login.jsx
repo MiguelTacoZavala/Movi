@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
@@ -131,6 +131,12 @@ export default function Login() {
             {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
           </Button>
         </form>
+
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <Link to="/registro" style={{ color: 'var(--primary-medium)', textDecoration: 'none', fontSize: '0.9rem' }}>
+            ¿No tienes cuenta? Regístrate
+          </Link>
+        </div>
 
         <div className="login-footer">
           <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#9ca3af' }}>

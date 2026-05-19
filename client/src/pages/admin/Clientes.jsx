@@ -7,25 +7,41 @@ import Input from '../../components/common/Input'
 import '../../App.css'
 
 const mockClientes = [
-  { id: 1, nombre: 'Juan Pérez', email: 'juan@email.com', dni: '12345678', telefono: '999111222', creditos: 5, reservas: 12, estado: 'Activo' },
-  { id: 2, nombre: 'Lucía Ramos', email: 'lucia@email.com', dni: '87654321', telefono: '999333444', creditos: 2, reservas: 8, estado: 'Activo' },
-  { id: 3, nombre: 'Pedro Sánchez', email: 'pedro@email.com', dni: '11223344', telefono: '999555666', creditos: 0, reservas: 3, estado: 'Inactivo' },
+  { id: 1, nombres: 'Juan Pérez', email: 'juan@email.com', dni: '12345678', telefono: '999111222', creditos: 5, reservas: 12, estado: 'Activo' },
+  { id: 2, nombres: 'Lucía Ramos', email: 'lucia@email.com', dni: '87654321', telefono: '999333444', creditos: 2, reservas: 8, estado: 'Activo' },
+  { id: 3, nombres: 'Pedro Sánchez', email: 'pedro@email.com', dni: '11223344', telefono: '999555666', creditos: 0, reservas: 3, estado: 'Inactivo' },
 ]
 
 export default function Clientes() {
-  const [clientes] = useState(mockClientes)
   const [search, setSearch] = useState('')
   const [selectedCliente, setSelectedCliente] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
 
+  const [clientes] = useState(() => {
+    const raw = localStorage.getItem('clientesRegistrados')
+    const registrados = raw ? JSON.parse(raw) : []
+    const mapeados = registrados.map(c => ({
+      id: c.id,
+      nombres: `${c.nombres} ${c.apellidos}`,
+      email: c.dni + '@movi.app',
+      dni: c.dni,
+      telefono: c.telefono,
+      creditos: 3,
+      reservas: 0,
+      estado: 'Activo',
+    }))
+    const todos = [...mockClientes, ...mapeados]
+    return todos.filter((c, i, arr) => arr.findIndex(x => x.dni === c.dni) === i)
+  })
+
   const filteredClientes = clientes.filter(c =>
-    c.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    c.nombres.toLowerCase().includes(search.toLowerCase()) ||
     c.email.toLowerCase().includes(search.toLowerCase()) ||
     c.dni.includes(search)
   )
 
   const columns = [
-    { key: 'nombre', label: 'Cliente', render: (val, row) => (
+    { key: 'nombres', label: 'Cliente', render: (val, row) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Users size={20} className="icon-primary" />
@@ -93,25 +109,15 @@ export default function Clientes() {
       <Modal
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
-        title={`Detalle: ${selectedCliente?.nombre}`}
+        title={`Detalle: ${selectedCliente?.nombres}`}
       >
         {selectedCliente && (
           <div className="cliente-detalle">
-            <p>
-              <strong>DNI:</strong> {selectedCliente.dni}
-            </p>
-            <p>
-              <strong>Email:</strong> {selectedCliente.email}
-            </p>
-            <p>
-              <strong>Teléfono:</strong> {selectedCliente.telefono}
-            </p>
-            <p>
-              <strong>Créditos:</strong> {selectedCliente.creditos}
-            </p>
-            <p>
-              <strong>Reservas realizadas:</strong> {selectedCliente.reservas}
-            </p>
+            <p><strong>DNI:</strong> {selectedCliente.dni}</p>
+            <p><strong>Email:</strong> {selectedCliente.email}</p>
+            <p><strong>Teléfono:</strong> {selectedCliente.telefono}</p>
+            <p><strong>Créditos:</strong> {selectedCliente.creditos}</p>
+            <p><strong>Reservas realizadas:</strong> {selectedCliente.reservas}</p>
             <p>
               <strong>Estado:</strong>{' '}
               <span className={`status-badge ${selectedCliente.estado === 'Activo' ? 'status-active' : 'status-inactive'}`}>

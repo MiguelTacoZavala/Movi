@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Calendar, Music, Clock, LogOut } from 'lucide-react'
+import { LayoutDashboard, Calendar, Music, Clock, User, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
@@ -63,6 +63,10 @@ export default function InstructorLayout() {
         <NavLink to="/instructor/historial" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <Clock size={20} />
           <span>Historial</span>
+        </NavLink>
+        <NavLink to="/instructor/perfil" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
+          <User size={20} />
+          <span>Perfil</span>
         </NavLink>
       </nav>
     </div>

@@ -143,6 +143,7 @@ function generarClases() {
       inscritos,
       minimo_participantes: 7,
       asientos,
+      tematica: 'LIBRE',
       estado: inscritos >= capacidad ? 'COMPLETA' : 'PROGRAMADA',
     })
   }
@@ -257,6 +258,7 @@ function generarClasesDesdeHorarios(horarios, semanas = 4) {
         capacidad_maxima: horario.capacidad_maxima,
         minimo_participantes: horario.minimo_participantes,
         inscritos: ocupadosRandom,
+        tematica: 'LIBRE',
         estado: 'PROGRAMADA',
         posiciones,
       })
@@ -389,7 +391,7 @@ const demoClases = [
     categoriaId: 1, categoria: 'Salsa',
     fecha: hoy, hora_inicio: '14:00', hora_fin: '15:30',
     capacidad_maxima: 30, minimo_participantes: 7, inscritos: 22,
-    estado: 'PROGRAMADA', posiciones: generarPosicionesOcupadas(30, 22),
+    tematica: 'LIBRE', estado: 'PROGRAMADA', posiciones: generarPosicionesOcupadas(30, 22),
   },
   {
     id: nextClaseId++, instructorId: 1, instructor: 'María García',
@@ -397,7 +399,7 @@ const demoClases = [
     categoriaId: 1, categoria: 'Salsa',
     fecha: hoy, hora_inicio: '16:00', hora_fin: '17:30',
     capacidad_maxima: 30, minimo_participantes: 7, inscritos: 15,
-    estado: 'PROGRAMADA', posiciones: generarPosicionesOcupadas(30, 15),
+    tematica: 'LIBRE', estado: 'PROGRAMADA', posiciones: generarPosicionesOcupadas(30, 15),
   },
   {
     id: nextClaseId++, instructorId: 1, instructor: 'María García',
@@ -405,7 +407,7 @@ const demoClases = [
     categoriaId: 1, categoria: 'Salsa',
     fecha: addDays(hoy, -1), hora_inicio: '14:00', hora_fin: '15:30',
     capacidad_maxima: 30, minimo_participantes: 7, inscritos: 25,
-    estado: 'FINALIZADA', posiciones: generarPosicionesOcupadas(30, 25),
+    tematica: 'LIBRE', estado: 'FINALIZADA', posiciones: generarPosicionesOcupadas(30, 25),
   },
   {
     id: nextClaseId++, instructorId: 1, instructor: 'María García',
@@ -413,7 +415,7 @@ const demoClases = [
     categoriaId: 1, categoria: 'Salsa',
     fecha: addDays(hoy, -2), hora_inicio: '14:00', hora_fin: '15:30',
     capacidad_maxima: 30, minimo_participantes: 7, inscritos: 20,
-    estado: 'FINALIZADA', posiciones: generarPosicionesOcupadas(30, 20),
+    tematica: 'LIBRE', estado: 'FINALIZADA', posiciones: generarPosicionesOcupadas(30, 20),
   },
   {
     id: nextClaseId++, instructorId: 1, instructor: 'María García',
@@ -421,7 +423,7 @@ const demoClases = [
     categoriaId: 1, categoria: 'Salsa',
     fecha: addDays(hoy, -3), hora_inicio: '10:00', hora_fin: '11:30',
     capacidad_maxima: 30, minimo_participantes: 7, inscritos: 8,
-    estado: 'CANCELADA', posiciones: generarPosicionesOcupadas(30, 8),
+    tematica: 'LIBRE', estado: 'CANCELADA', posiciones: generarPosicionesOcupadas(30, 8),
   },
 ]
 mockClasesGeneradas.push(...demoClases)
@@ -429,6 +431,39 @@ mockClasesGeneradas.push(...demoClases)
 let mockReservas = []
 let mockCreditos = []
 let mockNotificaciones = []
+
+function formatFechaBonita(fechaStr) {
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  const [, m, d] = fechaStr.split('-').map(Number)
+  return `${d} de ${meses[m - 1]}`
+}
+
+function generarCodigoPago() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let codigo = 'MOV-'
+  for (let i = 0; i < 6; i++) {
+    codigo += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return codigo
+}
+
+function setTematica(claseId, nuevaTematica) {
+  const clase = mockClasesGeneradas.find(c => c.id === claseId)
+  if (clase) {
+    clase.tematica = nuevaTematica
+  }
+}
+
+function addReserva(data) {
+  const nuevaReserva = {
+    id: Date.now(),
+    ...data,
+    codigoPago: generarCodigoPago(),
+    createdAt: new Date().toISOString(),
+  }
+  mockReservas.push(nuevaReserva)
+  return nuevaReserva
+}
 
 export {
   SALONES,
@@ -455,7 +490,11 @@ export {
   ESTADOS_RESERVA,
   generarClasesDesdeHorarios,
   formatDateStr,
+  formatFechaBonita,
   getMonday,
+  setTematica,
+  addReserva,
+  generarCodigoPago,
   nextHorarioId,
   nextClaseId,
 }
