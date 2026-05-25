@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import '../../App.css'
 
@@ -14,6 +14,12 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const prev = document.documentElement.dataset.theme
+    document.documentElement.dataset.theme = 'light'
+    return () => { document.documentElement.dataset.theme = prev }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -127,7 +133,6 @@ export default function Login() {
             className="btn-primary login-submit-btn"
             disabled={isLoading}
           >
-            <LogIn size={18} />
             {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
           </Button>
         </form>

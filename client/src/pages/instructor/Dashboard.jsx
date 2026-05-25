@@ -80,8 +80,8 @@ export default function Dashboard() {
               No hay clases hoy
             </p>
           ) : (
-            clasesHoy.map(clase => (
-              <div key={clase.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem' }}>
+            clasesHoy.map((clase, idx) => (
+              <div key={clase.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.08}s` }}>
                 <div style={{ fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.25rem' }}>
                   {clase.categoria}
                 </div>

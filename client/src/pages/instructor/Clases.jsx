@@ -37,11 +37,11 @@ export default function Clases() {
           <p>No tienes clases programadas</p>
         </div>
       ) : (
-        clases.map(clase => (
+        clases.map((clase, idx) => (
           <div
             key={clase.id}
             className="client-card"
-            style={{ marginBottom: '0.75rem', cursor: 'pointer' }}
+            style={{ marginBottom: '0.75rem', cursor: 'pointer', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}
             onClick={() => navigate(`/instructor/clases/${clase.id}`)}
           >
             <div className="client-card-content">

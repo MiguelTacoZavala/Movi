@@ -8,7 +8,7 @@ function generarFechaRelativa(dias) {
   return f.toISOString().split('T')[0]
 }
 
-const mockReservaProxima = {
+const mockClaseProxima = {
   id: 1,
   clase: 'Salsa',
   fecha: generarFechaRelativa(1),
@@ -44,7 +44,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {mockReservaProxima && (
+      {mockClaseProxima && (
         <div className="client-card" style={{ borderLeft: '4px solid var(--success)' }}>
           <div className="client-card-title">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -54,18 +54,18 @@ export default function Dashboard() {
           </div>
           <div className="client-card-content">
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
-              {mockReservaProxima.clase}
+              {mockClaseProxima.clase}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Calendar size={16} className="icon-muted" />
-                {mockReservaProxima.fecha}
+                {mockClaseProxima.fecha}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {mockReservaProxima.hora_inicio} - {mockReservaProxima.hora_fin}
+                {mockClaseProxima.hora_inicio} - {mockClaseProxima.hora_fin}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {mockReservaProxima.instructor}
+                {mockClaseProxima.instructor}
               </div>
             </div>
           </div>
@@ -80,8 +80,8 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="client-card-content">
-          {mockClasesDestacadas.map(clase => (
-            <div key={clase.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.75rem' }}>
+          {mockClasesDestacadas.map((clase, idx) => (
+            <div key={clase.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.08}s` }}>
               <div style={{ fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.25rem' }}>
                 {clase.categoria}
               </div>

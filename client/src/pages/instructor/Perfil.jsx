@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { User, Award } from 'lucide-react'
+import { User, Moon, Sun } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Input from '../../components/common/Input'
@@ -8,6 +9,7 @@ import '../../App.css'
 
 export default function Perfil() {
   const { user, updateUser } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const [modalOpen, setModalOpen] = useState(false)
   const [editData, setEditData] = useState({ nombres: '', apellidos: '', contacto: '', email: '' })
 
@@ -67,11 +69,44 @@ export default function Perfil() {
         </h3>
       </div>
 
+      <Button variant="secondary" style={{ width: '100%', marginBottom: '1.5rem' }} onClick={openEditModal}>
+        Editar Perfil
+      </Button>
+
+      <div className="client-card" style={{ marginBottom: '1rem' }}>
+        <div className="client-card-title">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {theme === 'dark' ? <Moon size={20} className="icon-primary" /> : <Sun size={20} className="icon-primary" />}
+            Preferencias
+          </div>
+        </div>
+        <div className="client-card-content">
+          <div
+            onClick={toggleTheme}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Tema oscuro</span>
+            <div style={{
+              width: 44, height: 24, borderRadius: 12, padding: 2,
+              background: theme === 'dark' ? 'var(--success)' : 'var(--gray-300)',
+              transition: 'background 0.2s ease', position: 'relative',
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: 2,
+                left: theme === 'dark' ? 22 : 2,
+                transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="client-card">
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Award size={20} className="icon-primary" />
-            Información
+            <User size={20} className="icon-primary" />
+            Información Personal
           </div>
         </div>
         <div className="client-card-content">
@@ -91,10 +126,6 @@ export default function Perfil() {
           </div>
         </div>
       </div>
-
-      <Button variant="secondary" style={{ width: '100%' }} onClick={openEditModal}>
-        Editar Perfil
-      </Button>
     </div>
   )
 }

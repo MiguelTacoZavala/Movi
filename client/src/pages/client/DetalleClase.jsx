@@ -3,7 +3,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User } from 'lucide-react'
 import Button from '../../components/common/Button'
-import { mockClases, claseDisponible, formatFechaBonita, formatHoraAMPM, addReserva } from '../../data/mockData'
+import Modal from '../../components/common/Modal'
+import { mockClases, claseDisponible, formatFechaBonita, formatHoraAMPM, addInscripcion } from '../../data/mockData'
 import '../../App.css'
 
 const HOLD_DURATION = 300
@@ -23,8 +24,9 @@ export default function DetalleClase() {
   const [holdSeconds, setHoldSeconds] = useState(HOLD_DURATION)
   const [holdActive, setHoldActive] = useState(false)
   const [holdExpired, setHoldExpired] = useState(false)
-  const [reservaExitosa, setReservaExitosa] = useState(false)
-  const [reservaData, setReservaData] = useState(null)
+  const [showResumenModal, setShowResumenModal] = useState(false)
+  const [inscripcionExitosa, setInscripcionExitosa] = useState(false)
+  const [inscripcionData, setInscripcionData] = useState(null)
 
   const clase = useMemo(() => mockClases.find(c => c.id === Number(id)), [id])
   const disponible = clase ? claseDisponible(clase) : false
@@ -73,10 +75,15 @@ export default function DetalleClase() {
   }
 
   const handlePagar = () => {
+    setShowResumenModal(true)
+  }
+
+  const handleConfirmarInscripcion = () => {
+    setShowResumenModal(false)
     setHoldActive(true)
     setHoldSeconds(HOLD_DURATION)
     setTimeout(() => {
-      const reserva = addReserva({
+      const inscripcion = addInscripcion({
         claseId: clase.id,
         categoria: clase.categoria,
         instructor: clase.instructor,
@@ -88,9 +95,13 @@ export default function DetalleClase() {
         tematica: clase.tematica || 'LIBRE',
         estado: 'CONFIRMADA',
       })
-      setReservaData(reserva)
-      setReservaExitosa(true)
+      setInscripcionData(inscripcion)
+      setInscripcionExitosa(true)
     }, 2500)
+  }
+
+  const handleCancelarInscripcion = () => {
+    setShowResumenModal(false)
   }
 
   if (!clase) {
@@ -105,51 +116,51 @@ export default function DetalleClase() {
     )
   }
 
-  if (reservaExitosa && reservaData) {
+  if (inscripcionExitosa && inscripcionData) {
     return (
       <div className="empty-state" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
         <div style={{ background: '#d1fae5', borderRadius: '50%', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
           <CheckCircle size={40} color="#059669" />
         </div>
-        <h3>Reserva confirmada</h3>
-        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Tu reserva se ha registrado correctamente</p>
+        <h3>Inscripción confirmada</h3>
+        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Tu inscripción fue confirmada correctamente</p>
 
         <div style={{ marginTop: '1.5rem', textAlign: 'left', background: 'var(--gray-50)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Categoría</span>
-            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{reservaData.categoria}</span>
+            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{inscripcionData.categoria}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Instructor</span>
-            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{reservaData.instructor}</span>
+            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{inscripcionData.instructor}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Fecha</span>
-            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{formatFechaBonita(reservaData.fecha)}</span>
+            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{formatFechaBonita(inscripcionData.fecha)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Hora</span>
-            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{formatHoraAMPM(reservaData.hora_inicio)}</span>
+            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{formatHoraAMPM(inscripcionData.hora_inicio)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento</span>
-            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{reservaData.asiento}</span>
+            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{inscripcionData.asiento}</span>
           </div>
           <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Código de pago</span>
-            <span style={{ fontWeight: 700, color: 'var(--primary-medium)', fontFamily: 'monospace', fontSize: '0.95rem' }}>{reservaData.codigoPago}</span>
+            <span style={{ fontWeight: 700, color: 'var(--primary-medium)', fontFamily: 'monospace', fontSize: '0.95rem' }}>{inscripcionData.codigoPago}</span>
           </div>
         </div>
 
-        <Button onClick={() => navigate('/cliente/mis-reservas')} style={{ marginTop: '1.5rem' }}>
-          Ir a Mis Reservas
+        <Button onClick={() => navigate('/cliente/mis-clases')} style={{ marginTop: '1.5rem' }}>
+          Ir a Mis Clases
         </Button>
       </div>
     )
   }
 
   return (
-    <div className="detalle-clase">
+    <div className="detalle-clase" style={{ animation: 'fadeIn 0.3s ease' }}>
       <button onClick={() => navigate('/cliente/clases')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
         <ArrowLeft size={18} />
         Volver a Clases
@@ -163,16 +174,16 @@ export default function DetalleClase() {
       </div>
 
       {!disponible && (
-        <div className="reservation-closed-banner cancelled">
+        <div className="inscripcion-closed-banner cancelled">
           <AlertTriangle size={16} />
-          <span>Esta clase ya no está disponible para reserva</span>
+          <span>Esta clase ya no está disponible</span>
         </div>
       )}
 
       {holdExpired && (
-        <div className="reservation-closed-banner cancelled">
+        <div className="inscripcion-closed-banner cancelled">
           <Timer size={16} />
-          <span>Tiempo de reserva agotado. Selecciona un asiento nuevamente.</span>
+          <span>El tiempo para completar tu inscripción expiró.</span>
         </div>
       )}
 
@@ -186,7 +197,6 @@ export default function DetalleClase() {
         </div>
         <div className="instructor-info">
           <h3>{clase.instructor}</h3>
-          <p>Instructor/a de {clase.categoria}</p>
           <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
             <span style={{ fontWeight: 500 }}>Temática:</span> {clase.tematica || 'LIBRE'}
           </div>
@@ -271,15 +281,46 @@ export default function DetalleClase() {
             </div>
           )}
 
+          <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem', marginTop: '0.5rem' }}>
+            Tu asiento será reservado temporalmente por 5 minutos.
+          </p>
+
           <Button
-            className="btn-reservar"
+            className="btn-inscribir"
             onClick={handlePagar}
             disabled={!selectedSeat || !metodoPago || holdActive || holdExpired}
           >
-            {holdActive ? 'Procesando...' : 'Pagar Reserva'}
+            {holdActive ? 'Procesando...' : 'Pagar e inscribirme'}
           </Button>
         </>
       )}
+
+      <Modal isOpen={showResumenModal} onClose={handleCancelarInscripcion} title="Confirmar inscripción">
+        <p className="modal-subtitle">Revisa los datos antes de confirmar</p>
+        <div className="resumen-detalle">
+          <div className="resumen-row">
+            <span className="resumen-label">Clase</span>
+            <span className="resumen-value">{clase.categoria} · {clase.instructor}</span>
+          </div>
+          <div className="resumen-row">
+            <span className="resumen-label">Asiento</span>
+            <span className="resumen-value">#{selectedSeat?.numero}</span>
+          </div>
+          <div className="resumen-row">
+            <span className="resumen-label">Pago</span>
+            <span className="resumen-value">
+              {metodoPago === 'yape'
+                ? `Yape (${user?.telefono || '—'})`
+                : 'Créditos (1)'
+              }
+            </span>
+          </div>
+        </div>
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={handleCancelarInscripcion}>Cancelar</Button>
+          <Button onClick={handleConfirmarInscripcion}>Confirmar</Button>
+        </div>
+      </Modal>
     </div>
   )
 }

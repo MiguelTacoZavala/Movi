@@ -67,7 +67,7 @@ export default function Clientes() {
         <CreditCard size={14} className="icon-muted" /> {val}
       </span>
     )},
-    { key: 'reservas', label: 'Reservas', render: (val) => (
+    { key: 'reservas', label: 'Clases', render: (val) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
         <Calendar size={14} className="icon-muted" /> {val}
       </span>
@@ -117,7 +117,7 @@ export default function Clientes() {
             <p><strong>Email:</strong> {selectedCliente.email}</p>
             <p><strong>Teléfono:</strong> {selectedCliente.telefono}</p>
             <p><strong>Créditos:</strong> {selectedCliente.creditos}</p>
-            <p><strong>Reservas realizadas:</strong> {selectedCliente.reservas}</p>
+            <p><strong>Clases realizadas:</strong> {selectedCliente.reservas}</p>
             <p>
               <strong>Estado:</strong>{' '}
               <span className={`status-badge ${selectedCliente.estado === 'Activo' ? 'status-active' : 'status-inactive'}`}>

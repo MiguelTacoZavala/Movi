@@ -20,7 +20,7 @@ export default function Table({ columns, data, emptyMessage = 'No hay datos disp
           </thead>
           <tbody>
             {data.map((row, rowIndex) => (
-              <tr key={row.id || rowIndex}>
+              <tr key={row.id || rowIndex} style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${rowIndex * 0.04}s` }}>
                 {columns.map((col, colIndex) => (
                   <td key={colIndex}>
                     {col.render ? col.render(row[col.key], row) : row[col.key]}

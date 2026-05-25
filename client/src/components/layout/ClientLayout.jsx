@@ -1,15 +1,22 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Music, Calendar, User, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import '../../App.css'
 
 export default function ClientLayout() {
   const { user, logout } = useAuth()
+  const { theme } = useTheme()
   const navigate = useNavigate()
+  const location = useLocation()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   const handleLogout = () => {
     logout()
@@ -44,7 +51,9 @@ export default function ClientLayout() {
       </Modal>
 
       <main className="client-content">
-        <Outlet />
+        <div className="page-fade-in" key={location.pathname}>
+          <Outlet />
+        </div>
       </main>
 
       <nav className="client-nav">
@@ -56,9 +65,9 @@ export default function ClientLayout() {
           <Music size={20} />
           <span>Clases</span>
         </NavLink>
-        <NavLink to="/cliente/mis-reservas" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
+        <NavLink to="/cliente/mis-clases" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <Calendar size={20} />
-          <span>Reservas</span>
+          <span>Mis Clases</span>
         </NavLink>
         <NavLink to="/cliente/perfil" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <User size={20} />

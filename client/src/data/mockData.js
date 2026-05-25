@@ -428,7 +428,7 @@ const demoClases = [
 ]
 mockClasesGeneradas.push(...demoClases)
 
-let mockReservas = []
+let mockInscripciones = []
 let mockCreditos = []
 let mockNotificaciones = []
 
@@ -454,15 +454,15 @@ function setTematica(claseId, nuevaTematica) {
   }
 }
 
-function addReserva(data) {
-  const nuevaReserva = {
+function addInscripcion(data) {
+  const nuevaInscripcion = {
     id: Date.now(),
     ...data,
     codigoPago: generarCodigoPago(),
     createdAt: new Date().toISOString(),
   }
-  mockReservas.push(nuevaReserva)
-  return nuevaReserva
+  mockInscripciones.push(nuevaInscripcion)
+  return nuevaInscripcion
 }
 
 export {
@@ -481,7 +481,7 @@ export {
   categorias,
   mockHorariosSemanales,
   mockClasesGeneradas,
-  mockReservas,
+  mockInscripciones,
   mockCreditos,
   mockNotificaciones,
   DIAS_SEMANA,
@@ -493,7 +493,7 @@ export {
   formatFechaBonita,
   getMonday,
   setTematica,
-  addReserva,
+  addInscripcion,
   generarCodigoPago,
   nextHorarioId,
   nextClaseId,

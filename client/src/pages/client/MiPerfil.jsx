@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { User, Calendar } from 'lucide-react'
+import { User, Calendar, Moon, Sun } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Input from '../../components/common/Input'
@@ -8,14 +9,15 @@ import '../../App.css'
 
 export default function MiPerfil() {
   const { user, updateUser } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const [modalOpen, setModalOpen] = useState(false)
   const [editData, setEditData] = useState({ nombres: '', apellidos: '', telefono: '' })
 
   const mockStats = {
     creditos: 5,
-    totalReservas: 12,
+    totalClases: 12,
     clasesAsistidas: 8,
-    proximasReservas: 3,
+    proximasClases: 3,
   }
 
   const mockHistorial = [
@@ -111,6 +113,35 @@ export default function MiPerfil() {
         Editar Perfil
       </Button>
 
+      <div className="client-card" style={{ marginBottom: '1rem' }}>
+        <div className="client-card-title">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {theme === 'dark' ? <Moon size={20} className="icon-primary" /> : <Sun size={20} className="icon-primary" />}
+            Preferencias
+          </div>
+        </div>
+        <div className="client-card-content">
+          <div
+            onClick={toggleTheme}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Tema oscuro</span>
+            <div style={{
+              width: 44, height: 24, borderRadius: 12, padding: 2,
+              background: theme === 'dark' ? 'var(--success)' : 'var(--gray-300)',
+              transition: 'background 0.2s ease', position: 'relative',
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: 2,
+                left: theme === 'dark' ? 22 : 2,
+                transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="client-card">
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -148,7 +179,7 @@ export default function MiPerfil() {
           </div>
         </div>
         <div className="client-card-content">
-          {mockHistorial.map(item => (
+          {mockHistorial.map((item, idx) => (
             <div key={item.id} style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -157,6 +188,8 @@ export default function MiPerfil() {
               background: 'var(--gray-50)',
               borderRadius: '8px',
               marginBottom: '0.5rem',
+              animation: 'fadeInUp 0.35s ease both',
+              animationDelay: `${idx * 0.08}s`,
             }}>
               <div>
                 <div style={{ fontWeight: 500, fontSize: '0.95rem' }}>{item.clase}</div>

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import AdminLayout from './components/layout/AdminLayout'
 import ClientLayout from './components/layout/ClientLayout'
 import Login from './pages/admin/Login'
@@ -12,7 +13,7 @@ import Clientes from './pages/admin/Clientes'
 import ClientDashboard from './pages/client/Dashboard'
 import ClasesDisponibles from './pages/client/ClasesDisponibles'
 import DetalleClase from './pages/client/DetalleClase'
-import MisReservas from './pages/client/MisReservas'
+import MisClases from './pages/client/MisClases'
 import MiPerfil from './pages/client/MiPerfil'
 import Registro from './pages/client/Registro'
 import InstructorLayout from './components/layout/InstructorLayout'
@@ -27,8 +28,9 @@ import './App.css'
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
@@ -50,7 +52,7 @@ function App() {
             <Route path="dashboard" element={<ClientDashboard />} />
             <Route path="clases" element={<ClasesDisponibles />} />
             <Route path="clases/:id" element={<DetalleClase />} />
-            <Route path="mis-reservas" element={<MisReservas />} />
+            <Route path="mis-clases" element={<MisClases />} />
             <Route path="perfil" element={<MiPerfil />} />
           </Route>
           
@@ -67,8 +69,9 @@ function App() {
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

@@ -240,8 +240,8 @@ export default function Clases() {
       >
         {cancelTargetClase && (
           <>
-            <div className="cancel-reserva-preview">
-              <div className="cancel-reserva-info">
+            <div className="cancel-inscripcion-preview">
+              <div className="cancel-inscripcion-info">
                 <strong>{cancelTargetClase.categoria}</strong>
                 <span>{cancelTargetClase.fecha} — {formatHoraAMPM(cancelTargetClase.hora_inicio)} a {formatHoraAMPM(cancelTargetClase.hora_fin)}</span>
                 <span>Instructor/a: {cancelTargetClase.instructor}</span>

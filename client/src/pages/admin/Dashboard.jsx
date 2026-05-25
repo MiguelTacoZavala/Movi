@@ -21,7 +21,7 @@ export default function Dashboard() {
         {stats.map((stat, index) => {
           const Icon = stat.icon
           return (
-            <div className="stat-card" key={index}>
+            <div className="stat-card" key={index} style={{ animation: 'fadeInUp 0.35s ease both', animationDelay: `${index * 0.08}s` }}>
               <div className="stat-icon">
                 <Icon size={24} />
               </div>
@@ -53,8 +53,8 @@ export default function Dashboard() {
              </tr>
            </thead>
            <tbody>
-             {clasesHoy.map(clase => (
-               <tr key={clase.id}>
+              {clasesHoy.map((clase, idx) => (
+                <tr key={clase.id} style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${idx * 0.04}s` }}>
                  <td>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                      <Music size={16} className="icon-primary" />

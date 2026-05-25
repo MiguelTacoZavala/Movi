@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { User, Smartphone, CreditCard, Lock, Eye, EyeOff, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
@@ -23,6 +23,12 @@ export default function Registro() {
   const [serverError, setServerError] = useState('')
   const [success, setSuccess] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const prev = document.documentElement.dataset.theme
+    document.documentElement.dataset.theme = 'light'
+    return () => { document.documentElement.dataset.theme = prev }
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target

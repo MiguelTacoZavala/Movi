@@ -9,7 +9,7 @@
   --primary-text: #5A1E1E;
   --primary-medium: #B85A6A;
   --primary-soft: #FEF2F2;
-  
+
   /* Grises */
   --white: #ffffff;
   --gray-50: #f9fafb;
@@ -22,27 +22,140 @@
   --gray-700: #374151;
   --gray-800: #1f2937;
   --gray-900: #111827;
-  
-  /* Estados derivados de la paleta base */
-  --success: var(--accent);
-  --success-text: var(--primary-text);
-  --danger: var(--primary);
-  --danger-text: var(--primary-text);
-  --warning: var(--primary-dark);
-  --warning-text: var(--primary-text);
+
+  /* Layout (usados por body, cards, etc.) */
+  --bg: #ffffff;
+  --bg-card: #ffffff;
+  --bg-soft: var(--gray-50);
+  --text-primary: var(--gray-900);
+  --text-secondary: var(--gray-500);
+  --border: var(--gray-200);
+
+  /* Estados independientes (ya no derivados de la paleta) */
+  --success: #22c55e;
+  --success-text: #ffffff;
+  --success-bg: #f0fdf4;
+  --danger: #ef4444;
+  --danger-text: #ffffff;
+  --danger-bg: #fef2f2;
+  --warning: #f59e0b;
+  --warning-text: #92400e;
+  --warning-bg: #fffbeb;
   --info: var(--primary-medium);
   --info-text: var(--primary-text);
-  
+
   /* Sombras */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  
+
   /* Transiciones */
   --transition: all 0.2s ease;
   --transition-slow: all 0.3s ease;
+}
+
+[data-theme="dark"] {
+  --primary: #3D2030;
+  --primary-dark: #4A2538;
+  --secondary: #2E1A20;
+  --accent: #E8C97A;
+  --primary-text: #E8D0D0;
+  --primary-medium: #E8A0B0;
+  --primary-soft: #2A1A20;
+
+  --white: #2A2424;
+  --gray-50: #342C2C;
+  --gray-100: #1A1414;
+  --gray-200: #3D3535;
+  --gray-300: #4A4040;
+  --gray-400: #7A6A6A;
+  --gray-500: #B0A0A0;
+  --gray-600: #C8B8B8;
+  --gray-700: #DDD0D0;
+  --gray-800: #E8E0E0;
+  --gray-900: #F0EAEA;
+
+  --bg: #1A1414;
+  --bg-card: #2A2424;
+  --bg-soft: #342C2C;
+  --text-primary: #F0EAEA;
+  --text-secondary: #B0A0A0;
+  --border: #3D3535;
+
+  --success: #4ADE80;
+  --success-text: #ffffff;
+  --success-bg: #1A2E1A;
+  --danger: #F87171;
+  --danger-text: #ffffff;
+  --danger-bg: #2E1A1A;
+  --warning: #FBBF24;
+  --warning-text: #F0EAEA;
+  --warning-bg: #2E2A1A;
+  --info: var(--primary-medium);
+  --info-text: #F0EAEA;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #5A1E1E 0%, #842A3B 100%);
+  color: #F0EAEA;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: linear-gradient(135deg, #6B2530 0%, #6B2730 100%);
+  color: #F0EAEA;
+}
+
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-secondary:hover {
+  color: #3D2030;
+}
+
+[data-theme="dark"] .btn-danger,
+[data-theme="dark"] .btn-danger:hover {
+  color: #F0EAEA;
+}
+
+[data-theme="dark"] .status-active {
+  color: #3D2030;
+}
+
+[data-theme="dark"] .status-info {
+  color: #3D2030;
+}
+
+[data-theme="dark"] .seat.disponible {
+  background: #1A3A2A;
+  border-color: #4ADE80;
+  color: #4ADE80;
+}
+
+[data-theme="dark"] .seat.disponible:hover {
+  background: #2A4A3A;
+}
+
+[data-theme="dark"] .seat-legend-dot.disponible {
+  background: #1A3A2A;
+  border-color: #4ADE80;
+}
+
+[data-theme="dark"] .seat.disponible.selected,
+[data-theme="dark"] .seat.disponible.selected:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1A1414;
+}
+
+[data-theme="dark"] .seat-legend-dot.seleccionado {
+  background: var(--accent);
+  border-color: #B8A050;
 }
 
 * {
@@ -673,6 +786,12 @@ body {
   font-size: 0.875rem;
 }
 
+.btn-filter-active,
+.btn-filter-active:hover {
+  background-color: var(--primary-text);
+  color: var(--white);
+}
+
 .btn-icon {
   padding: 0.5rem;
   border-radius: 8px;
@@ -948,7 +1067,7 @@ body {
 }
 
 .horario-grid-row.pasado {
-  background: #fef2f2;
+  background: var(--danger-bg);
   color: var(--gray-400);
   cursor: not-allowed;
 }
@@ -1163,7 +1282,38 @@ body {
   justify-content: flex-end;
 }
 
-.cancel-reserva-preview {
+.resumen-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.resumen-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.resumen-row:last-child {
+  border-bottom: none;
+}
+
+.resumen-label {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+}
+
+.resumen-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  text-align: right;
+}
+
+.cancel-inscripcion-preview {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -1173,7 +1323,7 @@ body {
   margin-bottom: 1rem;
 }
 
-.cancel-reserva-photo {
+.cancel-inscripcion-photo {
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -1181,18 +1331,18 @@ body {
   border: 2px solid var(--gray-200);
 }
 
-.cancel-reserva-info {
+.cancel-inscripcion-info {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
 }
 
-.cancel-reserva-info strong {
+.cancel-inscripcion-info strong {
   font-size: 0.95rem;
   color: var(--gray-900);
 }
 
-.cancel-reserva-info span {
+.cancel-inscripcion-info span {
   font-size: 0.8rem;
   color: var(--gray-500);
 }
@@ -1747,8 +1897,8 @@ body {
   gap: 0.5rem;
 }
 
-/* Reservation Cards */
-.reserva-card {
+/* Clase Cards */
+.clase-card {
   background: var(--white);
   border-radius: 12px;
   padding: 1rem;
@@ -1757,33 +1907,33 @@ body {
   border-left: 4px solid transparent;
 }
 
-.reserva-card.proxima {
+.clase-card.proxima {
   border-left-color: var(--accent);
 }
 
-.reserva-card.pasada {
+.clase-card.pasada {
   border-left-color: var(--gray-400);
   opacity: 0.8;
 }
 
-.reserva-card.cancelada {
+.clase-card.cancelada {
   border-left-color: var(--primary);
 }
 
-.reserva-card-header {
+.clase-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
 }
 
-.reserva-card-title {
+.clase-card-title {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--gray-900);
 }
 
-.reserva-card-datetime {
+.clase-card-datetime {
   display: flex;
   gap: 1rem;
   margin-bottom: 0.75rem;
@@ -2299,8 +2449,8 @@ body {
    DETAILLE CLASE PAGE
    ============================== */
 
-/* Reservation status banners */
-.reservation-closed-banner {
+/* Inscripcion status banners */
+.inscripcion-closed-banner {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -2314,10 +2464,10 @@ body {
   border: 1px solid var(--gray-200);
 }
 
-.reservation-closed-banner.cancelled {
-  background: #fef2f2;
-  color: #991b1b;
-  border-color: #fecaca;
+.inscripcion-closed-banner.cancelled {
+  background: var(--danger-bg);
+  color: var(--gray-700);
+  border-color: var(--danger);
 }
 
 .detalle-clase {
@@ -2493,7 +2643,7 @@ body {
   color: var(--gray-500);
 }
 
-.btn-reservar {
+.btn-inscribir {
   width: 100%;
   padding: 1rem;
   font-size: 1.1rem;
@@ -2548,6 +2698,10 @@ body {
 
 .category-active-header {
   animation: fadeInUp 0.3s ease;
+}
+
+.page-fade-in {
+  animation: fadeIn 0.3s ease;
 }
 
 /* Slim card active tap feedback */
@@ -2638,6 +2792,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  outline: none;
   transition: var(--transition);
   background: var(--white);
   color: var(--gray-700);
@@ -2671,10 +2826,10 @@ body {
   cursor: not-allowed;
 }
 
-.seat.selected {
-  background: #fca5a5;
-  border-color: #fca5a5;
-  color: #991b1b;
+.seat.disponible.selected {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--danger-text);
   box-shadow: none;
   transform: scale(1.05);
   z-index: 1;
@@ -2688,10 +2843,10 @@ body {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning);
   border-radius: 10px;
-  color: #92400e;
+  color: var(--warning-text);
   font-size: 0.9rem;
   margin-bottom: 1rem;
   animation: fadeIn 0.3s ease;
@@ -2713,7 +2868,7 @@ body {
 
 /* ── Button disabled ── */
 
-.btn-reservar:disabled {
+.btn-inscribir:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -2721,10 +2876,17 @@ body {
 /* ── Form error ── */
 
 .form-error {
-  color: #dc2626;
+  color: var(--danger);
   font-size: 0.8rem;
   margin-top: 0.25rem;
   margin-bottom: 0.5rem;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
 }
 
 /* ── Clase info summary (participant modal) ── */

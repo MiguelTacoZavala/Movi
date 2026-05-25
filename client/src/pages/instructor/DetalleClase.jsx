@@ -139,7 +139,7 @@ export default function DetalleClase() {
             </p>
           ) : (
             participantes.map((p, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${i * 0.05}s` }}>
                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-medium)', fontWeight: 600, fontSize: '0.85rem' }}>
                   {p.nombre.charAt(0)}
                 </div>

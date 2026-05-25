@@ -28,8 +28,8 @@ export default function Horarios() {
           <p>No tienes horarios asignados</p>
         </div>
       ) : (
-        horarios.map(h => (
-          <div key={h.id} className="client-card" style={{ marginBottom: '0.75rem' }}>
+        horarios.map((h, idx) => (
+          <div key={h.id} className="client-card" style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}>
             <div className="client-card-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--gray-900)' }}>

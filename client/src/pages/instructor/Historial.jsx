@@ -26,8 +26,8 @@ export default function Historial() {
           <p>No hay clases anteriores registradas</p>
         </div>
       ) : (
-        historial.map(clase => (
-          <div key={clase.id} className="client-card" style={{ marginBottom: '0.75rem' }}>
+        historial.map((clase, idx) => (
+          <div key={clase.id} className="client-card" style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}>
             <div className="client-card-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--gray-900)' }}>
