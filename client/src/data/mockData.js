@@ -9,6 +9,8 @@ function salonId(nombre) {
   return SALONES.find(s => s.nombre === nombre)?.id || 1
 }
 
+const PRECIOS_CLASE = { Salsa: 25, Bachata: 30, Tango: 35 }
+
 const CATEGORIAS = [
   {
     nombre: 'Salsa',
@@ -568,6 +570,7 @@ function addInscripcion(data) {
 export {
   SALONES,
   CATEGORIAS,
+  PRECIOS_CLASE,
   mockClases,
   diasSemana,
   isWithinReservationWindow,
