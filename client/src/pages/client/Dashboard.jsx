@@ -9,12 +9,13 @@ function generarFechaRelativa(dias) {
 }
 
 const mockClaseProxima = {
-  id: 1,
+  id: 9005,
   clase: 'Salsa',
   fecha: generarFechaRelativa(1),
   hora_inicio: '10:00',
   hora_fin: '11:30',
-  instructor: 'María García'
+  instructor: 'María García',
+  estado: 'CONFIRMADA',
 }
 
 const mockClasesDestacadas = [
@@ -35,12 +36,12 @@ export default function Dashboard() {
 
       <div className="client-stats">
         <div className="client-stat-card">
-          <div className="client-stat-value">5</div>
+          <div className="client-stat-value">2</div>
           <div className="client-stat-label">Créditos</div>
         </div>
         <div className="client-stat-card">
-          <div className="client-stat-value">3</div>
-          <div className="client-stat-label">Clases Pendientes</div>
+          <div className="client-stat-value">2</div>
+          <div className="client-stat-label">Clases Próximas</div>
         </div>
       </div>
 

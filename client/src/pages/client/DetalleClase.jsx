@@ -256,7 +256,7 @@ export default function DetalleClase() {
               >
                 <CreditCard size={32} />
                 <span>Usar Créditos</span>
-                <small>5 disponibles</small>
+                <small>2 disponibles</small>
               </div>
               <div
                 className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive ? 'disabled' : ''}`}
