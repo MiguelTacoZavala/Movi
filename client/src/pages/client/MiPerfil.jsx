@@ -14,7 +14,7 @@ export default function MiPerfil() {
   const [editData, setEditData] = useState({ nombres: '', apellidos: '', telefono: '' })
 
   const mockStats = {
-    creditos: 5,
+    creditos: 2,
     totalClases: 12,
     clasesAsistidas: 8,
     proximasClases: 3,
