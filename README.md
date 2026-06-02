@@ -1,50 +1,87 @@
-# Movi — Flujo de reserva del cliente
+# Movi
 
 Sistema de reserva y gestión de clases de baile.
 
-## 1. Ingreso al sistema
+- **Cliente**: React SPA (`client/`) — Vite 8 + React 19 + React Router 7
+- **Servidor**: Express 5 + CORS (`server/`) — esqueleto, sin base de datos
+- **Datos**: 100% mock (`client/src/data/mockData.js`), todo en `localStorage`
 
-**Iniciar sesión** (`/login`): DNI `12345678` o teléfono `999111222`, contraseña `cliente123`.
+## Quick start
 
-**Registrarse** (`/registro`): completa nombres, apellidos, DNI, teléfono y contraseña. Guarda en `localStorage` e inicia sesión automáticamente.
+```bash
+# Cliente (http://localhost:5173)
+cd client && npm install && npm run dev
 
-## 2. Dashboard (`/cliente/dashboard`)
+# Servidor (http://localhost:3000)
+cd server && npm install && node index.js
+```
 
-Saludo personalizado, próxima clase reservada (si existe), clases destacadas.
+## Credenciales de acceso
 
-## 3. Elegir clase (`/cliente/clases`)
+| Rol       | Identificador                | Contraseña        | Redirección                |
+|-----------|------------------------------|-------------------|----------------------------|
+| Admin     | `admin@dance.com`            | `admin123`        | `/admin/dashboard`         |
+| Instructor| `maria@dance.com`            | `instructor123`   | `/instructor/dashboard`    |
+| Cliente   | DNI `12345678` / telf. `999111222` | `cliente123` | `/cliente/dashboard`    |
 
-1. Seleccionar categoría (Salsa, Bachata, Tango…).
-2. Carrusel de 6 días (lun–sáb). Hoy seleccionado. Pasados deshabilitados.
-3. Clases agrupadas por franja (mañana, tarde, nocturnas). Cada tarjeta muestra instructor, hora, duración, cupos.
+Los clientes también pueden registrarse solos en `/registro`.
 
-## 4. Detalle de clase (`/cliente/clases/:id`)
+## Páginas
 
-- **Info**: categoría, instructor, foto, temática (default `LIBRE`).
-- **Mapa de asientos**: cuadrícula. Verde = disponible, gris = ocupado. Al tocar cambia a color de selección.
-- **Pago**: Yape (muestra el teléfono del cliente) o Créditos (simulado, 5 disponibles).
-- Botón **"Pagar Reserva"**: se habilita solo con asiento + método de pago.
+### Admin — sidebar (escritorio)
 
-## 5. Modal de confirmación
+| Ruta | Página | Descripción |
+|------|--------|-------------|
+| `/admin/dashboard` | Dashboard | Resumen de ingresos, clases en riesgo, clases de hoy |
+| `/admin/clases` | Clases | Clases generadas desde horarios, grilla de asientos |
+| `/admin/horarios` | Horarios | CRUD de horarios semanales (formulario modal) |
+| `/admin/instructores` | Instructores | CRUD con foto |
+| `/admin/categorias` | Categorías | CRUD |
+| `/admin/clientes` | Clientes | Lista de clientes registrados |
 
-Resumen: clase, asiento #, método de pago. Botones **Cancelar** (vuelve a selección) y **Confirmar**.
+### Cliente — bottom nav (móvil)
 
-## 6. Procesamiento
+| Ruta | Página | Descripción |
+|------|--------|-------------|
+| `/cliente/dashboard` | Inicio | Saludo, próxima clase, clases destacadas |
+| `/cliente/clases` | Clases | Selector de categoría → carrusel de 6 días → grilla de clases |
+| `/cliente/clases/:id` | Detalle | Mapa de asientos, método de pago, "Pagar Reserva" |
+| `/cliente/mis-clases` | Mis Clases | Reservas activas/pasadas, comprobante, cancelación |
+| `/cliente/perfil` | Perfil | Editar datos, toggle de tema oscuro |
 
-Al confirmar: contador de **5 minutos** + 2.5s de procesamiento simulado. Si expira, se resetea la selección.
+### Instructor — bottom nav (móvil)
 
-## 7. Pantalla de éxito
+| Ruta | Página | Descripción |
+|------|--------|-------------|
+| `/instructor/dashboard` | Inicio | Siguiente clase + clases de hoy |
+| `/instructor/horarios` | Horarios | Horario semanal en tarjetas |
+| `/instructor/clases` | Clases | Próximas clases, detalle de participantes |
+| `/instructor/clases/:id` | Detalle | Lista de participantes, editar temática |
+| `/instructor/historial` | Historial | Clases pasadas (FINALIZADA / CANCELADA) |
+| `/instructor/perfil` | Perfil | Editar datos, toggle de tema oscuro |
 
-Icono verde, resumen completo, **código de pago** (`MOV-XXXXXX`). Botón **"Ir a Mis Reservas"**.
+## Flujo de reserva
 
-## 8. Mis Reservas (`/cliente/mis-reservas`)
+1. El cliente selecciona una clase → escoge asiento + método de pago (Yape o Créditos)
+2. "Pagar Reserva" abre un modal de confirmación
+3. "Confirmar" inicia un hold de **5 minutos** + procesamiento simulado de 2.5s
+4. Si el hold expira, la selección se resetea
+5. Al completarse, se muestra pantalla de éxito con código de pago (`MOV-XXXXXX`)
 
-Lista filtrable (Próximas / Todas). Cada tarjeta → modal comprobante con código, método de pago, temática. Se puede cancelar desde el botón en cada tarjeta.
+## Comandos del cliente
+
+```bash
+npm run dev       # Vite dev (hot reload)
+npm run build     # Build producción a dist/
+npm run lint      # ESLint (flat config)
+npm run preview   # Vista previa de dist/
+```
 
 ## Notas técnicas
 
-- Todo es front-end puro (mock). Sin base de datos.
-- Reservas en memoria (`mockReservas`), no persisten al recargar.
-- Hold timer local de 5 minutos. Al expirar resetea selección.
-- Código de pago: `generarCodigoPago()` → `MOV-` + 6 caracteres.
-- Tema oscuro desde Mi Perfil. No afecta el flujo.
+- Sin base de datos — todo es mock, persiste solo en `localStorage`
+- Sin framework de tests, sin formatter
+- React 19 Compiler habilitado vía `@rolldown/plugin-babel` (impacta rendimiento de dev/build)
+- `index.css` eliminado — `main.jsx` importa solo `App.jsx`
+- Tema oscuro desde Perfil (cliente/instructor). Admin siempre en modo claro
+- `server/database/MOVI_bd.sql` — esquema MySQL de referencia para integración futura
