@@ -115,7 +115,15 @@ Propósito: Tipos de baile ofrecidos (Salsa, Bachata, Tango, etc.).
 |---------|------|---------------|-------------|
 | id | INT | PK AUTO_INCREMENT | |
 | nombre | VARCHAR(100) | NOT NULL UNIQUE | |
-| descripcion | TEXT | NULL | |
+| descripcion | TEXT | NULL |
+
+**Datos iniciales:**
+```sql
+INSERT INTO categorias_baile (nombre, descripcion) VALUES
+('Salsa',   'Ritmo y energía'),
+('Bachata', 'Romántica y sensual'),
+('Tango',   'Pasión y elegancia');
+```
 
 ---
 

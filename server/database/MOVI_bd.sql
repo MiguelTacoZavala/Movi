@@ -385,3 +385,9 @@ VALUES
 ('ADMIN'),
 ('CLIENTE'),
 ('INSTRUCTOR');
+
+INSERT INTO categorias_baile (nombre, descripcion)
+VALUES
+('Salsa',   'Ritmo y energía'),
+('Bachata', 'Romántica y sensual'),
+('Tango',   'Pasión y elegancia');
