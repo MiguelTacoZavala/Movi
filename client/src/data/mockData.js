@@ -9,6 +9,8 @@ function salonId(nombre) {
   return SALONES.find(s => s.nombre === nombre)?.id || 1
 }
 
+const PRECIOS_CLASE = { Salsa: 25, Bachata: 30, Tango: 35 }
+
 const CATEGORIAS = [
   {
     nombre: 'Salsa',
@@ -279,7 +281,7 @@ const mockHorariosSemanales = [
     hora_inicio: '10:00',
     hora_fin: '11:30',
     capacidad_maxima: 30,
-    minimo_participantes: 10,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -292,7 +294,7 @@ const mockHorariosSemanales = [
     hora_inicio: '10:00',
     hora_fin: '11:30',
     capacidad_maxima: 30,
-    minimo_participantes: 10,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -305,7 +307,7 @@ const mockHorariosSemanales = [
     hora_inicio: '10:00',
     hora_fin: '11:30',
     capacidad_maxima: 30,
-    minimo_participantes: 10,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -318,7 +320,7 @@ const mockHorariosSemanales = [
     hora_inicio: '14:00',
     hora_fin: '15:30',
     capacidad_maxima: 20,
-    minimo_participantes: 8,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -331,7 +333,7 @@ const mockHorariosSemanales = [
     hora_inicio: '14:00',
     hora_fin: '15:30',
     capacidad_maxima: 20,
-    minimo_participantes: 8,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -344,7 +346,7 @@ const mockHorariosSemanales = [
     hora_inicio: '18:00',
     hora_fin: '19:30',
     capacidad_maxima: 15,
-    minimo_participantes: 5,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -357,7 +359,7 @@ const mockHorariosSemanales = [
     hora_inicio: '18:00',
     hora_fin: '19:30',
     capacidad_maxima: 15,
-    minimo_participantes: 5,
+    minimo_participantes: 7,
     activo: true,
   },
 ]
@@ -428,8 +430,108 @@ const demoClases = [
 ]
 mockClasesGeneradas.push(...demoClases)
 
-let mockInscripciones = []
-let mockCreditos = []
+let mockInscripciones = [
+  {
+    id: 9001,
+    clienteId: '12345678',
+    claseId: 901,
+    categoria: 'Salsa',
+    instructor: 'María García',
+    fecha: addDays(hoy, -7),
+    hora_inicio: '10:00',
+    hora_fin: '11:30',
+    asiento: 5,
+    metodoPago: 'yape',
+    tematica: 'LIBRE',
+    estado: 'CONFIRMADA',
+    codigoPago: 'MOV-XK9T21',
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 9002,
+    clienteId: '12345678',
+    claseId: 902,
+    categoria: 'Bachata',
+    instructor: 'Carlos López',
+    fecha: addDays(hoy, -3),
+    hora_inicio: '14:00',
+    hora_fin: '15:30',
+    asiento: 12,
+    metodoPago: 'creditos',
+    tematica: 'LIBRE',
+    estado: 'CONFIRMADA',
+    codigoPago: 'MOV-BQ4R77',
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 9005,
+    clienteId: '12345678',
+    claseId: 905,
+    categoria: 'Salsa',
+    instructor: 'María García',
+    fecha: addDays(hoy, 1),
+    hora_inicio: '10:00',
+    hora_fin: '11:30',
+    asiento: 7,
+    metodoPago: 'yape',
+    tematica: 'LIBRE',
+    estado: 'CONFIRMADA',
+    codigoPago: 'MOV-SA1C44',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 9006,
+    clienteId: '12345678',
+    claseId: 906,
+    categoria: 'Tango',
+    instructor: 'Ana Martínez',
+    fecha: addDays(hoy, 5),
+    hora_inicio: '18:00',
+    hora_fin: '19:30',
+    asiento: 2,
+    metodoPago: 'creditos',
+    tematica: 'LIBRE',
+    estado: 'PENDIENTE',
+    codigoPago: 'MOV-TG7P11',
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 9003,
+    clienteId: '12345678',
+    claseId: 903,
+    categoria: 'Tango',
+    instructor: 'Ana Martínez',
+    fecha: addDays(hoy, -14),
+    hora_inicio: '18:00',
+    hora_fin: '19:30',
+    asiento: 3,
+    metodoPago: 'yape',
+    tematica: 'LIBRE',
+    estado: 'CANCELADA',
+    codigoPago: 'MOV-TN2P55',
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 9004,
+    clienteId: '12345678',
+    claseId: 904,
+    categoria: 'Salsa',
+    instructor: 'María García',
+    fecha: addDays(hoy, -5),
+    hora_inicio: '10:00',
+    hora_fin: '11:30',
+    asiento: 8,
+    metodoPago: 'yape',
+    tematica: 'LIBRE',
+    estado: 'CANCELADA',
+    codigoPago: 'MOV-SL9K33',
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+]
+let mockCreditos = [
+  { id: 1, clienteId: '12345678', claseId: 903, usado: false },
+  { id: 2, clienteId: '12345678', claseId: 904, usado: false },
+]
 let mockNotificaciones = []
 
 function formatFechaBonita(fechaStr) {
@@ -468,6 +570,7 @@ function addInscripcion(data) {
 export {
   SALONES,
   CATEGORIAS,
+  PRECIOS_CLASE,
   mockClases,
   diasSemana,
   isWithinReservationWindow,

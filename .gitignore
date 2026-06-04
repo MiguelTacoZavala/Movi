@@ -43,3 +43,7 @@ vite.svg
 # Archivos generados
 *.tsbuildinfo
 AGENTS.md
+CLAUDE.md
+evaluacion.md
+
+vercel.json

@@ -7,7 +7,7 @@ import Input from '../../components/common/Input'
 import '../../App.css'
 
 const mockClientes = [
-  { id: 1, nombres: 'Juan Pérez', email: 'juan@email.com', dni: '12345678', telefono: '999111222', creditos: 5, reservas: 12, estado: 'Activo' },
+  { id: 1, nombres: 'Juan Pérez', email: 'juan@email.com', dni: '12345678', telefono: '999111222', creditos: 2, reservas: 12, estado: 'Activo' },
   { id: 2, nombres: 'Lucía Ramos', email: 'lucia@email.com', dni: '87654321', telefono: '999333444', creditos: 2, reservas: 8, estado: 'Activo' },
   { id: 3, nombres: 'Pedro Sánchez', email: 'pedro@email.com', dni: '11223344', telefono: '999555666', creditos: 0, reservas: 3, estado: 'Inactivo' },
 ]

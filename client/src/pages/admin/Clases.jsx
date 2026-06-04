@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
@@ -26,6 +26,8 @@ export default function Clases() {
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroInstructor, setFiltroInstructor] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const POR_PAGINA = 10
   const [selectedClase, setSelectedClase] = useState(null)
   const [participantsOpen, setParticipantsOpen] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
@@ -39,6 +41,11 @@ export default function Clases() {
       return true
     }), [clases, filtroEstado, filtroFecha, filtroInstructor]
   )
+
+  useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor])
+
+  const totalPaginas = Math.max(1, Math.ceil(filteredClases.length / POR_PAGINA))
+  const clasesPagina = filteredClases.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
 
   const columns = [
     { key: 'categoria', label: 'Clase', render: (val, row) => (
@@ -181,15 +188,31 @@ export default function Clases() {
         </div>
         <div className="stat-card">
           <h3>En Curso</h3>
-          <p style={{ color: 'var(--success-text)' }}>{clases.filter(c => c.estado === 'EN_CURSO').length}</p>
+          <p style={{ color: 'var(--info)' }}>{clases.filter(c => c.estado === 'EN_CURSO').length}</p>
         </div>
         <div className="stat-card">
           <h3>Canceladas</h3>
-          <p style={{ color: 'var(--danger-text)' }}>{clases.filter(c => c.estado === 'CANCELADA').length}</p>
+          <p style={{ color: 'var(--info)' }}>{clases.filter(c => c.estado === 'CANCELADA').length}</p>
         </div>
       </div>
 
-      <Table columns={columns} data={filteredClases} emptyMessage="No hay clases generadas" />
+      <Table columns={columns} data={clasesPagina} emptyMessage="No hay clases generadas" />
+
+      {filteredClases.length > POR_PAGINA && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', padding: '0.75rem 1rem', background: 'var(--white)', borderRadius: '10px', boxShadow: 'var(--shadow-sm)' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>
+            {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, filteredClases.length)} de {filteredClases.length} clases
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button variant="secondary" size="small" onClick={() => setPagina(p => p - 1)} disabled={pagina === 1}>
+              ← Anterior
+            </Button>
+            <Button variant="secondary" size="small" onClick={() => setPagina(p => p + 1)} disabled={pagina === totalPaginas}>
+              Siguiente →
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Modal
         isOpen={participantsOpen}

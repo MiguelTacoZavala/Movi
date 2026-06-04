@@ -139,10 +139,15 @@ export default function MisClases() {
                 <div className="clase-card-header">
                   <h3 className="clase-card-title">{inscripcion.categoria}</h3>
                   <span className={`status-badge ${
-                    inscripcion.estado === 'CONFIRMADA' ? 'status-active' : 'status-warning'
+                    inscripcion.estado === 'CONFIRMADA' ? 'status-active'
+                    : inscripcion.estado === 'CANCELADA' ? 'status-danger'
+                    : 'status-warning'
                   }`}>
                     {inscripcion.estado === 'CONFIRMADA' && <CheckCircle size={12} />}
-                    {inscripcion.estado === 'CONFIRMADA' ? 'Inscrito' : 'Pendiente'}
+                    {inscripcion.estado === 'CANCELADA' && <X size={12} />}
+                    {inscripcion.estado === 'CONFIRMADA' ? 'Confirmada'
+                      : inscripcion.estado === 'CANCELADA' ? 'Cancelada'
+                      : 'Pendiente'}
                   </span>
                 </div>
 
