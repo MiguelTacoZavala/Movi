@@ -281,7 +281,7 @@ const mockHorariosSemanales = [
     hora_inicio: '10:00',
     hora_fin: '11:30',
     capacidad_maxima: 30,
-    minimo_participantes: 10,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -294,7 +294,7 @@ const mockHorariosSemanales = [
     hora_inicio: '10:00',
     hora_fin: '11:30',
     capacidad_maxima: 30,
-    minimo_participantes: 10,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -307,7 +307,7 @@ const mockHorariosSemanales = [
     hora_inicio: '10:00',
     hora_fin: '11:30',
     capacidad_maxima: 30,
-    minimo_participantes: 10,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -320,7 +320,7 @@ const mockHorariosSemanales = [
     hora_inicio: '14:00',
     hora_fin: '15:30',
     capacidad_maxima: 20,
-    minimo_participantes: 8,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -333,7 +333,7 @@ const mockHorariosSemanales = [
     hora_inicio: '14:00',
     hora_fin: '15:30',
     capacidad_maxima: 20,
-    minimo_participantes: 8,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -346,7 +346,7 @@ const mockHorariosSemanales = [
     hora_inicio: '18:00',
     hora_fin: '19:30',
     capacidad_maxima: 15,
-    minimo_participantes: 5,
+    minimo_participantes: 7,
     activo: true,
   },
   {
@@ -359,7 +359,7 @@ const mockHorariosSemanales = [
     hora_inicio: '18:00',
     hora_fin: '19:30',
     capacidad_maxima: 15,
-    minimo_participantes: 5,
+    minimo_participantes: 7,
     activo: true,
   },
 ]
