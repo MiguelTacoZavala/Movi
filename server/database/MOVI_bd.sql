@@ -293,6 +293,7 @@ CREATE TABLE pagos (
     ) DEFAULT 'PENDIENTE',
 
     fecha_pago TIMESTAMP NULL,
+    culqi_charge_id VARCHAR(255) NULL,
 
     CONSTRAINT fk_pago_reserva
         FOREIGN KEY (reserva_id)
