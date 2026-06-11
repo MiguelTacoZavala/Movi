@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  CLIENTE
+  INSTRUCTOR
+}
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+enum EstadoClase {
+  PROGRAMADA
+  EN_CURSO
+  CANCELADA
+  FINALIZADA
+}
+
+enum EstadoReserva {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  EXPIRADA
+}
+
+enum MetodoPago {
+  yape
+  creditos
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO
+  FALLIDO
+}
+
+enum TipoNotificacion {
+  INSCRIPCION_CONFIRMADA
+  RECORDATORIO
+  CLASE_CANCELADA
+  CREDITO_GENERADO
+}
+
+model Role {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique
+  usuarios Usuario[]
+}
+
+model Usuario {
+  id        Int           @id @default(autoincrement())
+  rolId     Int
+  nombres   String
+  apellidos String
+  email     String?       @unique
+  dni       String?       @unique
+  telefono  String?       @unique
+  password  String
+  fotoUrl   String?       @map("foto_url")
+  estado    Boolean       @default(true)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  instructor    Instructor?
+  reservas      Reserva[]
+  creditos      Credito[]
+  notificaciones Notificacion[]
+  horariosCreados  HorarioSemanal[] @relation("horarioCreadoPor")
+  cancelaciones    Reserva[]        @relation("usuarioCancelador")
+
+  role Role @relation(fields: [rolId], references: [id])
+
+  @@map("usuarios")
+}
+
+model Instructor {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int      @unique
+  especialidad  String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime? @map("updated_at")
+
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  horarios      HorarioSemanal[]
+
+  @@map("instructores")
+}
+
+model CategoriaBaile {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  descripcion String?
+
+  horarios HorarioSemanal[]
+
+  @@map("categorias_baile")
+}
+
+model HorarioSemanal {
+  id                  Int      @id @default(autoincrement())
+  categoriaId         Int
+  instructorId        Int
+  diaSemana           DiaSemana @map("dia_semana")
+  horaInicio          DateTime  @map("hora_inicio")
+  horaFin             DateTime  @map("hora_fin")
+  capacidadMaxima     Int       @map("capacidad_maxima")
+  minimoParticipantes Int       @default(7) @map("minimo_participantes")
+  activo              Boolean   @default(true)
+  createdBy           Int?      @map("created_by")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime? @map("updated_at")
+
+  categoria   CategoriaBaile @relation(fields: [categoriaId], references: [id])
+  instructor  Instructor     @relation(fields: [instructorId], references: [id])
+  creadoPor   Usuario?       @relation("horarioCreadoPor", fields: [createdBy], references: [id])
+  clases      Clase[]
+
+  @@unique([instructorId, diaSemana, horaInicio, horaFin])
+  @@map("horarios_semanales")
+}
+
+model Clase {
+  id                  Int         @id @default(autoincrement())
+  horarioSemanalId    Int         @map("horario_semanal_id")
+  fecha               DateTime
+  horaInicio          DateTime    @map("hora_inicio")
+  horaFin             DateTime    @map("hora_fin")
+  capacidadMaxima     Int         @map("capacidad_maxima")
+  minimoParticipantes Int         @default(7) @map("minimo_participantes")
+  tematica            String      @default("LIBRE")
+  estado              EstadoClase @default(PROGRAMADA)
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime?   @map("updated_at")
+
+  horarioSemanal HorarioSemanal  @relation(fields: [horarioSemanalId], references: [id], onDelete: Cascade)
+  posiciones     PosicionClase[]
+  reservas       Reserva[]
+  creditos       Credito[]
+
+  @@unique([horarioSemanalId, fecha])
+  @@map("clases")
+}
+
+model PosicionClase {
+  id        Int      @id @default(autoincrement())
+  claseId   Int      @map("clase_id")
+  numero    Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  clase    Clase     @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  reservas Reserva[]
+
+  @@unique([claseId, numero])
+  @@unique([claseId, id])
+  @@map("posiciones_clase")
+}
+
+model Reserva {
+  id                Int           @id @default(autoincrement())
+  usuarioId         Int           @map("usuario_id")
+  claseId           Int           @map("clase_id")
+  posicionClaseId   Int           @map("posicion_clase_id")
+  codigoPago        String        @unique @map("codigo_pago")
+  estado            EstadoReserva @default(PENDIENTE)
+  fechaReserva      DateTime      @default(now()) @map("fecha_reserva")
+  expiracionReserva DateTime?     @map("expiracion_reserva")
+  fechaConfirmacion DateTime?     @map("fecha_confirmacion")
+  fechaCancelacion  DateTime?     @map("fecha_cancelacion")
+  canceladoPor      Int?          @map("cancelado_por")
+  usoCredito        Boolean       @default(false) @map("uso_credito")
+  updatedAt         DateTime?     @map("updated_at")
+
+  usuario       Usuario         @relation(fields: [usuarioId], references: [id])
+  clase         Clase           @relation(fields: [claseId], references: [id])
+  posicionClase PosicionClase   @relation(fields: [posicionClaseId], references: [id])
+  canceladoPorUsuario Usuario?  @relation("usuarioCancelador", fields: [canceladoPor], references: [id])
+  pago          Pago?
+  creditos      Credito[]
+
+  @@index([usuarioId])
+  @@index([claseId])
+  @@map("reservas")
+}
+
+model Pago {
+  id            Int         @id @default(autoincrement())
+  reservaId     Int         @unique @map("reserva_id")
+  metodoPago    MetodoPago  @map("metodo_pago")
+  monto         Decimal     @db.Decimal(10, 2)
+  estado        EstadoPago  @default(PENDIENTE)
+  fechaPago     DateTime?   @map("fecha_pago")
+  culqiChargeId String?     @map("culqi_charge_id")
+
+  reserva Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+
+  @@map("pagos")
+}
+
+model Credito {
+  id           Int      @id @default(autoincrement())
+  usuarioId    Int      @map("usuario_id")
+  claseId      Int?     @map("clase_id")
+  reservaId    Int?     @map("reserva_id")
+  usado        Boolean  @default(false)
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+  fechaUso     DateTime? @map("fecha_uso")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  clase   Clase?  @relation(fields: [claseId], references: [id], onDelete: SetNull)
+  reserva Reserva? @relation(fields: [reservaId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId])
+  @@map("creditos")
+}
+
+model Notificacion {
+  id        Int               @id @default(autoincrement())
+  usuarioId Int               @map("usuario_id")
+  tipo      TipoNotificacion
+  mensaje   String
+  leido     Boolean           @default(false)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("notificaciones")
+}

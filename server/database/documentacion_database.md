@@ -250,6 +250,7 @@ Propósito: Información del pago asociado a una reserva. Relación 1:1.
 | monto | DECIMAL(10,2) | NOT NULL | Monto pagado |
 | estado | ENUM | DEFAULT 'PENDIENTE' | PENDIENTE, PAGADO, FALLIDO |
 | fecha_pago | TIMESTAMP | NULL | Momento en que se confirmó el pago |
+| culqi_charge_id | VARCHAR(255) | NULL | ID del cargo en Culqi (para pagos Yape) |
 
 **Notas:**
 - En el MVP actual el pago es simulado (siempre exitoso tras 2.5s de procesamiento).
