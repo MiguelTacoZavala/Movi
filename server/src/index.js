@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth.routes')
 const categoriasRoutes = require('./routes/categorias.routes')
 const instructoresRoutes = require('./routes/instructores.routes')
 const horariosRoutes = require('./routes/horarios.routes')
+const clasesRoutes = require('./routes/clases.routes')
 
 const app = express()
 
@@ -22,6 +23,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/categorias', categoriasRoutes)
 app.use('/api/instructores', instructoresRoutes)
 app.use('/api/horarios', horariosRoutes)
+app.use('/api/clases', clasesRoutes)
 
 app.use(errorHandler)
 
