@@ -3,6 +3,7 @@ const cors = require('cors')
 const { env } = require('./config/env')
 const { errorHandler } = require('./middleware/errorHandler')
 const authRoutes = require('./routes/auth.routes')
+const uploadRoutes = require('./routes/upload.routes')
 
 const app = express()
 
@@ -14,6 +15,7 @@ app.get('/api', (_req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
+app.use('/api/upload', uploadRoutes)
 
 app.use(errorHandler)
 
