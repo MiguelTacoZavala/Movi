@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Users, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX } from 'lucide-react'
+import { Search, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -44,7 +44,7 @@ export default function Clientes() {
     { key: 'nombres', label: 'Cliente', render: (val, row) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Users size={20} className="icon-primary" />
+          <User size={20} className="icon-primary" />
         </div>
         <div>
           <div style={{ fontWeight: 600 }}>{val}</div>
@@ -92,7 +92,7 @@ export default function Clientes() {
     <div>
       <div className="page-header">
         <h1>
-          <Users size={28} />
+          <User size={28} />
           Gestión de Clientes
         </h1>
         <div className="search-box">

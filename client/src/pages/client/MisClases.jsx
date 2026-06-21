@@ -84,6 +84,10 @@ export default function MisClases() {
                 <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{comprobanteInscripcion.asiento}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Monto</span>
+                <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>S/ 15.00</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Método de pago</span>
                 <span style={{ fontWeight: 600, color: 'var(--gray-900)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   {comprobanteInscripcion.metodoPago === 'creditos' ? <><CreditCard size={14} /> Créditos</> : <><Smartphone size={14} /> Yape</>}

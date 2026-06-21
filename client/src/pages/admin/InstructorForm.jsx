@@ -2,42 +2,33 @@ import { useState } from 'react'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Select from '../../components/common/Select'
-import { User } from 'lucide-react'
 import '../../App.css'
 
 const ESPECIALIDADES = ['Salsa', 'Bachata', 'Tango', 'Merengue', 'Cumbia', 'Reggaeton', 'Hip Hop', 'Ballet']
 
 export default function InstructorForm({ initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState({
-    nombre: initialData?.nombre || '',
+    nombres: initialData?.nombres || '',
+    apellidos: initialData?.apellidos || '',
     especialidad: initialData?.especialidad || '',
-    contacto: initialData?.contacto || '',
     email: initialData?.email || '',
-    foto: initialData?.foto || '',
+    telefono: initialData?.telefono || '',
+    password: '',
   })
-  const [fotoPreview, setFotoPreview] = useState(initialData?.foto || '')
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
   }
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result
-      setFotoPreview(dataUrl)
-      setFormData({ ...formData, foto: dataUrl })
-    }
-    reader.readAsDataURL(file)
-  }
-
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!formData.nombre || !formData.especialidad) {
-      alert('Nombre y especialidad son requeridos')
+    if (!formData.nombres.trim() || !formData.apellidos.trim() || !formData.especialidad) {
+      alert('Nombres, apellidos y especialidad son requeridos')
+      return
+    }
+    if (!initialData && !formData.password) {
+      alert('La contraseña es requerida para crear un nuevo instructor')
       return
     }
     onSave(formData)
@@ -46,10 +37,20 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
   return (
     <form onSubmit={handleSubmit} className="form-container">
       <Input
-        label="Nombre Completo"
-        name="nombre"
-        value={formData.nombre}
+        label="Nombres"
+        name="nombres"
+        value={formData.nombres}
         onChange={handleChange}
+        placeholder="Ej: María"
+        required
+      />
+
+      <Input
+        label="Apellidos"
+        name="apellidos"
+        value={formData.apellidos}
+        onChange={handleChange}
+        placeholder="Ej: García López"
         required
       />
 
@@ -63,42 +64,37 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
       />
 
       <Input
-        label="Contacto (Teléfono)"
-        name="contacto"
-        value={formData.contacto}
-        onChange={handleChange}
-        placeholder="999888777"
-      />
-
-      <Input
         label="Email"
         name="email"
         type="email"
         value={formData.email}
         onChange={handleChange}
+        placeholder="maria@dance.com"
+        required
       />
 
-      <div className="form-group">
-        <label>Foto</label>
-        <div className="file-upload-wrapper">
-          <div className="file-upload-preview">
-            {fotoPreview ? (
-              <img src={fotoPreview} alt="Preview" className="file-upload-img" />
-            ) : (
-              <div className="file-upload-placeholder">
-                <User size={24} />
-              </div>
-            )}
-          </div>
-          <label className="file-upload-btn">
-            <input type="file" accept="image/*" onChange={handleFileChange} />
-            {fotoPreview ? 'Cambiar foto' : 'Seleccionar foto'}
-          </label>
-        </div>
-      </div>
+      <Input
+        label="Teléfono"
+        name="telefono"
+        value={formData.telefono}
+        onChange={handleChange}
+        placeholder="999888777"
+      />
+
+      {!initialData && (
+        <Input
+          label="Contraseña"
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          placeholder="Mínimo 6 caracteres"
+          required
+        />
+      )}
 
       <div className="form-actions">
-        <Button type="submit">{initialData ? 'Actualizar' : 'Crear'}</Button>
+        <Button type="submit">{initialData ? 'Actualizar' : 'Crear Instructor'}</Button>
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
       </div>
     </form>

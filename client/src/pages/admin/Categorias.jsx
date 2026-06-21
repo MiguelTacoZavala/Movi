@@ -1,19 +1,30 @@
-import { useState } from 'react'
-import { Plus, Edit2, Trash2, Music2, Layers } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Edit2, Trash2, Music2 } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import CategoriaForm from './CategoriaForm'
-import { categorias as mockCategorias, mockHorariosSemanales } from '../../data/mockData'
+import api from '../../services/api'
 import '../../App.css'
 
 export default function Categorias() {
-  const [categorias, setCategorias] = useState(mockCategorias)
+  const [categorias, setCategorias] = useState([])
+  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
 
-  const getHorariosCount = (catId) =>
-    mockHorariosSemanales.filter(h => h.categoriaId === catId).length
+  const cargar = async () => {
+    try {
+      const data = await api.get('/categorias')
+      setCategorias(data.categorias)
+    } catch (e) {
+      alert(e.message || 'Error al cargar categorías')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { cargar() }, [])
 
   const columns = [
     { key: 'nombre', label: 'Categoría', render: (val) => (
@@ -25,14 +36,9 @@ export default function Categorias() {
     { key: 'descripcion', label: 'Descripción', render: (val) => (
       <span style={{ color: 'var(--gray-500)' }}>{val || '—'}</span>
     )},
-    { key: 'horarios', label: 'Horarios', render: (_, row) => {
-      const count = getHorariosCount(row.id)
-      return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <Layers size={14} className="icon-muted" /> {count} vinculados
-        </span>
-      )
-    }},
+    { key: 'precio', label: 'Precio', render: (val) => (
+      <span style={{ fontWeight: 600 }}>S/ {Number(val).toFixed(2)}</span>
+    )},
     { key: 'acciones', label: 'Acciones', render: (_, row) => (
       <div className="action-buttons">
         <Button size="small" variant="ghost" onClick={() => handleEdit(row)} title="Editar">
@@ -55,25 +61,32 @@ export default function Categorias() {
     setModalOpen(true)
   }
 
-  const handleDelete = (cat) => {
-    const count = getHorariosCount(cat.id)
-    let msg = `¿Eliminar la categoría "${cat.nombre}"?`
-    if (count > 0) msg += `\n\n⚠️ Tiene ${count} horario(s) vinculado(s).`
-    if (!window.confirm(msg)) return
-    setCategorias(categorias.filter(c => c.id !== cat.id))
+  const handleDelete = async (cat) => {
+    if (!window.confirm(`¿Eliminar la categoría "${cat.nombre}"?`)) return
+    try {
+      await api.del(`/categorias/${cat.id}`)
+      setCategorias(categorias.filter(c => c.id !== cat.id))
+    } catch (e) {
+      alert(e.message || 'Error al eliminar')
+    }
   }
 
-  const handleSave = (formData) => {
-    if (editing) {
-      setCategorias(categorias.map(c =>
-        c.id === editing.id ? { ...c, ...formData } : c
-      ))
-    } else {
-      const newId = Math.max(...categorias.map(c => c.id), 0) + 1
-      setCategorias([...categorias, { ...formData, id: newId }])
+  const handleSave = async (formData) => {
+    try {
+      if (editing) {
+        const data = await api.put(`/categorias/${editing.id}`, formData)
+        setCategorias(categorias.map(c => c.id === editing.id ? data.categoria : c))
+      } else {
+        const data = await api.post('/categorias', formData)
+        setCategorias([...categorias, data.categoria])
+      }
+      setModalOpen(false)
+    } catch (e) {
+      alert(e.message || 'Error al guardar')
     }
-    setModalOpen(false)
   }
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
   return (
     <div>

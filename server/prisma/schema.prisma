@@ -103,6 +103,7 @@ model CategoriaBaile {
   id          Int      @id @default(autoincrement())
   nombre      String   @unique
   descripcion String?
+  precio      Decimal  @default(15.0) @db.Decimal(10, 2)
 
   horarios HorarioSemanal[]
 

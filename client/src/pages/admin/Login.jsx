@@ -34,7 +34,7 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      const result = login(identifier.trim(), password)
+      const result = await login(identifier.trim(), password)
 
       if (result.success) {
         setSuccess('¡Bienvenido! Redirigiendo...')
@@ -51,8 +51,8 @@ export default function Login() {
       } else {
         setError(result.message || 'Credenciales incorrectas. Inténtalo de nuevo.')
       }
-    } catch {
-      setError('Ocurrió un error. Inténtalo de nuevo.')
+    } catch (err) {
+      setError(err.message || 'Ocurrió un error. Inténtalo de nuevo.')
     } finally {
       setIsLoading(false)
     }

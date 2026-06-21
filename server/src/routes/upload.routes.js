@@ -1,12 +1,15 @@
 const { Router } = require('express')
+const path = require('path')
 const multer = require('multer')
 const { auth } = require('../middleware/auth')
+const { authorize } = require('../middleware/authorize')
 const { uploadProfilePhoto } = require('../controllers/upload.controller')
 
 const router = Router()
+const UPLOADS_DIR = path.resolve(__dirname, '../../uploads')
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, 'uploads/'),
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
   filename: (_req, file, cb) => {
     const ext = file.originalname.split('.').pop()
     cb(null, `profile-${Date.now()}.${ext}`)
@@ -26,6 +29,6 @@ const upload = multer({
     },
 })
 
-router.post('/profile-photo', auth, upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'file', maxCount: 1 }]), uploadProfilePhoto)
+router.post('/profile-photo', auth, authorize('CLIENTE', 'INSTRUCTOR'), upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'file', maxCount: 1 }]), uploadProfilePhoto)
 
 module.exports = router

@@ -1,14 +1,16 @@
 const cloudinary = require('cloudinary').v2
 
-function subirArchivo(filePath) {
+const FOLDER_MAP = { cliente: 'clientes', instructor: 'instructores' }
+
+function subirFotoPerfil(filePath, userId, rol) {
+  const rolFolder = FOLDER_MAP[rol.toLowerCase()] || 'temp'
+  const publicId = `movi/perfiles/${rolFolder}/usuario-${userId}`
   return cloudinary.uploader.upload(filePath, {
-    folder: 'movi/perfiles',
+    public_id: publicId,
     resource_type: 'image',
+    overwrite: true,
+    invalidate: true,
   })
 }
 
-function eliminarArchivo(publicId) {
-  return cloudinary.uploader.destroy(publicId)
-}
-
-module.exports = { subirArchivo, eliminarArchivo }
+module.exports = { subirFotoPerfil }

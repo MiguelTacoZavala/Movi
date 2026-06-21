@@ -10,7 +10,7 @@ async function uploadProfilePhoto(req, res, next) {
       return res.status(400).json({ error: 'No se envió ninguna imagen' })
     }
 
-    const result = await cloudinaryService.subirArchivo(file.path)
+    const result = await cloudinaryService.subirFotoPerfil(file.path, req.user.id, req.user.rol)
 
     fs.unlink(file.path, () => {})
 
@@ -33,6 +33,7 @@ async function uploadProfilePhoto(req, res, next) {
       },
     })
   } catch (error) {
+    console.error('Cloudinary upload error:', error.message)
     const file = req.files?.foto?.[0] || req.files?.file?.[0]; if (file) fs.unlink(file.path, () => {})
     next(error)
   }

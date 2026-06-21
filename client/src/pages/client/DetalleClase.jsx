@@ -4,10 +4,13 @@ import { useAuth } from '../../context/AuthContext'
 import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
-import { mockClases, claseDisponible, formatFechaBonita, formatHoraAMPM, addInscripcion } from '../../data/mockData'
+import api from '../../services/api'
+import culqi from '../../services/culqi'
+import { mockClases, formatFechaBonita, formatHoraAMPM } from '../../data/mockData'
 import '../../App.css'
 
 const HOLD_DURATION = 300
+const PRECIO_DEFAULT = 15
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -27,9 +30,10 @@ export default function DetalleClase() {
   const [showResumenModal, setShowResumenModal] = useState(false)
   const [inscripcionExitosa, setInscripcionExitosa] = useState(false)
   const [inscripcionData, setInscripcionData] = useState(null)
+  const [procesando, setProcesando] = useState(false)
+  const [error, setError] = useState('')
 
   const clase = useMemo(() => mockClases.find(c => c.id === Number(id)), [id])
-  const disponible = clase ? claseDisponible(clase) : false
 
   useEffect(() => {
     if (!holdActive) return
@@ -60,44 +64,102 @@ export default function DetalleClase() {
     return Object.values(filas).map(f => f.sort((a, b) => a.columna - b.columna))
   }, [clase])
 
-  const columnas = clase.capacidad_maxima <= 10 ? 4 : clase.capacidad_maxima <= 20 ? 5 : 6
+  const columnas = clase?.capacidad_maxima <= 10 ? 4 : clase?.capacidad_maxima <= 20 ? 5 : 6
 
   const handleSelectSeat = (seat) => {
     if (seat.estado !== 'disponible' || holdActive) return
     setSelectedSeat(seat)
     setHoldExpired(false)
+    setError('')
   }
 
   const handleSelectPago = (metodo) => {
     if (holdActive) return
     setMetodoPago(metodo)
     setHoldExpired(false)
+    setError('')
   }
 
   const handlePagar = () => {
     setShowResumenModal(true)
   }
 
-  const handleConfirmarInscripcion = () => {
+  const handleConfirmarInscripcion = async () => {
     setShowResumenModal(false)
-    setHoldActive(true)
-    setHoldSeconds(HOLD_DURATION)
-    setTimeout(() => {
-      const inscripcion = addInscripcion({
-        claseId: clase.id,
-        categoria: clase.categoria,
-        instructor: clase.instructor,
-        fecha: clase.fecha,
-        hora_inicio: clase.hora_inicio,
-        hora_fin: clase.hora_fin,
-        asiento: selectedSeat.numero,
-        metodoPago: metodoPago,
-        tematica: clase.tematica || 'LIBRE',
-        estado: 'CONFIRMADA',
-      })
-      setInscripcionData(inscripcion)
-      setInscripcionExitosa(true)
-    }, 2500)
+    setError('')
+
+    if (metodoPago === 'yape') {
+      setProcesando(true)
+      try {
+        const tokenId = await culqi.generarToken({
+          amount: PRECIO_DEFAULT,
+          email: user?.email || 'cliente@movi.com',
+          description: `${clase.categoria} - ${formatFechaBonita(clase.fecha)}`,
+        })
+
+        setHoldActive(true)
+        setHoldSeconds(HOLD_DURATION)
+
+        const result = await api.procesarPago({
+          tokenId,
+          claseId: clase.id,
+          posicionClaseId: selectedSeat.id,
+          metodoPago: 'yape',
+        })
+
+        setInscripcionData({
+          categoria: clase.categoria,
+          instructor: clase.instructor,
+          fecha: clase.fecha,
+          hora_inicio: clase.hora_inicio,
+          asiento: selectedSeat.numero,
+          metodoPago: 'yape',
+          tematica: clase.tematica || 'LIBRE',
+          codigoPago: result.codigoPago,
+          monto: result.monto,
+        })
+        setInscripcionExitosa(true)
+      } catch (e) {
+        setError(e.message || 'Error al procesar el pago')
+        setSelectedSeat(null)
+        setMetodoPago(null)
+      } finally {
+        setProcesando(false)
+        setHoldActive(false)
+      }
+    } else {
+      setHoldActive(true)
+      setHoldSeconds(HOLD_DURATION)
+
+      setTimeout(async () => {
+        try {
+          const result = await api.procesarPago({
+            claseId: clase.id,
+            posicionClaseId: selectedSeat.id,
+            metodoPago: 'creditos',
+          })
+
+          setInscripcionData({
+            categoria: clase.categoria,
+            instructor: clase.instructor,
+            fecha: clase.fecha,
+            hora_inicio: clase.hora_inicio,
+            asiento: selectedSeat.numero,
+            metodoPago: 'creditos',
+            tematica: clase.tematica || 'LIBRE',
+            codigoPago: result.codigoPago,
+            monto: result.monto,
+          })
+          setInscripcionExitosa(true)
+        } catch (e) {
+          setError(e.message || 'Error al procesar el pago')
+          setSelectedSeat(null)
+          setMetodoPago(null)
+        } finally {
+          setHoldActive(false)
+        }
+      }, 2500)
+    }
   }
 
   const handleCancelarInscripcion = () => {
@@ -146,6 +208,10 @@ export default function DetalleClase() {
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento</span>
             <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{inscripcionData.asiento}</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Monto</span>
+            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>S/ {inscripcionData.monto?.toFixed(2) || '15.00'}</span>
+          </div>
           <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Código de pago</span>
             <span style={{ fontWeight: 700, color: 'var(--primary-medium)', fontFamily: 'monospace', fontSize: '0.95rem' }}>{inscripcionData.codigoPago}</span>
@@ -168,22 +234,19 @@ export default function DetalleClase() {
 
       <div className="detalle-header">
         <h2>{clase.categoria}</h2>
-        <span className={`status-badge ${!disponible ? 'status-warning' : 'status-active'}`}>
-          {!disponible ? 'No disponible' : 'Disponible'}
-        </span>
       </div>
-
-      {!disponible && (
-        <div className="inscripcion-closed-banner cancelled">
-          <AlertTriangle size={16} />
-          <span>Esta clase ya no está disponible</span>
-        </div>
-      )}
 
       {holdExpired && (
         <div className="inscripcion-closed-banner cancelled">
           <Timer size={16} />
           <span>El tiempo para completar tu inscripción expiró.</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="inscripcion-closed-banner cancelled" style={{ marginTop: '0.5rem' }}>
+          <AlertTriangle size={16} />
+          <span>{error}</span>
         </div>
       )}
 
@@ -203,97 +266,97 @@ export default function DetalleClase() {
         </div>
       </div>
 
-      {disponible && (
-        <>
-          <div className="seat-map-section">
-            <div className="seat-stage">
-              <User size={16} />
-              <span>Instructor</span>
-            </div>
+      <div className="seat-map-section">
+        <div className="seat-stage">
+          <User size={16} />
+          <span>Instructor</span>
+        </div>
 
-            <div className="seat-legend">
-              <div className="seat-legend-item">
-                <div className="seat-legend-dot disponible" />
-                <span>Disponible</span>
-              </div>
-              <div className="seat-legend-item">
-                <div className="seat-legend-dot ocupado" />
-                <span>Ocupado</span>
-              </div>
-              <div className="seat-legend-item">
-                <div className="seat-legend-dot seleccionado" />
-                <span>Tu selección</span>
-              </div>
-            </div>
-
-            <div className="seat-grid" style={{ '--columnas': columnas }}>
-              {asientosAgrupados.map((fila, fi) =>
-                fila.map(asiento => {
-                  const isSelected = selectedSeat?.id === asiento.id
-                  const isOcupado = asiento.estado === 'ocupado'
-                  return (
-                    <button
-                      key={asiento.id}
-                      className={`seat ${isOcupado ? 'ocupado' : 'disponible'} ${isSelected ? 'selected' : ''}`}
-                      disabled={isOcupado || holdActive}
-                      onClick={() => !isOcupado && handleSelectSeat(asiento)}
-                      style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
-                    >
-                      <User size={22} />
-                    </button>
-                  )
-                })
-              )}
-            </div>
+        <div className="seat-legend">
+          <div className="seat-legend-item">
+            <div className="seat-legend-dot disponible" />
+            <span>Disponible</span>
           </div>
-
-          <div className="pago-section">
-            <h3>¿Cómo deseas pagar?</h3>
-            <div className="pago-options">
-              <div
-                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive ? 'disabled' : ''}`}
-                onClick={() => !holdActive && handleSelectPago('creditos')}
-              >
-                <CreditCard size={32} />
-                <span>Usar Créditos</span>
-                <small>2 disponibles</small>
-              </div>
-              <div
-                className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive ? 'disabled' : ''}`}
-                onClick={() => !holdActive && handleSelectPago('yape')}
-              >
-                <Smartphone size={32} />
-                <span>Yape</span>
-                <small>{user?.telefono || 'Pago móvil'}</small>
-              </div>
-            </div>
+          <div className="seat-legend-item">
+            <div className="seat-legend-dot ocupado" />
+            <span>Ocupado</span>
           </div>
+          <div className="seat-legend-item">
+            <div className="seat-legend-dot seleccionado" />
+            <span>Tu selección</span>
+          </div>
+        </div>
 
-          {holdActive && (
-            <div className="hold-timer">
-              <Timer size={18} />
-              <span>
-                {holdSeconds > 295
-                  ? 'Procesando pago...'
-                  : `Tiempo restante: ${formatTime(holdSeconds)}`
-                }
-              </span>
-            </div>
+        <div className="seat-grid" style={{ '--columnas': columnas }}>
+          {asientosAgrupados.map((fila, fi) =>
+            fila.map(asiento => {
+              const isSelected = selectedSeat?.id === asiento.id
+              const isOcupado = asiento.estado === 'ocupado'
+              return (
+                <button
+                  key={asiento.id}
+                  className={`seat ${isOcupado ? 'ocupado' : 'disponible'} ${isSelected ? 'selected' : ''}`}
+                  disabled={isOcupado || holdActive || procesando}
+                  onClick={() => !isOcupado && handleSelectSeat(asiento)}
+                  style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
+                >
+                  <User size={22} />
+                </button>
+              )
+            })
           )}
+        </div>
+      </div>
 
-          <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem', marginTop: '0.5rem' }}>
-            Tu asiento será reservado temporalmente por 5 minutos.
-          </p>
+      <div style={{ textAlign: 'center', margin: '1rem 0', fontSize: '1.1rem', fontWeight: 600, color: 'var(--gray-900)' }}>
+        S/ {PRECIO_DEFAULT.toFixed(2)}
+      </div>
 
-          <Button
-            className="btn-inscribir"
-            onClick={handlePagar}
-            disabled={!selectedSeat || !metodoPago || holdActive || holdExpired}
+      <div className="pago-section">
+        <h3>¿Cómo deseas pagar?</h3>
+        <div className="pago-options">
+          <div
+            className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
+            onClick={() => !holdActive && !procesando && handleSelectPago('creditos')}
           >
-            {holdActive ? 'Procesando...' : 'Pagar e inscribirme'}
-          </Button>
-        </>
+            <CreditCard size={32} />
+            <span>Usar Créditos</span>
+            <small>2 disponibles</small>
+          </div>
+          <div
+            className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
+            onClick={() => !holdActive && !procesando && handleSelectPago('yape')}
+          >
+            <Smartphone size={32} />
+            <span>Yape</span>
+            <small>{user?.telefono || 'Pago móvil'}</small>
+          </div>
+        </div>
+      </div>
+
+      {holdActive && (
+        <div className="hold-timer">
+          <Timer size={18} />
+          <span>
+            {holdSeconds > 295
+              ? 'Procesando pago...'
+              : `Tiempo restante: ${formatTime(holdSeconds)}`
+            }
+          </span>
+        </div>
       )}
+
+      <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem', marginTop: '0.5rem' }}>
+        Tu asiento será reservado temporalmente por 5 minutos.
+      </p>
+
+      <Button
+        className="btn-inscribir"
+        onClick={handlePagar}
+        disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando}
+      >
+        {procesando ? 'Procesando...' : holdActive ? 'Procesando...' : 'Pagar e inscribirme'}
+      </Button>
 
       <Modal isOpen={showResumenModal} onClose={handleCancelarInscripcion} title="Confirmar inscripción">
         <p className="modal-subtitle">Revisa los datos antes de confirmar</p>
@@ -307,6 +370,10 @@ export default function DetalleClase() {
             <span className="resumen-value">#{selectedSeat?.numero}</span>
           </div>
           <div className="resumen-row">
+            <span className="resumen-label">Monto</span>
+            <span className="resumen-value">S/ {PRECIO_DEFAULT.toFixed(2)}</span>
+          </div>
+          <div className="resumen-row">
             <span className="resumen-label">Pago</span>
             <span className="resumen-value">
               {metodoPago === 'yape'
@@ -318,7 +385,9 @@ export default function DetalleClase() {
         </div>
         <div className="modal-actions">
           <Button variant="secondary" onClick={handleCancelarInscripcion}>Cancelar</Button>
-          <Button onClick={handleConfirmarInscripcion}>Confirmar</Button>
+          <Button onClick={handleConfirmarInscripcion} disabled={procesando}>
+            {procesando ? 'Procesando...' : 'Confirmar'}
+          </Button>
         </div>
       </Modal>
     </div>

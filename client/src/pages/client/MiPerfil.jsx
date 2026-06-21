@@ -1,17 +1,21 @@
-import { useState } from 'react'
-import { User, Calendar, Moon, Sun } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { User, Calendar, Moon, Sun, Camera, Upload } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import api from '../../services/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Input from '../../components/common/Input'
 import '../../App.css'
 
 export default function MiPerfil() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [modalOpen, setModalOpen] = useState(false)
   const [editData, setEditData] = useState({ nombres: '', apellidos: '', telefono: '' })
+  const [uploading, setUploading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const fileInputRef = useRef(null)
 
   const mockStats = {
     creditos: 2,
@@ -40,18 +44,49 @@ export default function MiPerfil() {
     setEditData({ ...editData, [name]: value })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editData.nombres.trim() || !editData.apellidos.trim()) {
       alert('Nombres y apellidos son obligatorios')
       return
     }
-    updateUser({
-      nombres: editData.nombres.trim(),
-      apellidos: editData.apellidos.trim(),
-      telefono: editData.telefono.trim(),
-    })
-    setModalOpen(false)
+    try {
+      await api.updateProfile({
+        nombres: editData.nombres.trim(),
+        apellidos: editData.apellidos.trim(),
+        telefono: editData.telefono.trim(),
+      })
+      updateUser({
+        nombres: editData.nombres.trim(),
+        apellidos: editData.apellidos.trim(),
+        telefono: editData.telefono.trim(),
+      })
+      setModalOpen(false)
+    } catch (e) {
+      alert(e.message || 'Error al guardar')
+    }
   }
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (ev) => setPreviewUrl(ev.target.result)
+    reader.readAsDataURL(file)
+
+    setUploading(true)
+    try {
+      const result = await api.uploadProfilePhoto(file)
+      updateUser({ fotoUrl: result.fotoUrl })
+      setPreviewUrl(null)
+    } catch (e) {
+      alert(e.message || 'Error al subir foto')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const fotoSource = previewUrl || user?.fotoUrl
 
   return (
     <div>
@@ -98,10 +133,38 @@ export default function MiPerfil() {
       </Modal>
 
       <div className="perfil-header">
-        <div className="perfil-avatar">
-          <User size={40} />
+        <div
+          className="perfil-avatar"
+          style={{ position: 'relative', cursor: 'pointer' }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {fotoSource ? (
+            <img
+              src={fotoSource}
+              alt="Foto de perfil"
+              style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }}
+            />
+          ) : (
+            <User size={40} />
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, right: 0,
+            background: 'var(--primary-medium)', borderRadius: '50%',
+            width: 28, height: 28, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', color: '#fff',
+          }}>
+            <Camera size={14} />
+          </div>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
         <h2 className="perfil-name">{user?.nombres} {user?.apellidos}</h2>
+        {uploading && <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>Subiendo foto...</p>}
       </div>
 
       <div className="perfil-creditos">{mockStats.creditos}</div>
@@ -167,6 +230,12 @@ export default function MiPerfil() {
               <span style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>Teléfono</span>
               <span style={{ fontWeight: 500 }}>{user?.telefono}</span>
             </div>
+            {user?.fotoUrl && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
+                <span style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>Foto</span>
+                <span style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--gray-500)' }}>Subida ✓</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

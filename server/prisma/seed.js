@@ -24,15 +24,15 @@ async function main() {
 
   // Categorías
   const categorias = [
-    { nombre: 'Salsa', descripcion: 'Ritmo y energía' },
-    { nombre: 'Bachata', descripcion: 'Romántica y sensual' },
-    { nombre: 'Tango', descripcion: 'Pasión y elegancia' },
+    { nombre: 'Salsa', descripcion: 'Ritmo y energía', precio: 15 },
+    { nombre: 'Bachata', descripcion: 'Romántica y sensual', precio: 15 },
+    { nombre: 'Tango', descripcion: 'Pasión y elegancia', precio: 15 },
   ]
 
   for (const cat of categorias) {
     await prisma.categoriaBaile.upsert({
       where: { nombre: cat.nombre },
-      update: { descripcion: cat.descripcion },
+      update: { descripcion: cat.descripcion, precio: cat.precio },
       create: cat,
     })
   }
