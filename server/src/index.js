@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 const express = require('express')
 const cors = require('cors')
+const path = require('path')
 const { env } = require('./config/env')
 const { errorHandler } = require('./middleware/errorHandler')
 const authRoutes = require('./routes/auth.routes')
@@ -15,6 +16,7 @@ const app = express()
 
 app.use(cors())
 app.use(express.json())
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 app.get('/api', (_req, res) => {
   res.json({ message: 'Movi API v1' })
