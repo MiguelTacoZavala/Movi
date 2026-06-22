@@ -6,6 +6,7 @@ export default function CategoriaForm({ initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     nombre: initialData?.nombre || '',
     descripcion: initialData?.descripcion || '',
+    precio: initialData?.precio ?? 15,
   })
 
   const handleChange = (e) => {
@@ -39,6 +40,19 @@ export default function CategoriaForm({ initialData, onSave, onCancel }) {
         onChange={handleChange}
         placeholder="Breve descripción de la categoría"
       />
+      <div className="form-group">
+        <label>Precio por clase (S/)</label>
+        <input
+          type="number"
+          name="precio"
+          value={formData.precio}
+          onChange={handleChange}
+          min="1"
+          step="0.50"
+          required
+          style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', border: '1px solid var(--gray-200)', borderRadius: '8px' }}
+        />
+      </div>
       <div className="form-actions">
         <Button type="submit">{initialData ? 'Actualizar' : 'Crear'}</Button>
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>

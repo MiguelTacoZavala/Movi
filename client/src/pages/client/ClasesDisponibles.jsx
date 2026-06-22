@@ -204,6 +204,9 @@ export default function ClasesDisponibles() {
                           <div className="clase-card-slim-name">{clase.instructor}</div>
                         </div>
                         <div className="clase-card-slim-meta">
+                          <div style={{ fontWeight: 600, color: 'var(--primary-medium)', fontSize: '0.85rem' }}>
+                            S/ 15
+                          </div>
                           <div className="clase-card-slim-participants">
                             <Users size={13} />
                             <span>{clase.inscritos}/{clase.capacidad_maxima}</span>

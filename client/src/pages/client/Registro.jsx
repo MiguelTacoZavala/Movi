@@ -45,11 +45,6 @@ export default function Registro() {
     if (formData.password.length < 6) errs.password = 'La contraseña debe tener al menos 6 caracteres'
     if (formData.password !== formData.confirmPassword) errs.confirmPassword = 'Las contraseñas no coinciden'
 
-    // Check DNI uniqueness in localStorage
-    const clientes = JSON.parse(localStorage.getItem('clientesRegistrados') || '[]')
-    if (clientes.find(c => c.dni === formData.dni)) errs.dni = 'Este DNI ya está registrado'
-    if (clientes.find(c => c.telefono === formData.telefono)) errs.telefono = 'Este teléfono ya está registrado'
-
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -62,7 +57,7 @@ export default function Registro() {
 
     setIsLoading(true)
     try {
-      const result = registerClient({
+      const result = await registerClient({
         nombres: formData.nombres.trim(),
         apellidos: formData.apellidos.trim(),
         dni: formData.dni,
@@ -73,8 +68,8 @@ export default function Registro() {
         setSuccess('¡Cuenta creada! Redirigiendo...')
         setTimeout(() => navigate('/cliente/dashboard'), 1500)
       }
-    } catch {
-      setServerError('Ocurrió un error. Inténtalo de nuevo.')
+    } catch (err) {
+      setServerError(err.message || 'Ocurrió un error. Inténtalo de nuevo.')
     } finally {
       setIsLoading(false)
     }
