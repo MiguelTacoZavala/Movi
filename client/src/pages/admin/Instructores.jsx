@@ -82,7 +82,7 @@ export default function Instructores() {
 
   const handleToggleStatus = async (instructor) => {
     try {
-      const data = await api.patch(`/instructores/${instructor.id}/estado`)
+      const data = await api.patch(`/instructores/${instructor.id}/status`)
       setInstructores(instructores.map(inst =>
         inst.id === instructor.id ? data.instructor : inst
       ))
