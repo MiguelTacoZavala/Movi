@@ -1,40 +1,63 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Edit2, Trash2, Calendar, Clock, ToggleLeft, ToggleRight } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
 import HorarioSemanalForm from './HorarioSemanalForm'
-import { mockHorariosSemanales, instructores, categorias, DIAS_SEMANA, formatHoraAMPM } from '../../data/mockData'
+import api from '../../services/api'
+import { DIAS_SEMANA, formatHoraAMPM } from '../../data/mockData'
 
 const diaLabel = {
   LUNES: 'Lunes', MARTES: 'Martes', MIERCOLES: 'Miércoles',
-  JUEVES: 'Jueves', VIERNES: 'Viernes', SABADO: 'Sábado',
+  JUEVES: 'Jueves', VIERNES: 'Viernes', SABADO: 'Sábado', DOMINGO: 'Domingo',
 }
 
 export default function HorariosSemanales() {
-  const [horarios, setHorarios] = useState(mockHorariosSemanales)
+  const [horarios, setHorarios] = useState([])
+  const [instructores, setInstructores] = useState([])
+  const [categorias, setCategorias] = useState([])
+  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [filtroInstructor, setFiltroInstructor] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroDia, setFiltroDia] = useState('')
 
+  const cargar = async () => {
+    try {
+      const [hData, iData, cData] = await Promise.all([
+        api.get('/horarios'),
+        api.get('/instructores'),
+        api.get('/categorias'),
+      ])
+      setHorarios(hData.horarios)
+      setInstructores(iData.instructores)
+      setCategorias(cData.categorias)
+    } catch (e) {
+      alert(e.message || 'Error al cargar horarios')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { cargar() }, [])
+
   const filteredHorarios = useMemo(() =>
     horarios.filter(h => {
-      if (filtroInstructor && h.instructorId !== parseInt(filtroInstructor)) return false
-      if (filtroCategoria && h.categoriaId !== parseInt(filtroCategoria)) return false
-      if (filtroDia && h.dia_semana !== filtroDia) return false
+      if (filtroInstructor && h.instructor.id !== parseInt(filtroInstructor)) return false
+      if (filtroCategoria && h.categoria.id !== parseInt(filtroCategoria)) return false
+      if (filtroDia && h.diaSemana !== filtroDia) return false
       return true
     }), [horarios, filtroInstructor, filtroCategoria, filtroDia]
   )
 
   const columns = [
-    { key: 'instructorNombre', label: 'Instructor', render: (val) => (
-      <span style={{ fontWeight: 600 }}>{val}</span>
+    { key: 'instructor', label: 'Instructor', render: (val) => (
+      <span style={{ fontWeight: 600 }}>{val.nombres} {val.apellidos}</span>
     )},
-    { key: 'categoriaNombre', label: 'Categoría' },
-    { key: 'dia_semana', label: 'Día', render: (val) => (
+    { key: 'categoria', label: 'Categoría', render: (val) => val.nombre },
+    { key: 'diaSemana', label: 'Día', render: (val) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
         <Calendar size={14} className="icon-muted" /> {diaLabel[val] || val}
       </span>
@@ -42,7 +65,7 @@ export default function HorariosSemanales() {
     { key: 'horario', label: 'Horario', render: (_, row) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
         <Clock size={14} className="icon-muted" />
-        {formatHoraAMPM(row.hora_inicio)} — {formatHoraAMPM(row.hora_fin)}
+        {formatHoraAMPM(row.horaInicio)} — {formatHoraAMPM(row.horaFin)}
       </span>
     )},
     { key: 'activo', label: 'Estado', render: (val) => (
@@ -52,7 +75,7 @@ export default function HorariosSemanales() {
     )},
     { key: 'acciones', label: 'Acciones', render: (_, row) => (
       <div className="action-buttons">
-        <Button size="small" variant="ghost" onClick={() => handleToggle(row.id)} title={row.activo ? 'Desactivar' : 'Activar'}>
+        <Button size="small" variant="ghost" onClick={() => handleToggle(row)} title={row.activo ? 'Desactivar' : 'Activar'}>
           {row.activo ? <ToggleRight size={16} className="icon-success" /> : <ToggleLeft size={16} className="icon-muted" />}
         </Button>
         <Button size="small" variant="ghost" onClick={() => handleEdit(row)} title="Editar">
@@ -71,32 +94,45 @@ export default function HorariosSemanales() {
   }
 
   const handleEdit = (h) => {
-    setEditing({ ...h })
+    setEditing(h)
     setModalOpen(true)
   }
 
-  const handleToggle = (id) => {
-    setHorarios(horarios.map(h =>
-      h.id === id ? { ...h, activo: !h.activo } : h
-    ))
-  }
-
-  const handleDelete = (h) => {
-    if (!window.confirm(`¿Eliminar el horario de ${h.instructorNombre} (${diaLabel[h.dia_semana]})?`)) return
-    setHorarios(horarios.filter(x => x.id !== h.id))
-  }
-
-  const handleSave = (formData) => {
-    if (editing) {
-      setHorarios(horarios.map(h =>
-        h.id === editing.id ? { ...h, ...formData, id: h.id } : h
-      ))
-    } else {
-      const newId = Math.max(...horarios.map(h => h.id), 0) + 1
-      setHorarios([...horarios, { ...formData, id: newId }])
+  const handleToggle = async (h) => {
+    try {
+      const result = await api.patch(`/horarios/${h.id}/status`)
+      setHorarios(horarios.map(x => x.id === h.id ? { ...x, activo: result.activo } : x))
+    } catch (e) {
+      alert(e.message || 'Error al cambiar estado')
     }
-    setModalOpen(false)
   }
+
+  const handleDelete = async (h) => {
+    if (!window.confirm(`¿Eliminar el horario de ${h.instructor.nombres} ${h.instructor.apellidos} (${diaLabel[h.diaSemana]})?`)) return
+    try {
+      await api.del(`/horarios/${h.id}`)
+      setHorarios(horarios.filter(x => x.id !== h.id))
+    } catch (e) {
+      alert(e.message || 'Error al eliminar')
+    }
+  }
+
+  const handleSave = async (formData) => {
+    try {
+      if (editing) {
+        const data = await api.put(`/horarios/${editing.id}`, formData)
+        setHorarios(horarios.map(h => h.id === editing.id ? data.horario : h))
+      } else {
+        const data = await api.post('/horarios', formData)
+        setHorarios([...horarios, data.horario])
+      }
+      setModalOpen(false)
+    } catch (e) {
+      alert(e.message || 'Error al guardar el horario')
+    }
+  }
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
   return (
     <div>
@@ -118,7 +154,7 @@ export default function HorariosSemanales() {
           onChange={(e) => setFiltroInstructor(e.target.value)}
           options={[
             { value: '', label: 'Todos los instructores' },
-            ...instructores.map(i => ({ value: i.id, label: i.nombre })),
+            ...instructores.map(i => ({ value: i.id, label: `${i.nombres} ${i.apellidos}` })),
           ]}
         />
         <Select
@@ -158,7 +194,8 @@ export default function HorariosSemanales() {
           initialData={editing}
           onSave={handleSave}
           onCancel={() => setModalOpen(false)}
-          existingHorarios={horarios}
+          instructores={instructores}
+          categorias={categorias}
         />
       </Modal>
     </div>

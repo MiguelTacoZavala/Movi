@@ -1,21 +1,21 @@
 import { useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
 import Select from '../../components/common/Select'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
-import { instructores, categorias, DIAS_SEMANA } from '../../data/mockData'
+import { DIAS_SEMANA } from '../../data/mockData'
 import '../../App.css'
 
-export default function HorarioSemanalForm({ initialData, onSave, onCancel, existingHorarios }) {
+export default function HorarioSemanalForm({ initialData, onSave, onCancel, instructores = [], categorias = [] }) {
   const [formData, setFormData] = useState({
-    instructorId: initialData?.instructorId || '',
-    categoriaId: initialData?.categoriaId || '',
-    dia_semana: initialData?.dia_semana || '',
-    hora_inicio: initialData?.hora_inicio || '',
-    hora_fin: initialData?.hora_fin || '',
-    capacidad_maxima: initialData?.capacidad_maxima || '',
+    instructorId: initialData?.instructor?.id || '',
+    categoriaId: initialData?.categoria?.id || '',
+    diaSemana: initialData?.diaSemana || '',
+    horaInicio: initialData?.horaInicio || '',
+    horaFin: initialData?.horaFin || '',
+    capacidadMaxima: initialData?.capacidadMaxima || '',
   })
   const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -25,53 +25,42 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, exis
 
   const validate = () => {
     const newErrors = {}
-    const { instructorId, categoriaId, dia_semana, hora_inicio, hora_fin, capacidad_maxima } = formData
+    const { instructorId, categoriaId, diaSemana, horaInicio, horaFin, capacidadMaxima } = formData
 
     if (!instructorId) newErrors.instructorId = 'Selecciona un instructor'
     if (!categoriaId) newErrors.categoriaId = 'Selecciona una categoría'
-    if (!dia_semana) newErrors.dia_semana = 'Selecciona un día'
+    if (!diaSemana) newErrors.diaSemana = 'Selecciona un día'
 
-    if (!hora_inicio) newErrors.hora_inicio = 'Ingresa la hora de inicio'
-    if (!hora_fin) newErrors.hora_fin = 'Ingresa la hora de fin'
-    if (hora_inicio && hora_fin && hora_inicio >= hora_fin) {
-      newErrors.hora_fin = 'La hora de fin debe ser mayor a la de inicio'
+    if (!horaInicio) newErrors.horaInicio = 'Ingresa la hora de inicio'
+    if (!horaFin) newErrors.horaFin = 'Ingresa la hora de fin'
+    if (horaInicio && horaFin && horaInicio >= horaFin) {
+      newErrors.horaFin = 'La hora de fin debe ser mayor a la de inicio'
     }
 
-    const cap = parseInt(capacidad_maxima)
-    if (!capacidad_maxima || cap < 1) newErrors.capacidad_maxima = 'Debe ser al menos 1'
-
-    if (existingHorarios && instructorId && dia_semana && hora_inicio && hora_fin) {
-      const overlap = existingHorarios.some(h => {
-        if (initialData?.id && h.id === initialData.id) return false
-        if (h.instructorId !== parseInt(instructorId)) return false
-        if (h.dia_semana !== dia_semana) return false
-        if (!h.activo) return false
-        return h.hora_inicio < hora_fin && h.hora_fin > hora_inicio
-      })
-      if (overlap) newErrors.dia_semana = 'El instructor ya tiene un horario en este día y horario'
-    }
+    const cap = parseInt(capacidadMaxima)
+    if (!capacidadMaxima || cap < 1) newErrors.capacidadMaxima = 'Debe ser al menos 1'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validate()) return
 
-    const instructor = instructores.find(i => i.id === parseInt(formData.instructorId))
-    const categoria = categorias.find(c => c.id === parseInt(formData.categoriaId))
-
-    onSave({
-      ...formData,
-      instructorId: parseInt(formData.instructorId),
-      categoriaId: parseInt(formData.categoriaId),
-      instructorNombre: instructor?.nombre || '',
-      categoriaNombre: categoria?.nombre || '',
-      capacidad_maxima: parseInt(formData.capacidad_maxima),
-      minimo_participantes: 7,
-      activo: initialData?.activo ?? true,
-    })
+    setSaving(true)
+    try {
+      await onSave({
+        instructorId: parseInt(formData.instructorId),
+        categoriaId: parseInt(formData.categoriaId),
+        diaSemana: formData.diaSemana,
+        horaInicio: formData.horaInicio,
+        horaFin: formData.horaFin,
+        capacidadMaxima: parseInt(formData.capacidadMaxima),
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -82,8 +71,8 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, exis
         value={formData.instructorId}
         onChange={handleChange}
         options={instructores
-          .filter(i => i.estado === 'Activo')
-          .map(i => ({ value: i.id, label: i.nombre }))}
+          .filter(i => i.estado)
+          .map(i => ({ value: i.id, label: `${i.nombres} ${i.apellidos}` }))}
         required
       />
       {errors.instructorId && <p className="form-error">{errors.instructorId}</p>}
@@ -100,8 +89,8 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, exis
 
       <Select
         label="Día de la Semana"
-        name="dia_semana"
-        value={formData.dia_semana}
+        name="diaSemana"
+        value={formData.diaSemana}
         onChange={handleChange}
         options={DIAS_SEMANA.map(d => ({
           value: d,
@@ -109,46 +98,42 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, exis
         }))}
         required
       />
-      {errors.dia_semana && (
-        <p className="form-error" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <AlertTriangle size={14} /> {errors.dia_semana}
-        </p>
-      )}
+      {errors.diaSemana && <p className="form-error">{errors.diaSemana}</p>}
 
       <div className="form-row">
         <Input
           label="Hora Inicio"
-          name="hora_inicio"
+          name="horaInicio"
           type="time"
-          value={formData.hora_inicio}
+          value={formData.horaInicio}
           onChange={handleChange}
           required
         />
         <Input
           label="Hora Fin"
-          name="hora_fin"
+          name="horaFin"
           type="time"
-          value={formData.hora_fin}
+          value={formData.horaFin}
           onChange={handleChange}
           required
         />
       </div>
-      {errors.hora_fin && <p className="form-error">{errors.hora_fin}</p>}
+      {errors.horaFin && <p className="form-error">{errors.horaFin}</p>}
 
       <Input
         label="Capacidad Máxima"
-        name="capacidad_maxima"
+        name="capacidadMaxima"
         type="number"
-        value={formData.capacidad_maxima}
+        value={formData.capacidadMaxima}
         onChange={handleChange}
         min="1"
         required
       />
-      {errors.capacidad_maxima && <p className="form-error">{errors.capacidad_maxima}</p>}
+      {errors.capacidadMaxima && <p className="form-error">{errors.capacidadMaxima}</p>}
 
       <div className="form-actions">
-        <Button type="submit">
-          {initialData ? 'Actualizar Horario' : 'Guardar Horario'}
+        <Button type="submit" disabled={saving}>
+          {saving ? 'Guardando...' : initialData ? 'Actualizar Horario' : 'Guardar Horario'}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
       </div>
