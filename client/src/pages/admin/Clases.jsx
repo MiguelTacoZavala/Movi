@@ -1,16 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle } from 'lucide-react'
+import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle, RefreshCw } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
-import {
-  mockClasesGeneradas,
-  instructores,
-  ESTADOS_CLASE,
-  formatHoraAMPM,
-  mockCreditos,
-} from '../../data/mockData'
+import api from '../../services/api'
+import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita } from '../../data/mockData'
 import '../../App.css'
 
 const estadoConfig = {
@@ -21,8 +16,9 @@ const estadoConfig = {
 }
 
 export default function Clases() {
-  const [clases, setClases] = useState(mockClasesGeneradas)
-  const [creditos, setCreditos] = useState(mockCreditos)
+  const [clases, setClases] = useState([])
+  const [instructores, setInstructores] = useState([])
+  const [loading, setLoading] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroInstructor, setFiltroInstructor] = useState('')
@@ -33,11 +29,28 @@ export default function Clases() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [cancelTargetClase, setCancelTargetClase] = useState(null)
 
+  const cargar = async () => {
+    try {
+      const [cData, iData] = await Promise.all([
+        api.get('/clases?limit=500'),
+        api.get('/instructores'),
+      ])
+      setClases(cData.clases)
+      setInstructores(iData.instructores)
+    } catch (e) {
+      alert(e.message || 'Error al cargar clases')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { cargar() }, [])
+
   const filteredClases = useMemo(() =>
     clases.filter(c => {
       if (filtroEstado && c.estado !== filtroEstado) return false
       if (filtroFecha && c.fecha !== filtroFecha) return false
-      if (filtroInstructor && c.instructorId !== parseInt(filtroInstructor)) return false
+      if (filtroInstructor && c.instructor?.id !== parseInt(filtroInstructor)) return false
       return true
     }), [clases, filtroEstado, filtroFecha, filtroInstructor]
   )
@@ -52,27 +65,29 @@ export default function Clases() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <Music size={16} className="icon-primary" />
         <div>
-          <div style={{ fontWeight: 600 }}>{val}</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>{row.instructor}</div>
+          <div style={{ fontWeight: 600 }}>{val?.nombre}</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
+            {row.instructor ? `${row.instructor.nombres} ${row.instructor.apellidos}` : '—'}
+          </div>
         </div>
       </div>
     )},
     { key: 'fecha', label: 'Fecha', render: (val) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-        <Calendar size={14} className="icon-muted" /> {val}
+        <Calendar size={14} className="icon-muted" /> {formatFechaBonita(val)}
       </span>
     )},
     { key: 'horario', label: 'Horario', render: (_, row) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
         <Clock size={14} className="icon-muted" />
-        {formatHoraAMPM(row.hora_inicio)} — {formatHoraAMPM(row.hora_fin)}
+        {formatHoraAMPM(row.horaInicio)} — {formatHoraAMPM(row.horaFin)}
       </span>
     )},
     { key: 'cupos', label: 'Cupos', render: (_, row) => (
       <div>
-        <div>{row.inscritos}/{row.capacidad_maxima}</div>
+        <div>{row.inscritos}/{row.capacidadMaxima}</div>
         <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
-          {Math.round((row.inscritos / row.capacidad_maxima) * 100)}%
+          {Math.round((row.inscritos / row.capacidadMaxima) * 100)}%
         </div>
       </div>
     )},
@@ -101,9 +116,31 @@ export default function Clases() {
     )},
   ]
 
-  const handleViewParticipants = (clase) => {
-    setSelectedClase(clase)
-    setParticipantsOpen(true)
+  const handleGenerar = async () => {
+    const input = window.prompt('¿Para cuántas semanas generar clases? (1-52)', '4')
+    if (input === null) return
+    const semanas = parseInt(input)
+    if (!semanas || semanas < 1 || semanas > 52) {
+      alert('Ingresa un número de semanas entre 1 y 52')
+      return
+    }
+    try {
+      const r = await api.post('/clases/generate', { semanas })
+      alert(`Listo: ${r.creadas} clase(s) creada(s), ${r.omitidas} ya existían.`)
+      await cargar()
+    } catch (e) {
+      alert(e.message || 'Error al generar clases')
+    }
+  }
+
+  const handleViewParticipants = async (clase) => {
+    try {
+      const data = await api.get(`/clases/${clase.id}`)
+      setSelectedClase(data.clase)
+      setParticipantsOpen(true)
+    } catch (e) {
+      alert(e.message || 'Error al cargar participantes')
+    }
   }
 
   const openCancelConfirm = (clase) => {
@@ -111,26 +148,22 @@ export default function Clases() {
     setCancelConfirmOpen(true)
   }
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     if (!cancelTargetClase) return
-    const confirmados = cancelTargetClase.posiciones.filter(p => p.estado === 'ocupado').length
-
-    const nuevosCreditos = []
-    for (let i = 0; i < confirmados; i++) {
-      nuevosCreditos.push({
-        id: creditos.length + i + 1,
-        claseId: cancelTargetClase.id,
-        usado: false,
-        fecha_creacion: new Date().toISOString().split('T')[0],
-      })
+    try {
+      const r = await api.patch(`/clases/${cancelTargetClase.id}/cancel`)
+      setClases(clases.map(c =>
+        c.id === cancelTargetClase.id ? { ...c, estado: 'CANCELADA' } : c
+      ))
+      alert(r.creditosGenerados > 0
+        ? `Clase cancelada. Se generaron ${r.creditosGenerados} crédito(s).`
+        : 'Clase cancelada.')
+    } catch (e) {
+      alert(e.message || 'Error al cancelar la clase')
+    } finally {
+      setCancelConfirmOpen(false)
+      setCancelTargetClase(null)
     }
-
-    setCreditos(prev => [...prev, ...nuevosCreditos])
-    setClases(clases.map(c =>
-      c.id === cancelTargetClase.id ? { ...c, estado: 'CANCELADA' } : c
-    ))
-    setCancelConfirmOpen(false)
-    setCancelTargetClase(null)
   }
 
   const getSeatColumns = (total) => {
@@ -138,6 +171,10 @@ export default function Clases() {
     if (total <= 20) return 5
     return 6
   }
+
+  const isOcupado = (pos) => Array.isArray(pos.reservas) && pos.reservas.length > 0
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
   return (
     <div>
@@ -147,6 +184,10 @@ export default function Clases() {
           Clases Generadas
         </h1>
         <div className="filters">
+          <Button onClick={handleGenerar}>
+            <RefreshCw size={18} />
+            Generar Clases
+          </Button>
           <div className="form-group">
             <label>Fecha</label>
             <input
@@ -162,7 +203,7 @@ export default function Clases() {
             onChange={(e) => setFiltroInstructor(e.target.value)}
             options={[
               { value: '', label: 'Todos los instructores' },
-              ...instructores.map(i => ({ value: i.id, label: i.nombre })),
+              ...instructores.map(i => ({ value: i.id, label: `${i.nombres} ${i.apellidos}` })),
             ]}
           />
           <Select
@@ -217,16 +258,16 @@ export default function Clases() {
       <Modal
         isOpen={participantsOpen}
         onClose={() => setParticipantsOpen(false)}
-        title={`Participantes: ${selectedClase?.categoria || ''}`}
+        title={`Participantes: ${selectedClase?.categoria?.nombre || ''}`}
         size="large"
       >
         {selectedClase && (
           <div>
             <div className="clase-info-summary">
-              <p><strong>Instructor:</strong> {selectedClase.instructor}</p>
-              <p><strong>Fecha:</strong> {selectedClase.fecha}</p>
-              <p><strong>Horario:</strong> {formatHoraAMPM(selectedClase.hora_inicio)} — {formatHoraAMPM(selectedClase.hora_fin)}</p>
-              <p><strong>Ocupación:</strong> {selectedClase.inscritos}/{selectedClase.capacidad_maxima}</p>
+              <p><strong>Instructor:</strong> {selectedClase.instructor ? `${selectedClase.instructor.nombres} ${selectedClase.instructor.apellidos}` : '—'}</p>
+              <p><strong>Fecha:</strong> {formatFechaBonita(selectedClase.fecha)}</p>
+              <p><strong>Horario:</strong> {formatHoraAMPM(selectedClase.horaInicio)} — {formatHoraAMPM(selectedClase.horaFin)}</p>
+              <p><strong>Ocupación:</strong> {selectedClase.inscritos}/{selectedClase.capacidadMaxima}</p>
             </div>
 
             <div style={{ marginTop: '1rem', textAlign: 'center' }}>
@@ -240,12 +281,12 @@ export default function Clases() {
               </p>
               <div
                 className="seat-grid"
-                style={{ '--columnas': getSeatColumns(selectedClase.capacidad_maxima) }}
+                style={{ '--columnas': getSeatColumns(selectedClase.capacidadMaxima) }}
               >
-                {selectedClase.posiciones.map(pos => (
+                {(selectedClase.posiciones || []).map(pos => (
                   <div
                     key={pos.id}
-                    className={`seat ${pos.estado === 'ocupado' ? 'seat--occupied' : 'seat--available'}`}
+                    className={`seat ${isOcupado(pos) ? 'seat--occupied' : 'seat--available'}`}
                   >
                     {pos.numero}
                   </div>
@@ -265,29 +306,22 @@ export default function Clases() {
           <>
             <div className="cancel-inscripcion-preview">
               <div className="cancel-inscripcion-info">
-                <strong>{cancelTargetClase.categoria}</strong>
-                <span>{cancelTargetClase.fecha} — {formatHoraAMPM(cancelTargetClase.hora_inicio)} a {formatHoraAMPM(cancelTargetClase.hora_fin)}</span>
-                <span>Instructor/a: {cancelTargetClase.instructor}</span>
+                <strong>{cancelTargetClase.categoria?.nombre}</strong>
+                <span>{formatFechaBonita(cancelTargetClase.fecha)} — {formatHoraAMPM(cancelTargetClase.horaInicio)} a {formatHoraAMPM(cancelTargetClase.horaFin)}</span>
+                <span>Instructor/a: {cancelTargetClase.instructor ? `${cancelTargetClase.instructor.nombres} ${cancelTargetClase.instructor.apellidos}` : '—'}</span>
               </div>
             </div>
 
             <AlertTriangle size={48} style={{ display: 'block', margin: '1rem auto', color: 'var(--warning)' }} />
 
-            {(() => {
-              const confirmados = cancelTargetClase.posiciones.filter(p => p.estado === 'ocupado').length
-              return (
-                <>
-                  <p className="modal-subtitle" style={{ textAlign: 'center' }}>
-                    {confirmados > 0
-                      ? `Hay ${confirmados} participante(s) registrados. Se generarán créditos automáticamente.`
-                      : 'No hay participantes registrados para esta clase.'}
-                  </p>
-                  <p className="modal-subtitle" style={{ textAlign: 'center', fontWeight: 500, color: 'var(--danger-text)' }}>
-                    Esta acción no se puede deshacer.
-                  </p>
-                </>
-              )
-            })()}
+            <p className="modal-subtitle" style={{ textAlign: 'center' }}>
+              {cancelTargetClase.inscritos > 0
+                ? `Hay ${cancelTargetClase.inscritos} participante(s) registrados. Se generarán créditos automáticamente.`
+                : 'No hay participantes registrados para esta clase.'}
+            </p>
+            <p className="modal-subtitle" style={{ textAlign: 'center', fontWeight: 500, color: 'var(--danger-text)' }}>
+              Esta acción no se puede deshacer.
+            </p>
 
             <div className="modal-actions">
               <Button variant="secondary" onClick={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }}>
