@@ -1,64 +1,38 @@
-import { Music, Users, TrendingUp, Clock, AlertTriangle, DollarSign, BarChart2, CheckCircle } from 'lucide-react'
-import { mockClasesGeneradas, formatHoraAMPM, PRECIOS_CLASE } from '../../data/mockData'
+import { useState, useEffect } from 'react'
+import { Music, Clock, AlertTriangle, DollarSign, BarChart2 } from 'lucide-react'
+import api from '../../services/api'
+import { formatHoraAMPM, formatFechaBonita } from '../../data/mockData'
 import '../../App.css'
 
-const hoy = new Date().toISOString().split('T')[0]
-
-function getRangoSemana() {
-  const d = new Date()
-  const lunes = new Date(d)
-  lunes.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-  const domingo = new Date(lunes)
-  domingo.setDate(lunes.getDate() + 6)
-  return [lunes.toISOString().split('T')[0], domingo.toISOString().split('T')[0]]
-}
-
-function getRangoMes() {
-  const d = new Date()
-  return [
-    new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0],
-    new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0],
-  ]
-}
-
-function ingresoClase(c) {
-  return c.inscritos * (PRECIOS_CLASE[c.categoria] ?? 25)
-}
-
 function soles(n) {
-  return `S/. ${n.toLocaleString('es-PE')}`
+  return `S/. ${Number(n || 0).toLocaleString('es-PE')}`
 }
-
-const [semIni, semFin] = getRangoSemana()
-const [mesIni, mesFin] = getRangoMes()
 
 export default function Dashboard() {
-  const clasesHoy      = mockClasesGeneradas.filter(c => c.fecha === hoy)
-  const clasesSemana   = mockClasesGeneradas.filter(c => c.fecha >= semIni && c.fecha <= semFin)
-  const clasesMes      = mockClasesGeneradas.filter(c => c.fecha >= mesIni && c.fecha <= mesFin)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const ingresosHoy     = clasesHoy.reduce((s, c) => s + ingresoClase(c), 0)
-  const ingresosSemana  = clasesSemana.reduce((s, c) => s + ingresoClase(c), 0)
-  const ingresosMes     = clasesMes.reduce((s, c) => s + ingresoClase(c), 0)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/dashboard/admin')
+        setData(res)
+      } catch (e) {
+        alert(e.message || 'Error al cargar el dashboard')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
 
-  const ocupacion = mockClasesGeneradas.length
-    ? Math.round(mockClasesGeneradas.reduce((s, c) => s + c.inscritos / c.capacidad_maxima, 0) / mockClasesGeneradas.length * 100)
-    : 0
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (!data) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>No se pudo cargar el dashboard</div>
 
-  const confirmadasMes = clasesMes.filter(c => c.estado !== 'CANCELADA').length
-  const canceladasMes  = clasesMes.filter(c => c.estado === 'CANCELADA').length
-
-  const categoriasPopulares = Object.entries(
-    clasesSemana.reduce((acc, c) => {
-      acc[c.categoria] = (acc[c.categoria] || 0) + c.inscritos
-      return acc
-    }, {})
-  ).sort((a, b) => b[1] - a[1])
-  const maxCat = categoriasPopulares[0]?.[1] || 1
-
-  const claseRiesgo = mockClasesGeneradas
-    .filter(c => c.fecha >= hoy && c.inscritos < (c.minimo_participantes || 7))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora_inicio.localeCompare(b.hora_inicio))[0]
+  const ingresos = data.ingresos || { hoy: 0, semana: 0, mes: 0 }
+  const clasesHoy = data.clasesHoy || []
+  const categoriasPopulares = (data.categoriasPopulares || []).filter(c => c.totalReservas > 0)
+  const maxCat = categoriasPopulares[0]?.totalReservas || 1
+  const claseRiesgo = (data.clasesEnRiesgo || [])[0]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -70,9 +44,9 @@ export default function Dashboard() {
         </p>
         <div className="dashboard-grid">
           {[
-            { label: 'Hoy',         value: soles(ingresosHoy) },
-            { label: 'Esta semana', value: soles(ingresosSemana) },
-            { label: 'Este mes',    value: soles(ingresosMes) },
+            { label: 'Hoy',         value: soles(ingresos.hoy) },
+            { label: 'Esta semana', value: soles(ingresos.semana) },
+            { label: 'Este mes',    value: soles(ingresos.mes) },
           ].map((item, i) => (
             <div key={i} className="stat-card" style={{ animation: 'fadeInUp 0.35s ease both', animationDelay: `${i * 0.07}s` }}>
               <div className="stat-icon"><DollarSign size={22} /></div>
@@ -84,26 +58,26 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
-      
+
       {/* ── Categorías populares + Clase en riesgo ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
 
         <div className="dashboard-section">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', margin: 0 }}>
-            <BarChart2 size={17} className="icon-primary" /> Categorías populares esta semana
+            <BarChart2 size={17} className="icon-primary" /> Categorías más populares
           </h2>
           <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {categoriasPopulares.length === 0 ? (
-              <span style={{ color: 'var(--gray-300)', fontSize: '0.875rem' }}>Sin datos esta semana</span>
-            ) : categoriasPopulares.map(([cat, total]) => (
-              <div key={cat}>
+              <span style={{ color: 'var(--gray-300)', fontSize: '0.875rem' }}>Sin reservas registradas</span>
+            ) : categoriasPopulares.map((cat) => (
+              <div key={cat.id}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.3rem' }}>
-                  <span>{cat}</span>
-                  <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>{total} inscritos</span>
+                  <span>{cat.nombre}</span>
+                  <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>{cat.totalReservas} reservas</span>
                 </div>
                 <div style={{ background: 'var(--gray-100)', borderRadius: '99px', height: '7px' }}>
                   <div style={{
-                    width: `${Math.round(total / maxCat * 100)}%`,
+                    width: `${Math.round(cat.totalReservas / maxCat * 100)}%`,
                     background: 'linear-gradient(90deg, var(--primary-dark), var(--primary-medium))',
                     height: '100%',
                     borderRadius: '99px',
@@ -120,14 +94,16 @@ export default function Dashboard() {
           </h2>
           {claseRiesgo ? (
             <div style={{ marginTop: '1rem' }}>
-              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--gray-900)' }}>{claseRiesgo.categoria}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginTop: '0.2rem' }}>{claseRiesgo.instructor}</div>
+              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--gray-900)' }}>{claseRiesgo.categoria?.nombre}</div>
               <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginTop: '0.2rem' }}>
-                {claseRiesgo.fecha} · {formatHoraAMPM(claseRiesgo.hora_inicio)}
+                {claseRiesgo.instructor ? `${claseRiesgo.instructor.nombres} ${claseRiesgo.instructor.apellidos}` : '—'}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginTop: '0.2rem' }}>
+                {formatFechaBonita(claseRiesgo.fecha)} · {formatHoraAMPM(claseRiesgo.horaInicio)}
               </div>
               <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                 <span style={{ fontWeight: 700, color: '#dc2626', fontSize: '1.2rem' }}>{claseRiesgo.inscritos}</span>
-                <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>de {claseRiesgo.minimo_participantes} mínimo requerido</span>
+                <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>de {claseRiesgo.minimoParticipantes} mínimo requerido</span>
               </div>
               <div style={{ marginTop: '0.75rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#92400e' }}>
                 Se cancelará si no alcanza el mínimo antes del inicio
@@ -175,16 +151,16 @@ export default function Dashboard() {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Music size={14} className="icon-primary" />
-                      {c.categoria}
+                      {c.categoria?.nombre}
                     </div>
                   </td>
-                  <td>{formatHoraAMPM(c.hora_inicio)}</td>
-                  <td>{c.instructor}</td>
+                  <td>{formatHoraAMPM(c.horaInicio)}</td>
+                  <td>{c.instructor ? `${c.instructor.nombres} ${c.instructor.apellidos}` : '—'}</td>
                   <td>
-                    <span style={{ fontWeight: c.inscritos >= c.capacidad_maxima ? 700 : 400 }}>
+                    <span style={{ fontWeight: c.inscritos >= c.capacidadMaxima ? 700 : 400 }}>
                       {c.inscritos}
                     </span>
-                    <span style={{ color: 'var(--gray-400)' }}> / {c.capacidad_maxima}</span>
+                    <span style={{ color: 'var(--gray-400)' }}> / {c.capacidadMaxima}</span>
                   </td>
                   <td>
                     <span className={`status-badge ${
