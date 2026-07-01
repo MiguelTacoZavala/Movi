@@ -20,7 +20,7 @@ export default function CategoriaForm({ initialData, onSave, onCancel }) {
       alert('El nombre de la categoría es obligatorio')
       return
     }
-    onSave({ ...formData, nombre: formData.nombre.trim() })
+    onSave({ ...formData, nombre: formData.nombre.trim(), precio: Number(formData.precio) })
   }
 
   return (
