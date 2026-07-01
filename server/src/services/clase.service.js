@@ -91,12 +91,22 @@ async function generar({ semanas }) {
   const horarios = await prisma.horarioSemanal.findMany({ where: { activo: true } })
   const monday = getMondayOfCurrentWeek()
 
+  const hoy = new Date()
+  hoy.setUTCHours(0, 0, 0, 0)
+
   let creadas = 0
   let omitidas = 0
+  let pasadas = 0
 
   for (const horario of horarios) {
     for (let week = 0; week < semanas; week++) {
       const fecha = getFechaClase(monday, horario.diaSemana, week)
+
+      // No generar clases de días que ya pasaron (ej. el lunes de esta semana si hoy es miércoles)
+      if (fecha < hoy) {
+        pasadas++
+        continue
+      }
 
       const existing = await prisma.clase.findUnique({
         where: { horarioSemanalId_fecha: { horarioSemanalId: horario.id, fecha } },
@@ -131,10 +141,34 @@ async function generar({ semanas }) {
     }
   }
 
-  return { creadas, omitidas, semanas }
+  console.log(
+    `Clases generadas: ${creadas} nuevas, ${omitidas} ya existentes, ${pasadas} descartadas por fecha pasada (${horarios.length} horarios activos, ${semanas} semanas)`
+  )
+
+  return { creadas, omitidas, pasadas, semanas }
+}
+
+// Marca como FINALIZADA toda clase cuya fecha ya pasó y seguía activa
+async function finalizarClasesPasadas() {
+  const hoy = new Date()
+  hoy.setUTCHours(0, 0, 0, 0)
+
+  const { count } = await prisma.clase.updateMany({
+    where: {
+      fecha: { lt: hoy },
+      estado: { in: ['PROGRAMADA', 'EN_CURSO'] },
+    },
+    data: { estado: 'FINALIZADA', updatedAt: new Date() },
+  })
+
+  if (count > 0) {
+    console.log(`Clases finalizadas automaticamente: ${count}`)
+  }
 }
 
 async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limit = 10 }) {
+  await finalizarClasesPasadas()
+
   const where = {}
 
   if (estado) where.estado = estado
@@ -194,6 +228,11 @@ async function cancelar(id) {
   })
 
   if (!clase) return null
+
+  const hoy = new Date()
+  hoy.setUTCHours(0, 0, 0, 0)
+  if (clase.fecha < hoy) throw { yaPasada: true }
+
   if (clase.estado === 'CANCELADA') throw { yaCancelada: true }
   if (clase.estado === 'FINALIZADA') throw { yaFinalizada: true }
 
@@ -221,6 +260,8 @@ async function cancelar(id) {
       data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
     })
   })
+
+  console.log(`Clase ${id} cancelada: ${creditosGenerados} creditos generados`)
 
   return { creditosGenerados }
 }

@@ -38,8 +38,18 @@ async function cancelar(req, res, next) {
     if (!resultado) return res.status(404).json({ error: 'Clase no encontrada' })
     res.json({ message: 'Clase cancelada correctamente', ...resultado })
   } catch (error) {
-    if (error.yaCancelada) return res.status(409).json({ error: 'La clase ya está cancelada' })
-    if (error.yaFinalizada) return res.status(409).json({ error: 'No se puede cancelar una clase finalizada' })
+    if (error.yaPasada) {
+      console.warn(`Cancelacion rechazada: la clase ${req.params.id} ya paso`)
+      return res.status(409).json({ error: 'No se puede cancelar una clase que ya pasó' })
+    }
+    if (error.yaCancelada) {
+      console.warn(`Cancelacion rechazada: la clase ${req.params.id} ya estaba cancelada`)
+      return res.status(409).json({ error: 'La clase ya está cancelada' })
+    }
+    if (error.yaFinalizada) {
+      console.warn(`Cancelacion rechazada: la clase ${req.params.id} ya finalizo`)
+      return res.status(409).json({ error: 'No se puede cancelar una clase finalizada' })
+    }
     next(error)
   }
 }
