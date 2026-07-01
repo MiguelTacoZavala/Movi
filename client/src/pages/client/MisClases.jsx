@@ -24,8 +24,8 @@ export default function MisClases() {
   useEffect(() => {
     api.get('/reservas/mis-reservas').then(data => {
       setReservas(data.reservas)
-    }).catch(e => {
-      alert(e.message || 'Error al cargar reservas')
+    }).catch(() => {
+      alert('No pudimos cargar tus reservas. Revisa tu conexión.')
     }).finally(() => setLoading(false))
   }, [])
 
@@ -43,8 +43,8 @@ export default function MisClases() {
       const data = await api.patch(`/reservas/${cancelando.id}/cancelar`)
       setReservas(reservas.map(r => r.id === cancelando.id ? data.reserva : r))
       setCancelando(null)
-    } catch (e) {
-      alert(e.message || 'Error al cancelar')
+    } catch {
+      alert('No se pudo cancelar la reserva. Intenta de nuevo.')
     }
   }
 
@@ -138,10 +138,10 @@ export default function MisClases() {
       </Modal>
 
       <div className="filters" style={{ marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <Button variant="secondary" size="small" className={filtro === 'proximas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('proximas')}>
+        <Button variant="secondary" size="small" className={filtro === 'proximas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('proximas')} title="Mostrar solo clases próximas">
           Próximas
         </Button>
-        <Button variant="secondary" size="small" className={filtro === 'pasadas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('pasadas')}>
+        <Button variant="secondary" size="small" className={filtro === 'pasadas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('pasadas')} title="Mostrar clases pasadas o canceladas">
           Pasadas
         </Button>
       </div>
@@ -199,15 +199,16 @@ export default function MisClases() {
               </div>
 
               {esProxima && (
-                <Button
-                  variant="danger"
-                  size="small"
-                  onClick={(e) => { e.stopPropagation(); setCancelando(r) }}
-                  style={{ width: '100%' }}
-                >
-                  <X size={16} />
-                  Cancelar inscripción
-                </Button>
+                  <Button
+                    variant="danger"
+                    size="small"
+                    onClick={(e) => { e.stopPropagation(); setCancelando(r) }}
+                    style={{ width: '100%' }}
+                    title="Cancelar esta inscripción (no se puede deshacer)"
+                  >
+                    <X size={16} />
+                    Cancelar inscripción
+                  </Button>
               )}
             </div>
           )

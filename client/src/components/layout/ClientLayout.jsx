@@ -5,11 +5,12 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
+import AyudaContextual from '../common/AyudaContextual'
 import '../../App.css'
 
 export default function ClientLayout() {
   const { user, logout } = useAuth()
-  const { theme } = useTheme()
+  const { theme, reducedMotion } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -17,6 +18,10 @@ export default function ClientLayout() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.dataset.reducedMotion = reducedMotion ? 'true' : 'false'
+  }, [reducedMotion])
 
   const handleLogout = () => {
     logout()
@@ -74,6 +79,8 @@ export default function ClientLayout() {
           <span>Perfil</span>
         </NavLink>
       </nav>
+
+      <AyudaContextual role="cliente" />
     </div>
   )
 }
