@@ -11,17 +11,18 @@ const menuItems = [
   { path: '/admin/clientes', label: 'Clientes', icon: UserCircle },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
+    onClose()
     logout()
     navigate('/login')
   }
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="sidebar-header">
         <img src="/MOVI_LOGO.svg" alt="MOVI" className="sidebar-logo" />
       </div>
@@ -33,6 +34,7 @@ export default function Sidebar() {
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  onClick={onClose}
                   className={({ isActive }) => isActive ? 'active' : ''}
                 >
                   <span className="menu-icon">
