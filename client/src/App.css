@@ -2954,3 +2954,32 @@ body {
   color: #ffffff;
   border-color: #1e8449;
 }
+
+/* ── Theme transition (smooth dark/light switch) ── */
+
+.theme-transitioning,
+.theme-transitioning * {
+  transition-property: background-color, color, border-color, box-shadow, fill, stroke !important;
+  transition-duration: 0.3s !important;
+  transition-timing-function: ease !important;
+}
+
+/* ── Desactivar animaciones (user toggle + OS preference) ── */
+
+[data-reduced-motion="true"] .page-fade-in,
+[data-reduced-motion="true"] .clase-card-slim,
+[data-reduced-motion="true"] .date-carousel,
+[data-reduced-motion="true"] .back-btn,
+[data-reduced-motion="true"] .category-active-header {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-in,
+  .clase-card-slim,
+  .date-carousel,
+  .back-btn,
+  .category-active-header {
+    animation: none !important;
+  }
+}

@@ -338,6 +338,7 @@ export default function DetalleClase() {
           <div
             className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
             onClick={() => !holdActive && !procesando && handleSelectPago('creditos')}
+            title="Usar un crédito disponible como método de pago"
           >
             <CreditCard size={32} />
             <span>Usar Créditos</span>
@@ -346,6 +347,7 @@ export default function DetalleClase() {
           <div
             className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
             onClick={() => !holdActive && !procesando && handleSelectPago('yape')}
+            title="Pagar con Yape (tarjeta online)"
           >
             <Smartphone size={32} />
             <span>Yape</span>
@@ -374,6 +376,7 @@ export default function DetalleClase() {
         className="btn-inscribir"
         onClick={handlePagar}
         disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando}
+        title="Confirmar asiento y procesar el pago"
       >
         {procesando ? 'Procesando...' : holdActive ? 'Procesando...' : 'Pagar e inscribirme'}
       </Button>

@@ -39,8 +39,8 @@ export default function DetalleClase() {
       await api.patch(`/instructores/clases/${id}/tematica`, { tematica: val })
       setClase(prev => ({ ...prev, tematica: val }))
       setEditandoTematica(false)
-    } catch (e) {
-      alert(e.message || 'Error al guardar temática')
+    } catch {
+      alert('No se pudo guardar la temática. Intenta de nuevo.')
     } finally {
       setGuardandoTematica(false)
     }
@@ -119,7 +119,7 @@ export default function DetalleClase() {
               )}
             </div>
             {!editandoTematica && (
-              <button onClick={iniciarEdicion} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-medium)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+              <button onClick={iniciarEdicion} title="Cambiar la temática de la clase" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-medium)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
                 <Edit3 size={14} />
                 Editar
               </button>
