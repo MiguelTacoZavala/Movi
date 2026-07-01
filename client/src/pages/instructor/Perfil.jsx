@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { User, Moon, Sun, Camera } from 'lucide-react'
+import Ayuda from '../../components/common/Ayuda'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import api from '../../services/api'
@@ -10,7 +11,7 @@ import '../../App.css'
 
 export default function Perfil() {
   const { user, updateUser } = useAuth()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme, reducedMotion, toggleReducedMotion } = useTheme()
   const [modalOpen, setModalOpen] = useState(false)
   const [editData, setEditData] = useState({ nombres: '', apellidos: '', telefono: '', email: '' })
   const [uploading, setUploading] = useState(false)
@@ -51,8 +52,8 @@ export default function Perfil() {
         email: editData.email.trim(),
       })
       setModalOpen(false)
-    } catch (e) {
-      alert(e.message || 'Error al guardar')
+    } catch {
+      alert('No se pudieron guardar los cambios. Revisa los campos e intenta de nuevo.')
     }
   }
 
@@ -69,8 +70,8 @@ export default function Perfil() {
       const result = await api.uploadProfilePhoto(file)
       updateUser({ fotoUrl: result.fotoUrl })
       setPreviewUrl(null)
-    } catch (e) {
-      alert(e.message || 'Error al subir foto')
+    } catch {
+      alert('No se pudo subir la foto. Intenta con otro archivo.')
     } finally {
       setUploading(false)
     }
@@ -128,7 +129,7 @@ export default function Perfil() {
         {uploading && <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>Subiendo foto...</p>}
       </div>
 
-      <Button variant="secondary" style={{ width: '100%', marginBottom: '1.5rem' }} onClick={openEditModal}>
+      <Button variant="secondary" style={{ width: '100%', marginBottom: '1.5rem' }} onClick={openEditModal} title="Modificar tus datos personales">
         Editar Perfil
       </Button>
 
@@ -142,6 +143,7 @@ export default function Perfil() {
         <div className="client-card-content">
           <div
             onClick={toggleTheme}
+            title="Alternar entre tema claro y oscuro"
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer' }}
           >
             <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Tema oscuro</span>
@@ -154,6 +156,25 @@ export default function Perfil() {
                 width: 20, height: 20, borderRadius: '50%', background: '#fff',
                 position: 'absolute', top: 2,
                 left: theme === 'dark' ? 22 : 2,
+                transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </div>
+          </div>
+          <div
+            onClick={toggleReducedMotion}
+            title="Desactivar animaciones al cambiar de página"
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' }}
+          >
+            <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Desactivar animaciones</span>
+            <div style={{
+              width: 44, height: 24, borderRadius: 12, padding: 2,
+              background: reducedMotion ? 'var(--success)' : 'var(--gray-300)',
+              transition: 'background 0.2s ease', position: 'relative',
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: 2,
+                left: reducedMotion ? 22 : 2,
                 transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
               }} />
             </div>
@@ -191,6 +212,8 @@ export default function Perfil() {
           </div>
         </div>
       </div>
+
+      <Ayuda role="instructor" />
     </div>
   )
 }
