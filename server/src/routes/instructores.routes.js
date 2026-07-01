@@ -3,7 +3,7 @@ const { z } = require('zod')
 const { validate } = require('../middleware/validate')
 const { auth } = require('../middleware/auth')
 const { authorize } = require('../middleware/authorize')
-const { listar, crear, actualizar, eliminar, toggleEstado } = require('../controllers/instructores.controller')
+const { listar, crear, actualizar, eliminar, toggleEstado, dashboard, misHorarios, misClases, obtenerParticipantes, actualizarTematica, historial } = require('../controllers/instructores.controller')
 
 const router = Router()
 
@@ -27,10 +27,19 @@ const actualizarSchema = z.object({
   estado: z.boolean().optional(),
 })
 
+// Admin CRUD
 router.get('/', auth, authorize('ADMIN'), listar)
 router.post('/', auth, authorize('ADMIN'), validate(crearSchema), crear)
 router.put('/:id', auth, authorize('ADMIN'), validate(actualizarSchema), actualizar)
 router.delete('/:id', auth, authorize('ADMIN'), eliminar)
-router.patch('/:id/estado', auth, authorize('ADMIN'), toggleEstado)
+router.patch('/:id/status', auth, authorize('ADMIN'), toggleEstado)
+
+// Instructor panel
+router.get('/dashboard', auth, authorize('INSTRUCTOR'), dashboard)
+router.get('/mis-horarios', auth, authorize('INSTRUCTOR'), misHorarios)
+router.get('/mis-clases', auth, authorize('INSTRUCTOR'), misClases)
+router.get('/historial', auth, authorize('INSTRUCTOR'), historial)
+router.get('/clases/:id/participantes', auth, authorize('INSTRUCTOR'), obtenerParticipantes)
+router.patch('/clases/:id/tematica', auth, authorize('INSTRUCTOR'), actualizarTematica)
 
 module.exports = router

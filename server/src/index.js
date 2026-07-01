@@ -14,6 +14,9 @@ const horariosRoutes = require('./routes/horarios.routes')
 const clasesRoutes = require('./routes/clases.routes')
 const clientesRoutes = require('./routes/clientes.routes')
 const dashboardRoutes = require('./routes/dashboard.routes')
+const reservasRoutes = require('./routes/reservas.routes')
+const creditosRoutes = require('./routes/creditos.routes')
+const notificacionesRoutes = require('./routes/notificaciones.routes')
 
 const app = express()
 
@@ -34,6 +37,9 @@ app.use('/api/horarios', horariosRoutes)
 app.use('/api/clases', clasesRoutes)
 app.use('/api/clientes', clientesRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/reservas', reservasRoutes)
+app.use('/api/creditos', creditosRoutes)
+app.use('/api/notificaciones', notificacionesRoutes)
 
 app.use(errorHandler)
 

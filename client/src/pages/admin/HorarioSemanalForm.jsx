@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Select from '../../components/common/Select'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
-import { DIAS_SEMANA } from '../../data/mockData'
+import { DIAS_SEMANA } from '../../utils/helpers'
 import '../../App.css'
 
 export default function HorarioSemanalForm({ initialData, onSave, onCancel, instructores = [], categorias = [] }) {

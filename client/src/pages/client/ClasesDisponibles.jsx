@@ -1,7 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronRight } from 'lucide-react'
-import { CATEGORIAS, mockClases, diasSemana, formatFecha, formatHoraAMPM, claseDisponible } from '../../data/mockData'
+import api from '../../services/api'
+import { formatHoraAMPM } from '../../utils/helpers'
+import '../../App.css'
+
+const CATEGORIA_APARIENCIA = {
+  Salsa: { icon: 'Flame', color: '#E74C3C', bgColor: '#FEF2F2', gradient: 'linear-gradient(135deg, #E74C3C, #c0392b)', desc: 'Ritmo y energía' },
+  Bachata: { icon: 'Heart', color: '#27AE60', bgColor: '#F0FDF4', gradient: 'linear-gradient(135deg, #27AE60, #1e8449)', desc: 'Romántica y sensual' },
+  Tango: { icon: 'Drama', color: '#7C3AED', bgColor: '#F5F3FF', gradient: 'linear-gradient(135deg, #7C3AED, #5B21B6)', desc: 'Pasión y elegancia' },
+}
 
 const ICON_MAP = {
   Flame: ({ size }) => (
@@ -23,13 +31,26 @@ const ICON_MAP = {
     </svg>
   ),
 }
-import '../../App.css'
 
 const FRANJAS = [
   { key: 'manana', label: 'En la mañana', icon: Sun },
   { key: 'tarde', label: 'Tarde', icon: Sunset },
   { key: 'nocturnas', label: 'Nocturnas', icon: Moon },
 ]
+
+function generarProximosDias() {
+  const hoy = new Date()
+  const diaSem = hoy.getDay()
+  const lunes = new Date(hoy)
+  lunes.setDate(hoy.getDate() - ((diaSem + 6) % 7))
+  const dias = []
+  for (let i = 0; i < 6; i++) {
+    const fecha = new Date(lunes)
+    fecha.setDate(lunes.getDate() + i)
+    dias.push(fecha)
+  }
+  return dias
+}
 
 function calcularDuracion(inicio, fin) {
   const [h1, m1] = inicio.split(':').map(Number)
@@ -38,21 +59,10 @@ function calcularDuracion(inicio, fin) {
   return `${diff} min`
 }
 
-function clasesEnFecha(categoria, fechaStr) {
-  return mockClases.filter(c =>
-    c.categoria === categoria && c.fecha === fechaStr && claseDisponible(c)
-  )
-}
-
-function primeraFechaConClases(categoria) {
-  return diasSemana.find(f => clasesEnFecha(categoria, f.toISOString().split('T')[0]).length > 0
-  ) || diasSemana[0]
-}
-
 function agruparPorFranja(clases) {
   const grupos = { manana: [], tarde: [], nocturnas: [] }
   clases.forEach(clase => {
-    const hora = parseInt(clase.hora_inicio.split(':')[0], 10)
+    const hora = parseInt(clase.horaInicio.split(':')[0], 10)
     if (hora < 12) grupos.manana.push(clase)
     else if (hora < 18) grupos.tarde.push(clase)
     else grupos.nocturnas.push(clase)
@@ -60,33 +70,58 @@ function agruparPorFranja(clases) {
   return grupos
 }
 
+const DIAS_LABEL = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB']
+
 export default function ClasesDisponibles() {
+  const [categorias, setCategorias] = useState([])
+  const [clases, setClases] = useState([])
   const [selectedCategoria, setSelectedCategoria] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const hoyStr = formatFecha(new Date()).full
-    return diasSemana.find(d => formatFecha(d).full === hoyStr) || diasSemana[0]
-  })
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
-  const selectedDateStr = selectedDate.toISOString().split('T')[0]
+  const diasSemana = useMemo(() => generarProximosDias(), [])
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/categorias'),
+      api.get('/clases?limit=500'),
+    ]).then(([catData, clsData]) => {
+      setCategorias(catData.categorias || [])
+      setClases(clsData.clases || [])
+    }).catch(() => {
+      setCategorias([])
+      setClases([])
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const hoyStr = useMemo(() => {
+    const d = new Date()
+    return d.toISOString().split('T')[0]
+  }, [])
+
   const clasesFiltradas = selectedCategoria
-    ? mockClases.filter(c =>
-        c.categoria === selectedCategoria && c.fecha === selectedDateStr && claseDisponible(c)
+    ? clases.filter(c =>
+        c.categoria?.nombre === selectedCategoria &&
+        c.fecha === selectedDate &&
+        c.estado === 'PROGRAMADA'
       )
     : []
 
   const handleSelectCategoria = (nombre) => {
     setSelectedCategoria(nombre)
-    setSelectedDate(primeraFechaConClases(nombre))
+    const fechaConClases = diasSemana.find(f => {
+      const fs = f.toISOString().split('T')[0]
+      return clases.some(c => c.categoria?.nombre === nombre && c.fecha === fs && c.estado === 'PROGRAMADA')
+    })
+    setSelectedDate(fechaConClases ? fechaConClases.toISOString().split('T')[0] : diasSemana[0]?.toISOString().split('T')[0])
   }
 
-  const handleVerClase = (claseId) => {
-    navigate(`/cliente/clases/${claseId}`)
-  }
-
-  const categoriaInfo = CATEGORIAS.find(c => c.nombre === selectedCategoria)
+  const apariencia = CATEGORIA_APARIENCIA[selectedCategoria] || { color: '#666', bgColor: '#f5f5f5', gradient: 'linear-gradient(135deg, #666, #444)', desc: '' }
   const grupos = agruparPorFranja(clasesFiltradas)
   const tieneClases = Object.values(grupos).some(g => g.length > 0)
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
   if (!selectedCategoria) {
     return (
@@ -94,29 +129,30 @@ export default function ClasesDisponibles() {
         <h2 className="client-section-title">Elige tu estilo</h2>
         <p className="client-section-subtitle">Selecciona el tipo de baile que deseas practicar</p>
         <div className="category-selector">
-          {CATEGORIAS.map((cat, i) => {
-            const Icon = ICON_MAP[cat.icon]
+          {categorias.map((cat, i) => {
+            const apa = CATEGORIA_APARIENCIA[cat.nombre] || { icon: 'Flame', color: '#666', bgColor: '#f5f5f5', gradient: 'linear-gradient(135deg, #666, #444)', desc: cat.descripcion }
+            const Icon = ICON_MAP[apa.icon]
             return (
               <button
-                key={cat.nombre}
+                key={cat.id}
                 className="category-card"
                 style={{
-                  '--cat-color': cat.color,
-                  '--cat-bg': cat.bgColor,
-                  '--cat-gradient': cat.gradient,
+                  '--cat-color': apa.color,
+                  '--cat-bg': apa.bgColor,
+                  '--cat-gradient': apa.gradient,
                   animationDelay: `${i * 0.08}s`,
                 }}
                 onClick={() => handleSelectCategoria(cat.nombre)}
               >
-                <div className="category-card-accent" style={{ background: cat.gradient }} />
-                <div className="category-card-icon" style={{ background: cat.gradient, color: '#fff' }}>
+                <div className="category-card-accent" style={{ background: apa.gradient }} />
+                <div className="category-card-icon" style={{ background: apa.gradient, color: '#fff' }}>
                   <Icon size={24} />
                 </div>
                 <div className="category-card-info">
                   <h3 className="category-card-title">{cat.nombre}</h3>
-                  <p className="category-card-desc">{cat.desc}</p>
+                  <p className="category-card-desc">{apa.desc}</p>
                 </div>
-                <ChevronRight size={20} className="category-card-chevron" style={{ color: cat.color }} />
+                <ChevronRight size={20} className="category-card-chevron" style={{ color: apa.color }} />
               </button>
             )
           })}
@@ -132,24 +168,24 @@ export default function ClasesDisponibles() {
         <span>Todos los estilos</span>
       </button>
 
-      <div className="category-active-header" style={{ color: categoriaInfo.color }}>
+      <div className="category-active-header" style={{ color: apariencia.color }}>
         <h2>{selectedCategoria}</h2>
       </div>
 
       <div className="date-carousel">
         {diasSemana.map((fecha) => {
-          const { dia, numero, full } = formatFecha(fecha)
-          const isActive = full === selectedDateStr
-          const hasClases = clasesEnFecha(selectedCategoria, full).length > 0
-          const isToday = full === formatFecha(new Date()).full
-          const hoyStr = formatFecha(new Date()).full
-          const esPasado = full < hoyStr
+          const fs = fecha.toISOString().split('T')[0]
+          const dia = DIAS_LABEL[fecha.getDay()]
+          const numero = fecha.getDate().toString().padStart(2, '0')
+          const isActive = fs === selectedDate
+          const hasClases = clases.some(c => c.categoria?.nombre === selectedCategoria && c.fecha === fs && c.estado === 'PROGRAMADA')
+          const esPasado = fs < hoyStr
 
           return (
             <button
-              key={full}
-              className={`date-item${isActive ? ' active' : ''}${!hasClases || esPasado ? ' disabled' : ''}${isToday ? ' today' : ''}`}
-              onClick={() => !esPasado && hasClases && setSelectedDate(fecha)}
+              key={fs}
+              className={`date-item${isActive ? ' active' : ''}${!hasClases || esPasado ? ' disabled' : ''}${fs === hoyStr ? ' today' : ''}`}
+              onClick={() => !esPasado && hasClases && setSelectedDate(fs)}
               disabled={!hasClases || esPasado}
             >
               <span className="date-item-day">{dia}</span>
@@ -180,36 +216,32 @@ export default function ClasesDisponibles() {
                 </div>
                 <div className="time-section-content">
                   {clases.map(clase => {
-                    const cupos = clase.capacidad_maxima - clase.inscritos
+                    const cupos = clase.capacidadMaxima - clase.inscritos
                     const idx = animIdx++
                     return (
                       <div
                         key={clase.id}
                         className="clase-card-slim"
                         style={{ animationDelay: `${idx * 0.05}s` }}
-                        onClick={() => handleVerClase(clase.id)}
+                        onClick={() => navigate(`/cliente/clases/${clase.id}`)}
                       >
                         <div className="clase-card-slim-time">
-                          <span className="clase-time-text">{formatHoraAMPM(clase.hora_inicio)}</span>
-                          <span className="clase-duration-text">{calcularDuracion(clase.hora_inicio, clase.hora_fin)}</span>
+                          <span className="clase-time-text">{formatHoraAMPM(clase.horaInicio)}</span>
+                          <span className="clase-duration-text">{calcularDuracion(clase.horaInicio, clase.horaFin)}</span>
                         </div>
                         <div className="instructor-avatar">
-                          {clase.instructorFoto ? (
-                            <img src={clase.instructorFoto} alt={clase.instructor} />
-                          ) : (
-                            <span>{clase.instructor.charAt(0)}</span>
-                          )}
+                          <span>{clase.instructor?.nombres?.charAt(0) || '?'}</span>
                         </div>
                         <div className="clase-card-slim-info">
-                          <div className="clase-card-slim-name">{clase.instructor}</div>
+                          <div className="clase-card-slim-name">{clase.instructor?.nombres} {clase.instructor?.apellidos}</div>
                         </div>
                         <div className="clase-card-slim-meta">
                           <div style={{ fontWeight: 600, color: 'var(--primary-medium)', fontSize: '0.85rem' }}>
-                            S/ 15
+                            S/ {clase.precio ?? 15}
                           </div>
                           <div className="clase-card-slim-participants">
                             <Users size={13} />
-                            <span>{clase.inscritos}/{clase.capacidad_maxima}</span>
+                            <span>{clase.inscritos}/{clase.capacidadMaxima}</span>
                           </div>
                           <div className={`clase-card-slim-cupos-text${cupos === 0 ? ' agotado' : ''}${cupos > 0 && cupos <= 3 ? ' pocos' : ''}`}>
                             {cupos === 0 ? 'Completa' : `quedan ${cupos}`}

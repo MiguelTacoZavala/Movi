@@ -5,7 +5,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
 import api from '../../services/api'
-import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita } from '../../data/mockData'
+import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 const estadoConfig = {

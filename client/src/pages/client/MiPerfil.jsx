@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { User, Calendar, Moon, Sun, Camera, Upload } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { User, Moon, Sun, Camera } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import api from '../../services/api'
@@ -9,26 +9,21 @@ import Input from '../../components/common/Input'
 import '../../App.css'
 
 export default function MiPerfil() {
-  const { user, updateUser, logout } = useAuth()
+  const { user, updateUser } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [modalOpen, setModalOpen] = useState(false)
   const [editData, setEditData] = useState({ nombres: '', apellidos: '', telefono: '' })
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [creditos, setCreditos] = useState(0)
   const fileInputRef = useRef(null)
 
-  const mockStats = {
-    creditos: 2,
-    totalClases: 12,
-    clasesAsistidas: 8,
-    proximasClases: 3,
-  }
-
-  const mockHistorial = [
-    { id: 1, clase: 'Salsa', fecha: '2026-04-28', estado: 'asistida' },
-    { id: 2, clase: 'Bachata', fecha: '2026-04-25', estado: 'asistida' },
-    { id: 3, clase: 'Tango', fecha: '2026-04-20', estado: 'cancelada' },
-  ]
+  useEffect(() => {
+    api.get('/creditos').then(res => {
+      const disponibles = (res.creditos || []).filter(c => !c.usado).length
+      setCreditos(disponibles)
+    }).catch(() => {})
+  }, [])
 
   const openEditModal = () => {
     setEditData({
@@ -167,7 +162,7 @@ export default function MiPerfil() {
         {uploading && <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>Subiendo foto...</p>}
       </div>
 
-      <div className="perfil-creditos">{mockStats.creditos}</div>
+      <div className="perfil-creditos">{creditos}</div>
       <div style={{ textAlign: 'center', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
         Créditos disponibles
       </div>
@@ -240,37 +235,7 @@ export default function MiPerfil() {
         </div>
       </div>
 
-      <div className="client-card">
-        <div className="client-card-title">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Calendar size={20} className="icon-primary" />
-            Historial Reciente
-          </div>
-        </div>
-        <div className="client-card-content">
-          {mockHistorial.map((item, idx) => (
-            <div key={item.id} style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '0.75rem',
-              background: 'var(--gray-50)',
-              borderRadius: '8px',
-              marginBottom: '0.5rem',
-              animation: 'fadeInUp 0.35s ease both',
-              animationDelay: `${idx * 0.08}s`,
-            }}>
-              <div>
-                <div style={{ fontWeight: 500, fontSize: '0.95rem' }}>{item.clase}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>{item.fecha}</div>
-              </div>
-              <span className={`status-badge ${item.estado === 'asistida' ? 'status-active' : 'status-inactive'}`}>
-                {item.estado === 'asistida' ? 'Asistida' : 'Cancelada'}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+
     </div>
   )
 }

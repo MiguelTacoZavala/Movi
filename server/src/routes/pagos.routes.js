@@ -2,6 +2,7 @@ const { Router } = require('express')
 const { z } = require('zod')
 const { validate } = require('../middleware/validate')
 const { auth } = require('../middleware/auth')
+const { authorize } = require('../middleware/authorize')
 const { procesarPago } = require('../controllers/pagos.controller')
 
 const router = Router()
@@ -13,6 +14,6 @@ const procesarPagoSchema = z.object({
   metodoPago: z.enum(['yape', 'creditos']),
 })
 
-router.post('/procesar', auth, validate(procesarPagoSchema), procesarPago)
+router.post('/procesar', auth, authorize('CLIENTE'), validate(procesarPagoSchema), procesarPago)
 
 module.exports = router

@@ -1,25 +1,27 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Calendar, Clock, Users, Music } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { mockClasesGeneradas, formatHoraAMPM, formatDateStr } from '../../data/mockData'
+import api from '../../services/api'
+import { formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const hoy = formatDateStr(new Date())
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const misClases = useMemo(() =>
-    mockClasesGeneradas.filter(c => c.instructorId === user?.id),
-    [user]
-  )
+  useEffect(() => {
+    api.get('/instructores/dashboard').then(res => {
+      setData(res)
+    }).catch(() => {
+      setData(null)
+    }).finally(() => setLoading(false))
+  }, [])
 
-  const clasesHoy = useMemo(() =>
-    misClases.filter(c => c.fecha === hoy && c.estado !== 'CANCELADA' && c.estado !== 'FINALIZADA')
-      .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio)),
-    [misClases, hoy]
-  )
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
-  const proximaClase = clasesHoy[0] || null
+  const proximaClase = data?.proximaClase
+  const clasesHoy = data?.clasesHoy || []
 
   return (
     <div>
@@ -39,7 +41,7 @@ export default function Dashboard() {
           </div>
           <div className="client-card-content">
             <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--gray-900)', marginBottom: '0.75rem' }}>
-              {proximaClase.categoria}
+              {proximaClase.categoria?.nombre}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.95rem', color: 'var(--gray-600)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -48,11 +50,11 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Clock size={18} className="icon-muted" />
-                {formatHoraAMPM(proximaClase.hora_inicio)} — {formatHoraAMPM(proximaClase.hora_fin)}
+                {formatHoraAMPM(proximaClase.horaInicio)} — {formatHoraAMPM(proximaClase.horaFin)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Users size={18} className="icon-muted" />
-                {proximaClase.inscritos}/{proximaClase.capacidad_maxima} participantes
+                {proximaClase.inscritos}/{proximaClase.capacidadMaxima} participantes
               </div>
             </div>
           </div>
@@ -83,10 +85,10 @@ export default function Dashboard() {
             clasesHoy.map((clase, idx) => (
               <div key={clase.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.08}s` }}>
                 <div style={{ fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.25rem' }}>
-                  {clase.categoria}
+                  {clase.categoria?.nombre}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>
-                  {formatHoraAMPM(clase.hora_inicio)} — {formatHoraAMPM(clase.hora_fin)} · {clase.inscritos}/{clase.capacidad_maxima} participantes
+                  {formatHoraAMPM(clase.horaInicio)} — {formatHoraAMPM(clase.horaFin)} · {clase.inscritos}/{clase.capacidadMaxima} participantes
                 </div>
               </div>
             ))
