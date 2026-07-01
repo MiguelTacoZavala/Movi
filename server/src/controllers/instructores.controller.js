@@ -179,4 +179,233 @@ async function toggleEstado(req, res, next) {
   }
 }
 
-module.exports = { listar, crear, actualizar, eliminar, toggleEstado }
+const includeClaseBase = {
+  horarioSemanal: {
+    select: {
+      diaSemana: true,
+      categoria: { select: { id: true, nombre: true } },
+    },
+  },
+  _count: { select: { reservas: { where: { estado: 'CONFIRMADA' } } } },
+}
+
+function formatearClase(c) {
+  return {
+    id: c.id,
+    fecha: c.fecha.toISOString().substring(0, 10),
+    horaInicio: c.horaInicio.toISOString().substring(11, 16),
+    horaFin: c.horaFin.toISOString().substring(11, 16),
+    estado: c.estado,
+    tematica: c.tematica,
+    capacidadMaxima: c.capacidadMaxima,
+    minimoParticipantes: c.minimoParticipantes,
+    inscritos: c._count?.reservas,
+    categoria: c.horarioSemanal?.categoria,
+    diaSemana: c.horarioSemanal?.diaSemana,
+  }
+}
+
+async function dashboard(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const ahora = new Date()
+    const hoy = new Date(ahora)
+    hoy.setUTCHours(0, 0, 0, 0)
+    const mañana = new Date(hoy)
+    mañana.setUTCDate(hoy.getUTCDate() + 1)
+
+    const [proximaClase, clasesHoy] = await Promise.all([
+      prisma.clase.findFirst({
+        where: {
+          horarioSemanal: { instructorId: instructor.id },
+          fecha: { gte: hoy },
+          estado: { notIn: ['CANCELADA', 'FINALIZADA'] },
+        },
+        include: includeClaseBase,
+        orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
+      }),
+      prisma.clase.findMany({
+        where: {
+          horarioSemanal: { instructorId: instructor.id },
+          fecha: { gte: hoy, lt: mañana },
+          estado: { notIn: ['CANCELADA', 'FINALIZADA'] },
+        },
+        include: includeClaseBase,
+        orderBy: { horaInicio: 'asc' },
+      }),
+    ])
+
+    res.json({
+      proximaClase: proximaClase ? formatearClase(proximaClase) : null,
+      clasesHoy: clasesHoy.map(formatearClase),
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function misHorarios(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const horarios = await prisma.horarioSemanal.findMany({
+      where: { instructorId: instructor.id, activo: true },
+      include: {
+        categoria: { select: { id: true, nombre: true } },
+      },
+      orderBy: { diaSemana: 'asc' },
+    })
+
+    const formateados = horarios.map(h => ({
+      id: h.id,
+      diaSemana: h.diaSemana,
+      horaInicio: h.horaInicio.toISOString().substring(11, 16),
+      horaFin: h.horaFin.toISOString().substring(11, 16),
+      capacidadMaxima: h.capacidadMaxima,
+      minimoParticipantes: h.minimoParticipantes,
+      categoria: h.categoria,
+    }))
+
+    res.json({ horarios: formateados })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function misClases(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const ahora = new Date()
+    const hoy = new Date(ahora)
+    hoy.setUTCHours(0, 0, 0, 0)
+
+    const clases = await prisma.clase.findMany({
+      where: {
+        horarioSemanal: { instructorId: instructor.id },
+        fecha: { gte: hoy },
+        estado: { notIn: ['FINALIZADA', 'CANCELADA'] },
+      },
+      include: includeClaseBase,
+      orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
+    })
+
+    res.json({ clases: clases.map(formatearClase) })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function obtenerParticipantes(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const claseId = Number(req.params.id)
+
+    const clase = await prisma.clase.findUnique({
+      where: { id: claseId },
+      include: {
+        horarioSemanal: {
+          select: { instructorId: true, categoria: { select: { nombre: true } } },
+        },
+      },
+    })
+    if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
+    if (clase.horarioSemanal.instructorId !== instructor.id) {
+      return res.status(403).json({ error: 'No eres el instructor de esta clase' })
+    }
+
+    const reservas = await prisma.reserva.findMany({
+      where: { claseId, estado: { not: 'CANCELADA' } },
+      include: {
+        usuario: { select: { id: true, nombres: true, apellidos: true, email: true } },
+        posicionClase: { select: { numero: true } },
+      },
+      orderBy: { fechaConfirmacion: 'asc' },
+    })
+
+    const participantes = reservas.map(r => ({
+      id: r.id,
+      usuarioId: r.usuario.id,
+      nombres: r.usuario.nombres,
+      apellidos: r.usuario.apellidos,
+      email: r.usuario.email,
+      asiento: r.posicionClase?.numero,
+      estado: r.estado,
+    }))
+
+    res.json({
+      clase: {
+        id: clase.id,
+        fecha: clase.fecha.toISOString().substring(0, 10),
+        horaInicio: clase.horaInicio.toISOString().substring(11, 16),
+        horaFin: clase.horaFin.toISOString().substring(11, 16),
+        capacidadMaxima: clase.capacidadMaxima,
+        tematica: clase.tematica,
+        categoria: clase.horarioSemanal?.categoria?.nombre || null,
+      },
+      participantes,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function actualizarTematica(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const claseId = Number(req.params.id)
+    const { tematica } = req.body
+
+    if (!tematica || !tematica.trim()) {
+      return res.status(400).json({ error: 'Temática es requerida' })
+    }
+
+    const clase = await prisma.clase.findUnique({
+      where: { id: claseId },
+      include: { horarioSemanal: { select: { instructorId: true } } },
+    })
+    if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
+    if (clase.horarioSemanal.instructorId !== instructor.id) {
+      return res.status(403).json({ error: 'No eres el instructor de esta clase' })
+    }
+
+    const updated = await prisma.clase.update({
+      where: { id: claseId },
+      data: { tematica: tematica.trim(), updatedAt: new Date() },
+    })
+
+    res.json({ tematica: updated.tematica })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function historial(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const clases = await prisma.clase.findMany({
+      where: {
+        horarioSemanal: { instructorId: instructor.id },
+        estado: { in: ['FINALIZADA', 'CANCELADA'] },
+      },
+      include: includeClaseBase,
+      orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
+    })
+
+    res.json({ clases: clases.map(formatearClase) })
+  } catch (error) {
+    next(error)
+  }
+}
+
+module.exports = { listar, crear, actualizar, eliminar, toggleEstado, dashboard, misHorarios, misClases, obtenerParticipantes, actualizarTematica, historial }

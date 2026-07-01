@@ -6,7 +6,7 @@ import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
 import HorarioSemanalForm from './HorarioSemanalForm'
 import api from '../../services/api'
-import { DIAS_SEMANA, formatHoraAMPM } from '../../data/mockData'
+import { DIAS_SEMANA, formatHoraAMPM } from '../../utils/helpers'
 
 const diaLabel = {
   LUNES: 'Lunes', MARTES: 'Martes', MIERCOLES: 'Miércoles',

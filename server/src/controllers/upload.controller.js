@@ -12,7 +12,7 @@ async function uploadProfilePhoto(req, res, next) {
 
     const result = await cloudinaryService.subirFotoPerfil(file.path, req.user.id, req.user.rol)
 
-    fs.unlink(file.path, () => {})
+    fs.unlink(file.path, (err) => { if (err) console.error('Error al eliminar archivo temporal:', err.message) })
 
     const fotoUrl = result.secure_url
 
@@ -34,7 +34,7 @@ async function uploadProfilePhoto(req, res, next) {
     })
   } catch (error) {
     console.error('Cloudinary upload error:', error.message)
-    const file = req.files?.foto?.[0] || req.files?.file?.[0]; if (file) fs.unlink(file.path, () => {})
+    const file = req.files?.foto?.[0] || req.files?.file?.[0]; if (file) fs.unlink(file.path, (err) => { if (err) console.error('Error al eliminar archivo temporal:', err.message) })
     next(error)
   }
 }

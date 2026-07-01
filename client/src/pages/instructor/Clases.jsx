@@ -1,20 +1,22 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Calendar, Clock, Users, ChevronRight } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
-import { mockClasesGeneradas, formatHoraAMPM } from '../../data/mockData'
+import api from '../../services/api'
+import { formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Clases() {
-  const { user } = useAuth()
   const navigate = useNavigate()
+  const [clases, setClases] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const clases = useMemo(() =>
-    mockClasesGeneradas
-      .filter(c => c.instructorId === user?.id && c.estado !== 'FINALIZADA' && c.estado !== 'CANCELADA')
-      .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora_inicio.localeCompare(b.hora_inicio)),
-    [user]
-  )
+  useEffect(() => {
+    api.get('/instructores/mis-clases').then(res => {
+      setClases(res.clases || [])
+    }).catch(() => {
+      setClases([])
+    }).finally(() => setLoading(false))
+  }, [])
 
   const getEstadoBadge = (estado) => {
     const map = {
@@ -24,6 +26,8 @@ export default function Clases() {
     const cfg = map[estado] || { label: estado, className: '' }
     return <span className={`status-badge ${cfg.className}`}>{cfg.label}</span>
   }
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
   return (
     <div>
@@ -47,7 +51,7 @@ export default function Clases() {
             <div className="client-card-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--gray-900)' }}>
-                  {clase.categoria}
+                  {clase.categoria?.nombre}
                 </h3>
                 {getEstadoBadge(clase.estado)}
               </div>
@@ -58,11 +62,11 @@ export default function Clases() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={16} className="icon-muted" />
-                  {formatHoraAMPM(clase.hora_inicio)} — {formatHoraAMPM(clase.hora_fin)}
+                  {formatHoraAMPM(clase.horaInicio)} — {formatHoraAMPM(clase.horaFin)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Users size={16} className="icon-muted" />
-                  {clase.inscritos}/{clase.capacidad_maxima} participantes
+                  {clase.inscritos}/{clase.capacidadMaxima} participantes
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
                   <span style={{ color: 'var(--gray-500)' }}>Temática:</span>

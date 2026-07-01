@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Music, Clock, AlertTriangle, DollarSign, BarChart2 } from 'lucide-react'
 import api from '../../services/api'
-import { formatHoraAMPM, formatFechaBonita } from '../../data/mockData'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 function soles(n) {

@@ -24,7 +24,7 @@ const includeBase = {
   horarioSemanal: {
     select: {
       diaSemana: true,
-      categoria: { select: { id: true, nombre: true } },
+      categoria: { select: { id: true, nombre: true, precio: true } },
       instructor: {
         select: {
           id: true,
@@ -40,7 +40,7 @@ const includeDetalle = {
   horarioSemanal: {
     select: {
       diaSemana: true,
-      categoria: { select: { id: true, nombre: true } },
+      categoria: { select: { id: true, nombre: true, precio: true } },
       instructor: {
         select: {
           id: true,
@@ -74,6 +74,7 @@ function formatear(clase) {
     inscritos: clase._count?.reservas,
     diaSemana: clase.horarioSemanal?.diaSemana,
     categoria: clase.horarioSemanal?.categoria,
+    precio: clase.horarioSemanal?.categoria?.precio ? Number(clase.horarioSemanal.categoria.precio) : 15,
     instructor: clase.horarioSemanal
       ? {
           id: clase.horarioSemanal.instructor.id,

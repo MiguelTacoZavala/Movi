@@ -33,7 +33,7 @@ const culqi = {
     return this.initPromise
   },
 
-  generarToken({ amount, email, description }) {
+  generarToken({ amount, description }) {
     return new Promise((resolve, reject) => {
       this.load()
         .then(() => {
@@ -62,7 +62,7 @@ const culqi = {
     })
   },
 
-  checkout({ amount, email, description, order }) {
+  checkout({ amount, description, order }) {
     return new Promise((resolve, reject) => {
       this.load()
         .then(() => {

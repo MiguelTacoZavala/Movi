@@ -95,13 +95,17 @@ async function registerAdmin(req, res, next) {
   }
 }
 
-async function me(req, res) {
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: req.user.id },
-    include: { role: true, instructor: true },
-  })
+async function me(req, res, next) {
+  try {
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.user.id },
+      include: { role: true, instructor: true },
+    })
 
-  res.json({ user: authService.formatearUsuario(usuario) })
+    res.json({ user: authService.formatearUsuario(usuario) })
+  } catch (error) {
+    next(error)
+  }
 }
 
 async function updateProfile(req, res, next) {

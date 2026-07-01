@@ -100,4 +100,95 @@ async function resumenAdmin() {
   }
 }
 
-module.exports = { resumenAdmin }
+async function resumenCliente(usuarioId) {
+  const ahora = new Date()
+  const hoy = new Date(ahora)
+  hoy.setUTCHours(0, 0, 0, 0)
+
+  const proximaReserva = await prisma.reserva.findFirst({
+    where: { usuarioId, estado: 'CONFIRMADA', clase: { fecha: { gte: hoy } } },
+    include: {
+      clase: {
+        include: {
+          horarioSemanal: {
+            select: {
+              categoria: { select: { id: true, nombre: true } },
+              instructor: {
+                select: { id: true, usuario: { select: { nombres: true, apellidos: true } } },
+              },
+            },
+          },
+        },
+      },
+      posicionClase: { select: { numero: true } },
+    },
+    orderBy: { clase: { fecha: 'asc' } },
+  })
+
+  const creditosDisponibles = await prisma.credito.count({
+    where: { usuarioId, usado: false },
+  })
+
+  const proximasClases = await prisma.clase.findMany({
+    where: { fecha: { gte: hoy }, estado: 'PROGRAMADA' },
+    include: {
+      horarioSemanal: {
+        select: {
+          categoria: { select: { id: true, nombre: true } },
+          instructor: {
+            select: { id: true, usuario: { select: { nombres: true, apellidos: true } } },
+          },
+        },
+      },
+      _count: { select: { reservas: { where: { estado: 'CONFIRMADA' } } } },
+    },
+    orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
+    take: 5,
+  })
+
+  const clasesPopulares = proximasClases
+    .filter(c => c._count.reservas < c.capacidadMaxima)
+    .slice(0, 3)
+    .map(c => ({
+      id: c.id,
+      fecha: c.fecha.toISOString().substring(0, 10),
+      horaInicio: c.horaInicio.toISOString().substring(11, 16),
+      horaFin: c.horaFin.toISOString().substring(11, 16),
+      ocupacion: c._count.reservas,
+      capacidadMaxima: c.capacidadMaxima,
+      categoria: c.horarioSemanal.categoria,
+      instructor: {
+        id: c.horarioSemanal.instructor.id,
+        nombres: c.horarioSemanal.instructor.usuario.nombres,
+        apellidos: c.horarioSemanal.instructor.usuario.apellidos,
+      },
+    }))
+
+  return {
+    proximaReserva: proximaReserva
+      ? {
+          id: proximaReserva.id,
+          codigoPago: proximaReserva.codigoPago,
+          asiento: proximaReserva.posicionClase?.numero,
+          clase: {
+            id: proximaReserva.clase.id,
+            fecha: proximaReserva.clase.fecha.toISOString().substring(0, 10),
+            horaInicio: proximaReserva.clase.horaInicio.toISOString().substring(11, 16),
+            horaFin: proximaReserva.clase.horaFin.toISOString().substring(11, 16),
+            categoria: proximaReserva.clase.horarioSemanal?.categoria,
+            instructor: proximaReserva.clase.horarioSemanal?.instructor
+              ? {
+                  id: proximaReserva.clase.horarioSemanal.instructor.id,
+                  nombres: proximaReserva.clase.horarioSemanal.instructor.usuario.nombres,
+                  apellidos: proximaReserva.clase.horarioSemanal.instructor.usuario.apellidos,
+                }
+              : undefined,
+          },
+        }
+      : null,
+    creditosDisponibles,
+    clasesPopulares,
+  }
+}
+
+module.exports = { resumenAdmin, resumenCliente }

@@ -6,11 +6,10 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import culqi from '../../services/culqi'
-import { mockClases, formatFechaBonita, formatHoraAMPM } from '../../data/mockData'
+import { formatFechaBonita, formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
 const HOLD_DURATION = 300
-const PRECIO_DEFAULT = 15
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -18,10 +17,22 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+function posicionToAsiento(p, columnas) {
+  return {
+    id: p.id,
+    numero: p.numero,
+    fila: Math.ceil(p.numero / columnas),
+    columna: ((p.numero - 1) % columnas) + 1,
+    estado: p.reservas && p.reservas.length > 0 ? 'ocupado' : 'disponible',
+  }
+}
+
 export default function DetalleClase() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [clase, setClase] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [selectedSeat, setSelectedSeat] = useState(null)
   const [metodoPago, setMetodoPago] = useState(null)
   const [holdSeconds, setHoldSeconds] = useState(HOLD_DURATION)
@@ -33,11 +44,16 @@ export default function DetalleClase() {
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState('')
 
-  const clase = useMemo(() => mockClases.find(c => c.id === Number(id)), [id])
+  useEffect(() => {
+    api.get(`/clases/${id}`).then(res => {
+      setClase(res.clase)
+    }).catch(() => {
+      setClase(null)
+    }).finally(() => setLoading(false))
+  }, [id])
 
   useEffect(() => {
     if (!holdActive) return
-
     const t = setTimeout(() => {
       setHoldSeconds(prev => {
         if (prev <= 1) {
@@ -50,21 +66,26 @@ export default function DetalleClase() {
         return prev - 1
       })
     }, 1000)
-
     return () => clearTimeout(t)
   }, [holdActive, holdSeconds])
 
+  const columnas = clase?.capacidadMaxima <= 10 ? 4 : clase?.capacidadMaxima <= 20 ? 5 : 6
+
+  const asientos = useMemo(() => {
+    if (!clase?.posiciones) return []
+    return clase.posiciones.map(p => posicionToAsiento(p, columnas))
+  }, [clase, columnas])
+
   const asientosAgrupados = useMemo(() => {
-    if (!clase?.asientos) return []
     const filas = {}
-    clase.asientos.forEach(a => {
+    asientos.forEach(a => {
       if (!filas[a.fila]) filas[a.fila] = []
       filas[a.fila].push(a)
     })
     return Object.values(filas).map(f => f.sort((a, b) => a.columna - b.columna))
-  }, [clase])
+  }, [asientos])
 
-  const columnas = clase?.capacidad_maxima <= 10 ? 4 : clase?.capacidad_maxima <= 20 ? 5 : 6
+  const precio = clase?.precio || 15
 
   const handleSelectSeat = (seat) => {
     if (seat.estado !== 'disponible' || holdActive) return
@@ -92,9 +113,8 @@ export default function DetalleClase() {
       setProcesando(true)
       try {
         const tokenId = await culqi.generarToken({
-          amount: PRECIO_DEFAULT,
-          email: user?.email || 'cliente@movi.com',
-          description: `${clase.categoria} - ${formatFechaBonita(clase.fecha)}`,
+          amount: precio,
+          description: `${clase.categoria?.nombre} - ${clase.fecha}`,
         })
 
         setHoldActive(true)
@@ -108,10 +128,10 @@ export default function DetalleClase() {
         })
 
         setInscripcionData({
-          categoria: clase.categoria,
-          instructor: clase.instructor,
+          categoria: clase.categoria?.nombre,
+          instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
           fecha: clase.fecha,
-          hora_inicio: clase.hora_inicio,
+          hora_inicio: clase.horaInicio,
           asiento: selectedSeat.numero,
           metodoPago: 'yape',
           tematica: clase.tematica || 'LIBRE',
@@ -140,10 +160,10 @@ export default function DetalleClase() {
           })
 
           setInscripcionData({
-            categoria: clase.categoria,
-            instructor: clase.instructor,
+            categoria: clase.categoria?.nombre,
+            instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
             fecha: clase.fecha,
-            hora_inicio: clase.hora_inicio,
+            hora_inicio: clase.horaInicio,
             asiento: selectedSeat.numero,
             metodoPago: 'creditos',
             tematica: clase.tematica || 'LIBRE',
@@ -165,6 +185,8 @@ export default function DetalleClase() {
   const handleCancelarInscripcion = () => {
     setShowResumenModal(false)
   }
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
   if (!clase) {
     return (
@@ -225,6 +247,8 @@ export default function DetalleClase() {
     )
   }
 
+  const instrName = clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : ''
+
   return (
     <div className="detalle-clase" style={{ animation: 'fadeIn 0.3s ease' }}>
       <button onClick={() => navigate('/cliente/clases')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
@@ -233,7 +257,7 @@ export default function DetalleClase() {
       </button>
 
       <div className="detalle-header">
-        <h2>{clase.categoria}</h2>
+        <h2>{clase.categoria?.nombre}</h2>
       </div>
 
       {holdExpired && (
@@ -252,14 +276,10 @@ export default function DetalleClase() {
 
       <div className="instructor-section">
         <div className="instructor-photo">
-          {clase.instructorFoto ? (
-            <img src={clase.instructorFoto} alt={clase.instructor} />
-          ) : (
-            <span>{clase.instructor.charAt(0)}</span>
-          )}
+          <span>{instrName.charAt(0) || '?'}</span>
         </div>
         <div className="instructor-info">
-          <h3>{clase.instructor}</h3>
+          <h3>{instrName}</h3>
           <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
             <span style={{ fontWeight: 500 }}>Temática:</span> {clase.tematica || 'LIBRE'}
           </div>
@@ -309,7 +329,7 @@ export default function DetalleClase() {
       </div>
 
       <div style={{ textAlign: 'center', margin: '1rem 0', fontSize: '1.1rem', fontWeight: 600, color: 'var(--gray-900)' }}>
-        S/ {PRECIO_DEFAULT.toFixed(2)}
+        S/ {precio.toFixed(2)}
       </div>
 
       <div className="pago-section">
@@ -321,7 +341,7 @@ export default function DetalleClase() {
           >
             <CreditCard size={32} />
             <span>Usar Créditos</span>
-            <small>2 disponibles</small>
+            <small>disponibles</small>
           </div>
           <div
             className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
@@ -363,7 +383,7 @@ export default function DetalleClase() {
         <div className="resumen-detalle">
           <div className="resumen-row">
             <span className="resumen-label">Clase</span>
-            <span className="resumen-value">{clase.categoria} · {clase.instructor}</span>
+            <span className="resumen-value">{clase.categoria?.nombre} · {instrName}</span>
           </div>
           <div className="resumen-row">
             <span className="resumen-label">Asiento</span>
@@ -371,7 +391,7 @@ export default function DetalleClase() {
           </div>
           <div className="resumen-row">
             <span className="resumen-label">Monto</span>
-            <span className="resumen-value">S/ {PRECIO_DEFAULT.toFixed(2)}</span>
+            <span className="resumen-value">S/ {precio.toFixed(2)}</span>
           </div>
           <div className="resumen-row">
             <span className="resumen-label">Pago</span>
