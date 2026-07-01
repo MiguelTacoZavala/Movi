@@ -15,6 +15,12 @@ const estadoConfig = {
   FINALIZADA: { label: 'Finalizada', className: 'status-warning' },
 }
 
+// Una clase con fecha anterior a hoy ya no se puede cancelar
+function esClasePasada(fecha) {
+  const hoy = new Date().toISOString().substring(0, 10)
+  return fecha < hoy
+}
+
 export default function Clases() {
   const [clases, setClases] = useState([])
   const [instructores, setInstructores] = useState([])
@@ -46,14 +52,30 @@ export default function Clases() {
 
   useEffect(() => { cargar() }, [])
 
-  const filteredClases = useMemo(() =>
-    clases.filter(c => {
-      if (filtroEstado && c.estado !== filtroEstado) return false
-      if (filtroFecha && c.fecha !== filtroFecha) return false
-      if (filtroInstructor && c.instructor?.id !== parseInt(filtroInstructor)) return false
-      return true
-    }), [clases, filtroEstado, filtroFecha, filtroInstructor]
-  )
+  const filteredClases = useMemo(() => {
+    // Orden por estado: Programadas/activas (0) arriba, Canceladas (1) en medio, Finalizadas (2) al fondo
+    const rango = (c) => {
+      if (c.estado === 'FINALIZADA') return 2
+      if (c.estado === 'CANCELADA') return 1
+      return 0
+    }
+
+    return clases
+      .filter(c => {
+        if (filtroEstado && c.estado !== filtroEstado) return false
+        if (filtroFecha && c.fecha !== filtroFecha) return false
+        if (filtroInstructor && c.instructor?.id !== parseInt(filtroInstructor)) return false
+        return true
+      })
+      .sort((a, b) => {
+        const ra = rango(a)
+        const rb = rango(b)
+        if (ra !== rb) return ra - rb
+        // Dentro de cada grupo: próximas de la más cercana a la más lejana; cerradas de la más reciente primero
+        const cmp = a.fecha.localeCompare(b.fecha) || (a.horaInicio || '').localeCompare(b.horaInicio || '')
+        return ra === 0 ? cmp : -cmp
+      })
+  }, [clases, filtroEstado, filtroFecha, filtroInstructor])
 
   useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor])
 
@@ -107,7 +129,7 @@ export default function Clases() {
         <Button size="small" variant="ghost" onClick={() => handleViewParticipants(row)} title="Ver participantes">
           <Users size={16} />
         </Button>
-          {row.estado === 'PROGRAMADA' && (
+          {row.estado === 'PROGRAMADA' && !esClasePasada(row.fecha) && (
             <Button size="small" variant="ghost" onClick={() => openCancelConfirm(row)} title="Cancelar clase" className="icon-danger">
               <XCircle size={16} />
             </Button>
