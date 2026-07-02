@@ -1,4 +1,4 @@
-export default function Input({ label, name, value, onChange, type = 'text', placeholder, required, min, max }) {
+export default function Input({ label, name, value, onChange, type = 'text', placeholder, required, min, max, ariaLabel }) {
   return (
     <div className="form-group">
       {label && <label htmlFor={name}>{label}</label>}
@@ -12,6 +12,9 @@ export default function Input({ label, name, value, onChange, type = 'text', pla
         required={required}
         min={min}
         max={max}
+        // Cuando no hay <label> visible (ej. buscador), aria-label da el nombre
+        // accesible; el placeholder por sí solo no cuenta como etiqueta.
+        aria-label={ariaLabel}
       />
     </div>
   )

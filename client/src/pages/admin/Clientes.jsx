@@ -102,6 +102,9 @@ export default function Clientes() {
         </h1>
         <div className="search-box">
           <Input
+            name="buscarCliente"
+            type="search"
+            ariaLabel="Buscar clientes por nombre, email o DNI"
             placeholder="Buscar por nombre, email o DNI..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

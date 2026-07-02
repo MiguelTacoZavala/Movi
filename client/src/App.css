@@ -1371,6 +1371,12 @@ body {
   animation: slideUp 0.3s ease;
 }
 
+/* El modal recibe foco al abrir (tabIndex -1) para accesibilidad; evitamos el
+   contorno del navegador alrededor de todo el diálogo. */
+.modal:focus {
+  outline: none;
+}
+
 .modal h2 {
   font-size: 1.5rem;
   margin-bottom: 0.5rem;
@@ -1512,7 +1518,11 @@ body {
   min-width: 300px;
 }
 
-.search-box input {
+/* .search-box .form-group input (no solo .search-box input): sube la
+   especificidad para que las reglas móviles de .form-group input no pisen el
+   padding-left que deja sitio a la lupa (si no, el ícono se solapa con el
+   placeholder en celular). */
+.search-box .form-group input {
   width: 100%;
   padding: 0.625rem 1rem 0.625rem 2.5rem;
   border: 2px solid var(--gray-200);
@@ -1525,16 +1535,46 @@ body {
   background-position: left 0.75rem center;
 }
 
-.search-box input:focus {
+.search-box .form-group input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(245, 218, 167, 0.3);
+}
+
+/* En móvil/tablet el page-header se apila; que el buscador ocupe todo el ancho. */
+@media (max-width: 1024px) {
+  .search-box {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .filters {
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+
+/* En móvil los 3 filtros se apilan en columna: si no, comparten la fila y cada
+   select queda tan angosto que su texto no se alcanza a leer. */
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Botón "Limpiar filtros": discreto, alineado con la base de los selects en
+   escritorio y sin estirarse a lo ancho cuando los filtros se apilan en móvil. */
+.filters-clear {
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .filters-clear {
+    align-self: flex-start;
+  }
 }
 
 .filter-date {
