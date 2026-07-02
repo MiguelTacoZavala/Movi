@@ -160,7 +160,22 @@ async function toggleActivo(id, { cancelarFuturas = false } = {}) {
 }
 
 async function eliminar(id) {
-  return prisma.horarioSemanal.delete({ where: { id } })
+  return prisma.$transaction(async (tx) => {
+    const horario = await tx.horarioSemanal.findUnique({ where: { id }, select: { id: true } })
+    if (!horario) throw { code: 'P2025' }
+
+    // Las clases se borran en cascada (horario → clases → posiciones), pero las
+    // reservas referencian clases y posiciones con FK restrictiva. Cancelar una
+    // clase no borra sus reservas, así que hay que eliminarlas antes.
+    // Al borrar la reserva: sus pagos caen en cascada y sus créditos quedan en NULL.
+    const clases = await tx.clase.findMany({ where: { horarioSemanalId: id }, select: { id: true } })
+    const claseIds = clases.map((c) => c.id)
+    if (claseIds.length) {
+      await tx.reserva.deleteMany({ where: { claseId: { in: claseIds } } })
+    }
+
+    return tx.horarioSemanal.delete({ where: { id } })
+  })
 }
 
 module.exports = { listar, obtener, crear, actualizar, toggleActivo, eliminar, extender }
