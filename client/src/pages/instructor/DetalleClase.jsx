@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Clock, Users, User, Edit3, Check, X } from 'lucide-react'
 import Button from '../../components/common/Button'
 import api from '../../services/api'
+import Alert from '../../components/common/Alert'
 import { formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
@@ -15,15 +16,18 @@ export default function DetalleClase() {
   const [editandoTematica, setEditandoTematica] = useState(false)
   const [tematicaInput, setTematicaInput] = useState('')
   const [guardandoTematica, setGuardandoTematica] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     setLoading(true)
     api.get(`/instructores/clases/${id}/participantes`).then(res => {
       setClase(res.clase)
       setParticipantes(res.participantes || [])
+      setError(null)
     }).catch(() => {
       setClase(null)
       setParticipantes([])
+      setError('Tuvimos dificultades para obtener los detalles de esta clase. Por favor, inténtalo más tarde.')
     }).finally(() => setLoading(false))
   }, [id])
 
@@ -40,7 +44,7 @@ export default function DetalleClase() {
       setClase(prev => ({ ...prev, tematica: val }))
       setEditandoTematica(false)
     } catch {
-      alert('No se pudo guardar la temática. Intenta de nuevo.')
+      alert('Ocurrió un error al guardar la temática. Por favor, inténtalo de nuevo en unos momentos.')
     } finally {
       setGuardandoTematica(false)
     }
@@ -55,6 +59,7 @@ export default function DetalleClase() {
   if (!clase) {
     return (
       <div className="empty-state">
+        {error && <div style={{ marginBottom: '1rem', width: '100%' }}><Alert type="danger">{error}</Alert></div>}
         <h3>Clase no encontrada</h3>
         <p>La clase solicitada no existe</p>
         <Button onClick={() => navigate('/instructor/clases')} style={{ marginTop: '1rem' }}>
@@ -66,10 +71,12 @@ export default function DetalleClase() {
 
   return (
     <div>
-      <button onClick={() => navigate('/instructor/clases')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-        <ArrowLeft size={18} />
+      <button onClick={() => navigate('/instructor/clases')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }} aria-label="Volver a la lista de clases">
+        <ArrowLeft size={18} aria-hidden="true" />
         Volver a Clases
       </button>
+
+      {error && <div style={{ marginBottom: '1rem' }}><Alert type="danger">{error}</Alert></div>}
 
       <div className="client-card" style={{ marginBottom: '1rem' }}>
         <div className="client-card-content">
@@ -81,15 +88,15 @@ export default function DetalleClase() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Calendar size={16} className="icon-muted" />
+              <Calendar size={16} className="icon-muted" aria-hidden="true" />
               {clase.fecha}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Clock size={16} className="icon-muted" />
+              <Clock size={16} className="icon-muted" aria-hidden="true" />
               {formatHoraAMPM(clase.horaInicio)} — {formatHoraAMPM(clase.horaFin)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Users size={16} className="icon-muted" />
+              <Users size={16} className="icon-muted" aria-hidden="true" />
               {participantes.length}/{clase.capacidadMaxima || 0} participantes
             </div>
           </div>
@@ -106,12 +113,13 @@ export default function DetalleClase() {
                     style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid var(--gray-300)', fontSize: '0.9rem', width: '180px' }}
                     placeholder="LIBRE"
                     autoFocus
+                    aria-label="Campo temática"
                   />
-                  <button onClick={guardarTematica} disabled={guardandoTematica} style={{ background: 'var(--success)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
-                    <Check size={14} />
+                  <button onClick={guardarTematica} disabled={guardandoTematica} style={{ background: 'var(--success)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }} aria-label="Guardar temática" title="Guardar temática">
+                    <Check size={14} aria-hidden="true" />
                   </button>
-                  <button onClick={cancelarEdicion} style={{ background: 'var(--gray-200)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--gray-600)' }}>
-                    <X size={14} />
+                  <button onClick={cancelarEdicion} style={{ background: 'var(--gray-200)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--gray-600)' }} aria-label="Cancelar edición" title="Cancelar edición">
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
               ) : (
@@ -119,8 +127,8 @@ export default function DetalleClase() {
               )}
             </div>
             {!editandoTematica && (
-              <button onClick={iniciarEdicion} title="Cambiar la temática de la clase" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-medium)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
-                <Edit3 size={14} />
+              <button onClick={iniciarEdicion} title="Cambiar la temática de la clase" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-medium)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }} aria-label="Editar temática">
+                <Edit3 size={14} aria-hidden="true" />
                 Editar
               </button>
             )}
@@ -131,7 +139,7 @@ export default function DetalleClase() {
       <div className="client-card">
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Users size={20} className="icon-primary" />
+            <Users size={20} className="icon-primary" aria-hidden="true" />
             Participantes ({participantes.length})
           </div>
         </div>
@@ -143,14 +151,14 @@ export default function DetalleClase() {
           ) : (
             participantes.map((p, i) => (
               <div key={p.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${i * 0.05}s` }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-medium)', fontWeight: 600, fontSize: '0.85rem' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-medium)', fontWeight: 600, fontSize: '0.85rem' }} aria-hidden="true">
                   {p.nombres?.charAt(0) || '?'}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 500, fontSize: '0.95rem', color: 'var(--gray-900)' }}>{p.nombres} {p.apellidos}</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>Asiento {p.asiento}</div>
                 </div>
-                <User size={16} className="icon-muted" />
+                <User size={16} className="icon-muted" aria-hidden="true" />
               </div>
             ))
           )}
