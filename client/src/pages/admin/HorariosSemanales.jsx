@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Edit2, Trash2, Calendar, Clock, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, Calendar, Clock, ToggleLeft, ToggleRight, AlertCircle, FilterX } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
@@ -55,6 +55,14 @@ export default function HorariosSemanales() {
       return true
     }), [horarios, filtroInstructor, filtroCategoria, filtroDia]
   )
+
+  const hayFiltros = filtroInstructor || filtroCategoria || filtroDia
+
+  const limpiarFiltros = () => {
+    setFiltroInstructor('')
+    setFiltroCategoria('')
+    setFiltroDia('')
+  }
 
   const columns = [
     { key: 'instructor', label: 'Instructor', render: (val) => (
@@ -170,6 +178,7 @@ export default function HorariosSemanales() {
       <div className="filters" style={{ marginBottom: '1rem' }}>
         <Select
           label="Instructor"
+          name="filtroInstructor"
           value={filtroInstructor}
           onChange={(e) => setFiltroInstructor(e.target.value)}
           options={[
@@ -179,6 +188,7 @@ export default function HorariosSemanales() {
         />
         <Select
           label="Categoría"
+          name="filtroCategoria"
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
           options={[
@@ -188,6 +198,7 @@ export default function HorariosSemanales() {
         />
         <Select
           label="Día"
+          name="filtroDia"
           value={filtroDia}
           onChange={(e) => setFiltroDia(e.target.value)}
           options={[
@@ -195,6 +206,18 @@ export default function HorariosSemanales() {
             ...DIAS_SEMANA.map(d => ({ value: d, label: d.charAt(0) + d.slice(1).toLowerCase() })),
           ]}
         />
+        {hayFiltros && (
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={limpiarFiltros}
+            className="filters-clear"
+            title="Quitar todos los filtros"
+          >
+            <FilterX size={15} />
+            Limpiar filtros
+          </Button>
+        )}
       </div>
 
       {error && (

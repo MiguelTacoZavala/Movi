@@ -231,8 +231,10 @@ export default function Clases() {
             Generar Clases
           </Button>
           <div className="form-group">
-            <label>Fecha</label>
+            <label htmlFor="filtroFecha">Fecha</label>
             <input
+              id="filtroFecha"
+              name="filtroFecha"
               type="date"
               value={filtroFecha}
               onChange={(e) => setFiltroFecha(e.target.value)}
@@ -241,6 +243,7 @@ export default function Clases() {
           </div>
           <Select
             label="Instructor"
+            name="filtroInstructor"
             value={filtroInstructor}
             onChange={(e) => setFiltroInstructor(e.target.value)}
             options={[
@@ -250,6 +253,7 @@ export default function Clases() {
           />
           <Select
             label="Estado"
+            name="filtroEstado"
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
             options={[

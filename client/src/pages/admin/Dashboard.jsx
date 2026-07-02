@@ -48,14 +48,14 @@ export default function Dashboard() {
   const claseRiesgo = (data.clasesEnRiesgo || [])[0]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="admin-dashboard">
 
       {/* ── Ingresos ── */}
-      <div>
+      <div className="da-ingresos">
         <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gray-600)', marginBottom: '0.75rem' }}>
           Ingresos
         </p>
-        <div className="dashboard-grid">
+        <div className="dashboard-grid ingresos-grid">
           {[
             { label: 'Hoy',         value: soles(ingresos.hoy) },
             { label: 'Esta semana', value: soles(ingresos.semana) },
@@ -72,10 +72,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Categorías populares + Clase en riesgo ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-
-        <div className="dashboard-section">
+      {/* ── Categorías más populares ── */}
+      <div className="dashboard-section da-categorias">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', margin: 0 }}>
             <BarChart2 size={17} className="icon-primary" /> Categorías más populares
           </h2>
@@ -101,7 +99,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="dashboard-section" style={{ borderLeft: '4px solid #f59e0b' }}>
+      {/* ── Próxima clase en riesgo ── */}
+      <div className="dashboard-section da-riesgo" style={{ borderLeft: '4px solid #f59e0b' }}>
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', margin: 0, color: '#b45309' }}>
             <AlertTriangle size={17} /> Próxima clase en riesgo
           </h2>
@@ -128,10 +127,9 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
 
       {/* ── Clases programadas hoy ── */}
-      <div className="table-container" style={{ borderRadius: '12px', overflow: 'hidden' }}>
+      <div className="table-container da-tabla" style={{ borderRadius: '12px', overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--gray-100)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Clock size={17} className="icon-primary" />
           <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--gray-900)' }}>
@@ -148,7 +146,8 @@ export default function Dashboard() {
             No hay clases programadas para hoy
           </div>
         ) : (
-          <table className="table">
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table className="table" style={{ minWidth: '560px' }}>
             <thead>
               <tr>
                 <th>Categoría</th>
@@ -188,6 +187,7 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

@@ -8,6 +8,14 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  transition: transform 0.25s ease;
+  will-change: transform;
+}
+
+/* Estado auto-ocultar (solo se aplica en móvil, ver Header.jsx): se desliza
+   fuera de la vista al bajar y vuelve a bajar apenas se sube. */
+.header.header--hidden {
+  transform: translateY(-100%);
 }
 
 .header h1 {
