@@ -4,6 +4,10 @@ import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Alert from '../../components/common/Alert'
 
+// La descripción se muestra en varias vistas; la acotamos para que no rompa el
+// diseño. 150 queda cómodo por debajo del límite físico de la columna (VARCHAR 191).
+const MAX_DESCRIPCION = 150
+
 export default function CategoriaForm({ initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     nombre: initialData?.nombre || '',
@@ -43,13 +47,28 @@ export default function CategoriaForm({ initialData, onSave, onCancel }) {
         placeholder="Ej: Salsa, Bachata, Zumba..."
         required
       />
-      <Input
-        label="Descripción"
-        name="descripcion"
-        value={formData.descripcion}
-        onChange={handleChange}
-        placeholder="Breve descripción de la categoría"
-      />
+      <div className="form-group">
+        <label htmlFor="descripcion">Descripción</label>
+        <textarea
+          id="descripcion"
+          name="descripcion"
+          value={formData.descripcion}
+          onChange={handleChange}
+          placeholder="Breve descripción de la categoría"
+          maxLength={MAX_DESCRIPCION}
+          rows={3}
+          style={{ resize: 'vertical' }}
+        />
+        <span
+          style={{
+            fontSize: '0.75rem',
+            alignSelf: 'flex-end',
+            color: formData.descripcion.length >= MAX_DESCRIPCION ? 'var(--danger-text, #b91c1c)' : 'var(--gray-500)',
+          }}
+        >
+          {formData.descripcion.length}/{MAX_DESCRIPCION}
+        </span>
+      </div>
       <div className="form-group">
         <label htmlFor="precio">Precio por clase (S/)</label>
         <input
