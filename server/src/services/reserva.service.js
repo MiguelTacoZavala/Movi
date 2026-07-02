@@ -25,11 +25,23 @@ const includeClase = {
   pago: { select: { monto: true, metodoPago: true } },
 }
 
+function haPasado(clase) {
+  const ahora = new Date().toISOString()
+  const hoyStr = ahora.substring(0, 10)
+  const ahoraTimeStr = ahora.substring(11, 19)
+  const fechaStr = clase.fecha.toISOString().substring(0, 10)
+  const horaFinStr = clase.horaFin.toISOString().substring(11, 19)
+  return fechaStr < hoyStr || (fechaStr === hoyStr && horaFinStr < ahoraTimeStr)
+}
+
 function formatear(reserva) {
-  return {
+  const base = {
     id: reserva.id,
     codigoPago: reserva.codigoPago,
     estado: reserva.estado,
+    estadoDisplay: reserva.estado === 'CONFIRMADA' && haPasado(reserva.clase)
+      ? 'FINALIZADA'
+      : reserva.estado,
     fechaReserva: reserva.fechaReserva,
     expiracionReserva: reserva.expiracionReserva,
     fechaConfirmacion: reserva.fechaConfirmacion,
@@ -55,6 +67,7 @@ function formatear(reserva) {
         : undefined,
     },
   }
+  return base
 }
 
 async function listarPorUsuario(usuarioId) {

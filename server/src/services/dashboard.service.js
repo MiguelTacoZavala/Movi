@@ -105,7 +105,7 @@ async function resumenCliente(usuarioId) {
   const hoy = new Date(ahora)
   hoy.setUTCHours(0, 0, 0, 0)
 
-  const proximaReserva = await prisma.reserva.findFirst({
+  const reservas = await prisma.reserva.findMany({
     where: { usuarioId, estado: 'CONFIRMADA', clase: { fecha: { gte: hoy } } },
     include: {
       clase: {
@@ -122,14 +122,59 @@ async function resumenCliente(usuarioId) {
       },
       posicionClase: { select: { numero: true } },
     },
-    orderBy: { clase: { fecha: 'asc' } },
+    orderBy: [{ clase: { fecha: 'asc' } }, { clase: { horaInicio: 'asc' } }],
+    take: 5,
   })
+
+  const ahoraISO = ahora.toISOString()
+  const ahoraDateStr = ahoraISO.substring(0, 10)
+  const ahoraTimeStr = ahoraISO.substring(11, 19)
+
+  function claseHaPasado(c) {
+    const fechaStr = c.fecha.toISOString().substring(0, 10)
+    const horaFinStr = c.horaFin.toISOString().substring(11, 19)
+    return fechaStr < ahoraDateStr || (fechaStr === ahoraDateStr && horaFinStr < ahoraTimeStr)
+  }
+
+  const reservaValida = reservas.find(r => {
+    if (!r.clase) return false
+    const c = r.clase
+    const fechaStr = c.fecha.toISOString().substring(0, 10)
+
+    if (fechaStr < ahoraDateStr) return false
+    if (fechaStr > ahoraDateStr) return !claseHaPasado(c)
+    const horaStr = c.horaInicio.toISOString().substring(11, 19)
+    return horaStr > ahoraTimeStr
+  })
+
+  const proximaReserva = reservaValida
+    ? {
+        id: reservaValida.id,
+        codigoPago: reservaValida.codigoPago,
+        asiento: reservaValida.posicionClase?.numero,
+        estadoDisplay: 'CONFIRMADA',
+        clase: {
+          id: reservaValida.clase.id,
+          fecha: reservaValida.clase.fecha.toISOString().substring(0, 10),
+          horaInicio: reservaValida.clase.horaInicio.toISOString().substring(11, 16),
+          horaFin: reservaValida.clase.horaFin.toISOString().substring(11, 16),
+          categoria: reservaValida.clase.horarioSemanal?.categoria,
+          instructor: reservaValida.clase.horarioSemanal?.instructor
+            ? {
+                id: reservaValida.clase.horarioSemanal.instructor.id,
+                nombres: reservaValida.clase.horarioSemanal.instructor.usuario.nombres,
+                apellidos: reservaValida.clase.horarioSemanal.instructor.usuario.apellidos,
+              }
+            : undefined,
+        },
+      }
+    : null
 
   const creditosDisponibles = await prisma.credito.count({
     where: { usuarioId, usado: false },
   })
 
-  const proximasClases = await prisma.clase.findMany({
+  const clasesRaw = await prisma.clase.findMany({
     where: { fecha: { gte: hoy }, estado: 'PROGRAMADA' },
     include: {
       horarioSemanal: {
@@ -146,9 +191,8 @@ async function resumenCliente(usuarioId) {
     take: 5,
   })
 
-  const clasesPopulares = proximasClases
+  const proximasClases = clasesRaw
     .filter(c => c._count.reservas < c.capacidadMaxima)
-    .slice(0, 3)
     .map(c => ({
       id: c.id,
       fecha: c.fecha.toISOString().substring(0, 10),
@@ -164,30 +208,19 @@ async function resumenCliente(usuarioId) {
       },
     }))
 
+  const inscripcionesProximas = await prisma.reserva.count({
+    where: {
+      usuarioId,
+      estado: { in: ['CONFIRMADA', 'PENDIENTE'] },
+      clase: { fecha: { gte: hoy } },
+    },
+  })
+
   return {
-    proximaReserva: proximaReserva
-      ? {
-          id: proximaReserva.id,
-          codigoPago: proximaReserva.codigoPago,
-          asiento: proximaReserva.posicionClase?.numero,
-          clase: {
-            id: proximaReserva.clase.id,
-            fecha: proximaReserva.clase.fecha.toISOString().substring(0, 10),
-            horaInicio: proximaReserva.clase.horaInicio.toISOString().substring(11, 16),
-            horaFin: proximaReserva.clase.horaFin.toISOString().substring(11, 16),
-            categoria: proximaReserva.clase.horarioSemanal?.categoria,
-            instructor: proximaReserva.clase.horarioSemanal?.instructor
-              ? {
-                  id: proximaReserva.clase.horarioSemanal.instructor.id,
-                  nombres: proximaReserva.clase.horarioSemanal.instructor.usuario.nombres,
-                  apellidos: proximaReserva.clase.horarioSemanal.instructor.usuario.apellidos,
-                }
-              : undefined,
-          },
-        }
-      : null,
+    proximaReserva,
     creditosDisponibles,
-    clasesPopulares,
+    inscripcionesProximas,
+    proximasClases,
   }
 }
 

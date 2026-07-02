@@ -1,30 +1,71 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Music, Clock, Users } from 'lucide-react'
+import { Calendar, Clock, Users, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
+import Button from '../../components/common/Button'
 import '../../App.css'
+
+const DOT_COLORS = [
+  '#E06C75', '#61AFEF', '#98C379', '#E5C07B', '#C678DD',
+  '#56B6C2', '#D19A66', '#7EC8E3', '#B392F0', '#9ECBFF',
+]
+
+function getDotColor(catId) {
+  return DOT_COLORS[(catId || 0) % DOT_COLORS.length]
+}
+
+function getBarClass(pct) {
+  if (pct >= 90) return 'hot'
+  if (pct >= 75) return 'warm'
+  return 'safe'
+}
 
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    api.get('/dashboard/cliente').then(res => {
+  const cargar = useCallback(() => {
+    setLoading(true)
+    setError('')
+    api.cachedGet('/dashboard/cliente').then(res => {
       setData(res)
     }).catch(() => {
       setData(null)
+      setError('No pudimos cargar tu dashboard. Revisa tu conexión.')
     }).finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  useEffect(() => { cargar() }, [])
 
   const prox = data?.proximaReserva
   const creditos = data?.creditosDisponibles ?? 0
-  const populares = data?.clasesPopulares || []
+  const inscripciones = data?.inscripcionesProximas ?? 0
+  const clases = useMemo(() => (data?.proximasClases || []).slice(0, 3), [data])
+
+  const grupos = useMemo(() => {
+    const map = {}
+    clases.forEach(c => {
+      if (!map[c.fecha]) map[c.fecha] = []
+      map[c.fecha].push(c)
+    })
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b))
+  }, [clases])
+
+  if (error) {
+    return (
+      <div className="empty-state">
+        <AlertCircle size={48} className="icon-muted" />
+        <h3>No pudimos cargar tus datos</h3>
+        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: '0.5rem 0' }}>{error}</p>
+        <Button onClick={cargar} style={{ marginTop: '1rem' }}>Reintentar</Button>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -36,16 +77,61 @@ export default function Dashboard() {
 
       <div className="client-stats">
         <div className="client-stat-card">
-          <div className="client-stat-value">{creditos}</div>
+          {data ? (
+            <div className="client-stat-value">{creditos}</div>
+          ) : (
+            <div className="skeleton skeleton-inline" style={{ width: 40, height: 32, margin: '0 auto' }} />
+          )}
           <div className="client-stat-label">Créditos</div>
         </div>
         <div className="client-stat-card">
-          <div className="client-stat-value">{populares.length}</div>
-          <div className="client-stat-label">Clases disponibles</div>
+          {data ? (
+            <div className="client-stat-value">{inscripciones}</div>
+          ) : (
+            <div className="skeleton skeleton-inline" style={{ width: 40, height: 32, margin: '0 auto' }} />
+          )}
+          <div className="client-stat-label">Inscripciones</div>
         </div>
       </div>
 
-      {prox && (
+      {loading && !data && (
+        <>
+          <div className="client-card">
+            <div className="client-card-title">
+              <Calendar size={20} className="icon-primary" />
+              Tu próxima clase
+            </div>
+            <div className="client-card-content">
+              <div className="skeleton" style={{ width: '60%', height: 20, marginBottom: 12 }} />
+              <div className="skeleton" style={{ width: '80%', height: 16, marginBottom: 8 }} />
+              <div className="skeleton" style={{ width: '70%', height: 16, marginBottom: 8 }} />
+              <div className="skeleton" style={{ width: '50%', height: 16 }} />
+            </div>
+          </div>
+          <div className="client-card">
+            <div className="client-card-title">
+              <Calendar size={20} className="icon-primary" />
+              Clases disponibles
+            </div>
+            <div className="client-card-content">
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+                  <div className="skeleton" style={{ width: 12, height: 12, borderRadius: '50%', flexShrink: 0, marginTop: 4 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton" style={{ width: '40%', height: 16, marginBottom: 6 }} />
+                    <div className="skeleton" style={{ width: '30%', height: 12, marginBottom: 6 }} />
+                    <div className="skeleton" style={{ width: '50%', height: 10, marginBottom: 4 }} />
+                    <div className="skeleton" style={{ width: '100%', height: 5, marginBottom: 4 }} />
+                    <div className="skeleton" style={{ width: '25%', height: 10 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {data && prox && (
         <div className="client-card" style={{ borderLeft: '4px solid var(--success)' }}>
           <div className="client-card-title">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -77,37 +163,52 @@ export default function Dashboard() {
         </div>
       )}
 
-      {populares.length > 0 && (
+      {data && grupos.length > 0 && (
         <div className="client-card">
           <div className="client-card-title">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Music size={20} className="icon-primary" />
-              Clases con cupo disponible
+              <Calendar size={20} className="icon-primary" />
+              Clases disponibles
             </div>
           </div>
           <div className="client-card-content">
-            {populares.map((clase, idx) => (
-              <div
-                key={clase.id}
-                className="clase-card-slim"
-                style={{ animationDelay: `${idx * 0.08}s`, cursor: 'pointer' }}
-                onClick={() => navigate(`/cliente/clases/${clase.id}`)}
-              >
-                <div className="clase-card-slim-time">
-                  <span className="clase-time-text">{formatHoraAMPM(clase.horaInicio)}</span>
-                </div>
-                <div className="clase-card-slim-info">
-                  <div className="clase-card-slim-name">{clase.categoria?.nombre}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
-                    {clase.instructor?.nombres} {clase.instructor?.apellidos}
-                  </div>
-                </div>
-                <div className="clase-card-slim-meta">
-                  <div className="clase-card-slim-participants">
-                    <Users size={13} />
-                    <span>{clase.ocupacion}/{clase.capacidadMaxima}</span>
-                  </div>
-                </div>
+            {grupos.map(([fecha, claseList]) => (
+              <div key={fecha} className="proximas-day-group">
+                <div className="proximas-day-label">{formatFechaBonita(fecha)}</div>
+                {claseList.map(c => {
+                  const pct = c.capacidadMaxima > 0 ? (c.ocupacion / c.capacidadMaxima) * 100 : 0
+                  return (
+                    <div
+                      key={c.id}
+                      className="proxima-clase-card"
+                      onClick={() => navigate(`/cliente/clases/${c.id}`)}
+                    >
+                      <span
+                        className="proxima-clase-dot"
+                        style={{ background: getDotColor(c.categoria?.id) }}
+                      />
+                      <div className="proxima-clase-body">
+                        <div className="proxima-clase-name">{c.categoria?.nombre || 'Clase'}</div>
+                        <div className="proxima-clase-instructor">
+                          {c.instructor?.nombres} {c.instructor?.apellidos}
+                        </div>
+                        <div className="proxima-clase-time">
+                          <Clock size={12} />
+                          {formatHoraAMPM(c.horaInicio)} - {formatHoraAMPM(c.horaFin)}
+                        </div>
+                        <div className="proxima-clase-bar-track">
+                          <div
+                            className={`proxima-clase-bar-fill ${getBarClass(pct)}`}
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                        <div className="proxima-clase-ocupacion-text">
+                          {c.ocupacion}/{c.capacidadMaxima} ocupados
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             ))}
           </div>

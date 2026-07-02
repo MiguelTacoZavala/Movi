@@ -30,7 +30,8 @@ export default function Perfil() {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target
-    setEditData({ ...editData, [name]: value })
+    const cleaned = ['nombres', 'apellidos'].includes(name) ? value.replace(/\d/g, '') : value
+    setEditData({ ...editData, [name]: cleaned })
   }
 
   const handleSave = async () => {
@@ -83,8 +84,8 @@ export default function Perfil() {
     <div>
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Editar Perfil">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Input label="Nombres" name="nombres" value={editData.nombres} onChange={handleEditChange} required />
-          <Input label="Apellidos" name="apellidos" value={editData.apellidos} onChange={handleEditChange} />
+          <Input label="Nombres" hint="Solo letras" name="nombres" value={editData.nombres} onChange={handleEditChange} required />
+          <Input label="Apellidos" hint="Solo letras" name="apellidos" value={editData.apellidos} onChange={handleEditChange} />
           <Input label="Teléfono" name="telefono" type="tel" value={editData.telefono} onChange={handleEditChange} />
           <Input label="Email" name="email" type="email" value={editData.email} onChange={handleEditChange} />
           <div className="modal-actions" style={{ marginTop: '0.5rem' }}>
@@ -162,19 +163,19 @@ export default function Perfil() {
           </div>
           <div
             onClick={toggleReducedMotion}
-            title="Desactivar animaciones al cambiar de página"
+            title="Activar o desactivar animaciones al cambiar de página"
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' }}
           >
-            <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Desactivar animaciones</span>
+            <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Animaciones</span>
             <div style={{
               width: 44, height: 24, borderRadius: 12, padding: 2,
-              background: reducedMotion ? 'var(--success)' : 'var(--gray-300)',
+              background: reducedMotion ? 'var(--gray-300)' : 'var(--success)',
               transition: 'background 0.2s ease', position: 'relative',
             }}>
               <div style={{
                 width: 20, height: 20, borderRadius: '50%', background: '#fff',
                 position: 'absolute', top: 2,
-                left: reducedMotion ? 22 : 2,
+                left: reducedMotion ? 2 : 22,
                 transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
               }} />
             </div>

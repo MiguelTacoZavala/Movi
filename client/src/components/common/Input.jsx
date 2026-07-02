@@ -1,4 +1,5 @@
-export default function Input({ label, name, value, onChange, type = 'text', placeholder, required, min, max, ariaLabel }) {
+export default function Input({ label, hint, name, value, onChange, type = 'text', placeholder, required, min, max }) {
+
   return (
     <div className="form-group">
       {label && <label htmlFor={name}>{label}</label>}
@@ -16,6 +17,7 @@ export default function Input({ label, name, value, onChange, type = 'text', pla
         // accesible; el placeholder por sí solo no cuenta como etiqueta.
         aria-label={ariaLabel}
       />
+      {hint && <span className="form-hint">{hint}</span>}
     </div>
   )
 }

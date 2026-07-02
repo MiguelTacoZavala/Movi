@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Music, Calendar, User, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useHotkeys } from '../../hooks/useHotkeys'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import AyudaContextual from '../common/AyudaContextual'
+import KeyboardShortcutsHelp from '../common/KeyboardShortcutsHelp'
 import '../../App.css'
 
 export default function ClientLayout() {
@@ -14,14 +16,51 @@ export default function ClientLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+  const reducedMotionRef = useRef(reducedMotion)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
 
   useEffect(() => {
-    document.documentElement.dataset.reducedMotion = reducedMotion ? 'true' : 'false'
+    const el = document.createElement('style')
+    el.id = 'movi-anim-state'
+    document.head.appendChild(el)
+    return () => { document.getElementById('movi-anim-state')?.remove() }
+  }, [])
+
+  useEffect(() => {
+    reducedMotionRef.current = reducedMotion
+    const el = document.getElementById('movi-anim-state')
+    if (el) {
+      el.textContent = reducedMotion
+        ? '.clase-card-slim,.date-carousel,.back-btn,.category-card,.category-active-header{animation:none!important}'
+        : ''
+    }
   }, [reducedMotion])
+
+  useLayoutEffect(() => {
+    if (reducedMotionRef.current) return
+    const el = document.querySelector('.page-fade-in')
+    if (!el) return
+    el.style.opacity = ''
+    const anim = el.animate(
+      [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 300, easing: 'ease', fill: 'forwards' }
+    )
+    return () => anim.cancel()
+  }, [location.pathname])
+
+  const CLIENT_SHORTCUTS = [
+    { keys: 'g i', handler: useCallback(() => navigate('/cliente/dashboard'), [navigate]), description: 'Ir a Inicio' },
+    { keys: 'g c', handler: useCallback(() => navigate('/cliente/clases'), [navigate]), description: 'Ir a Clases' },
+    { keys: 'g m', handler: useCallback(() => navigate('/cliente/mis-clases'), [navigate]), description: 'Ir a Mis Clases' },
+    { keys: 'g p', handler: useCallback(() => navigate('/cliente/perfil'), [navigate]), description: 'Ir a Perfil' },
+    { keys: '?', handler: useCallback(() => setShowHelp(prev => !prev), []), description: 'Mostrar ayuda de teclado' },
+  ]
+
+  useHotkeys(CLIENT_SHORTCUTS, { enabled: !showHelp })
 
   const handleLogout = () => {
     logout()
@@ -36,7 +75,7 @@ export default function ClientLayout() {
           <h1 className="client-logo">MOVI</h1>
           <div className="client-user-menu">
             <span className="client-user-name">{user?.nombres}</span>
-            <button onClick={() => setShowLogoutModal(true)} className="btn btn-ghost btn-small" title="Cerrar sesión">
+            <button onClick={() => setShowLogoutModal(true)} className="btn btn-ghost btn-small" title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogOut size={18} />
             </button>
           </div>
@@ -62,25 +101,29 @@ export default function ClientLayout() {
       </main>
 
       <nav className="client-nav">
-        <NavLink to="/cliente/dashboard" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
+        <NavLink to="/cliente/dashboard" aria-keyshortcuts="g i" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <LayoutDashboard size={20} />
           <span>Inicio</span>
         </NavLink>
-        <NavLink to="/cliente/clases" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
+        <NavLink to="/cliente/clases" aria-keyshortcuts="g c" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <Music size={20} />
           <span>Clases</span>
         </NavLink>
-        <NavLink to="/cliente/mis-clases" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
+        <NavLink to="/cliente/mis-clases" aria-keyshortcuts="g m" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <Calendar size={20} />
           <span>Mis Clases</span>
         </NavLink>
-        <NavLink to="/cliente/perfil" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
+        <NavLink to="/cliente/perfil" aria-keyshortcuts="g p" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <User size={20} />
           <span>Perfil</span>
         </NavLink>
       </nav>
 
       <AyudaContextual role="cliente" />
+
+      {showHelp && (
+        <KeyboardShortcutsHelp shortcuts={CLIENT_SHORTCUTS} onClose={() => setShowHelp(false)} />
+      )}
     </div>
   )
 }

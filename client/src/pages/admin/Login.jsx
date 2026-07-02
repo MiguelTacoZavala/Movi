@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
 import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import '../../App.css'
@@ -43,16 +44,17 @@ export default function Login() {
           if (result.rol === 'admin') {
             navigate('/admin/dashboard')
           } else if (result.rol === 'cliente') {
+            api.preloadClientData()
             navigate('/cliente/dashboard')
           } else if (result.rol === 'instructor') {
             navigate('/instructor/dashboard')
           }
         }, 1500)
       } else {
-        setError(result.message || 'Credenciales incorrectas. Inténtalo de nuevo.')
+        setError('Credenciales incorrectas. Revisa tus datos e intenta de nuevo.')
       }
-    } catch (err) {
-      setError(err.message || 'Ocurrió un error. Inténtalo de nuevo.')
+    } catch {
+      setError('Ocurrió un error al iniciar sesión. Verifica tu conexión e intenta de nuevo.')
     } finally {
       setIsLoading(false)
     }
