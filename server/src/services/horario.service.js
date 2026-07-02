@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const claseService = require('./clase.service')
 
 const include = {
   categoria: { select: { id: true, nombre: true } },
@@ -51,7 +52,18 @@ async function verificarOverlap({ instructorId, diaSemana, horaInicio, horaFin, 
 
 async function listar() {
   const horarios = await prisma.horarioSemanal.findMany({ include, orderBy: { diaSemana: 'asc' } })
-  return horarios.map(formatear)
+
+  // Cuántas clases futuras PROGRAMADAS tiene cada horario (para avisar cuando se acaban)
+  const hoy = new Date()
+  hoy.setUTCHours(0, 0, 0, 0)
+  const counts = await prisma.clase.groupBy({
+    by: ['horarioSemanalId'],
+    where: { fecha: { gte: hoy }, estado: 'PROGRAMADA' },
+    _count: { _all: true },
+  })
+  const countMap = Object.fromEntries(counts.map((c) => [c.horarioSemanalId, c._count._all]))
+
+  return horarios.map((h) => ({ ...formatear(h), proximasClases: countMap[h.id] || 0 }))
 }
 
 async function obtener(id) {
@@ -59,7 +71,7 @@ async function obtener(id) {
   return horario ? formatear(horario) : null
 }
 
-async function crear({ categoriaId, instructorId, diaSemana, horaInicio: hi, horaFin: hf, capacidadMaxima, minimoParticipantes, createdBy }) {
+async function crear({ categoriaId, instructorId, diaSemana, horaInicio: hi, horaFin: hf, capacidadMaxima, minimoParticipantes, generarHasta, createdBy }) {
   const horaInicio = parsearHora(hi)
   const horaFin = parsearHora(hf)
 
@@ -79,7 +91,23 @@ async function crear({ categoriaId, instructorId, diaSemana, horaInicio: hi, hor
     },
     include,
   })
-  return formatear(horario)
+
+  // Automatización: al crear el horario ya quedan generadas sus clases hasta la fecha elegida
+  let generacion = null
+  if (generarHasta) {
+    generacion = await claseService.generarDesdeHorario(horario.id, generarHasta)
+  }
+
+  return { horario: { ...formatear(horario), proximasClases: generacion?.creadas ?? 0 }, generacion }
+}
+
+// Extiende (genera más) las clases de un horario activo hasta una nueva fecha
+async function extender(id, hasta) {
+  const horario = await prisma.horarioSemanal.findUnique({ where: { id } })
+  if (!horario) return null
+  if (!horario.activo) throw { inactivo: true }
+
+  return claseService.generarDesdeHorario(id, hasta)
 }
 
 async function actualizar(id, { categoriaId, instructorId, diaSemana, horaInicio: hi, horaFin: hf, capacidadMaxima, minimoParticipantes }) {
@@ -113,18 +141,26 @@ async function actualizar(id, { categoriaId, instructorId, diaSemana, horaInicio
   return formatear(horario)
 }
 
-async function toggleActivo(id) {
+async function toggleActivo(id, { cancelarFuturas = false } = {}) {
   const horario = await prisma.horarioSemanal.findUnique({ where: { id } })
   if (!horario) return null
+
   const updated = await prisma.horarioSemanal.update({
     where: { id },
     data: { activo: !horario.activo, updatedAt: new Date() },
   })
-  return { id: updated.id, activo: updated.activo }
+
+  // Solo tiene sentido al desactivar: opcionalmente cancelar las clases ya agendadas
+  let cancelacion = null
+  if (horario.activo && !updated.activo && cancelarFuturas) {
+    cancelacion = await claseService.cancelarFuturasDeHorario(id)
+  }
+
+  return { id: updated.id, activo: updated.activo, cancelacion }
 }
 
 async function eliminar(id) {
   return prisma.horarioSemanal.delete({ where: { id } })
 }
 
-module.exports = { listar, obtener, crear, actualizar, toggleActivo, eliminar }
+module.exports = { listar, obtener, crear, actualizar, toggleActivo, eliminar, extender }

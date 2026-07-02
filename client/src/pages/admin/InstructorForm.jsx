@@ -22,6 +22,12 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
   const handleChange = (e) => {
     const { name, value } = e.target
     if (error) setError('')
+    // El teléfono solo admite dígitos y máximo 9 (celular Perú).
+    if (name === 'telefono') {
+      const soloDigitos = value.replace(/\D/g, '').slice(0, 9)
+      setFormData({ ...formData, telefono: soloDigitos })
+      return
+    }
     setFormData({ ...formData, [name]: value })
   }
 
@@ -29,6 +35,10 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
     e.preventDefault()
     if (!formData.nombres.trim() || !formData.apellidos.trim() || !formData.especialidad) {
       setError('Nombres, apellidos y especialidad son requeridos.')
+      return
+    }
+    if (formData.telefono && formData.telefono.length !== 9) {
+      setError('El teléfono debe tener 9 dígitos.')
       return
     }
     if (!initialData && !formData.password) {
@@ -86,9 +96,10 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
       <Input
         label="Teléfono"
         name="telefono"
+        type="tel"
         value={formData.telefono}
         onChange={handleChange}
-        placeholder="999888777"
+        placeholder="Ej: 999888777 (9 dígitos)"
       />
 
       {!initialData && (

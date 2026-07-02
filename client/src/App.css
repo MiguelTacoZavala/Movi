@@ -1515,7 +1515,9 @@ body {
    ============================== */
 
 .search-box {
-  min-width: 300px;
+  /* Ancho suficiente en escritorio para que el placeholder completo
+     ("...email o DNI...") no se corte. En móvil pasa a 100% (ver media query). */
+  min-width: 360px;
 }
 
 /* .search-box .form-group input (no solo .search-box input): sube la
@@ -3205,6 +3207,14 @@ body {
   font-size: 0.8rem;
   margin-top: 0.25rem;
   margin-bottom: 0.5rem;
+}
+
+.form-hint {
+  color: var(--gray-500);
+  font-size: 0.8rem;
+  margin-top: -0.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
 }
 
 .field-error {
