@@ -5,6 +5,24 @@ import Button from '../../components/common/Button'
 import { DIAS_SEMANA } from '../../utils/helpers'
 import '../../App.css'
 
+// Fecha (YYYY-MM-DD) del último día del mes siguiente: default sensato para generar clases
+function finDeMesSiguiente() {
+  const hoy = new Date()
+  const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0)
+  const y = fin.getFullYear()
+  const m = String(fin.getMonth() + 1).padStart(2, '0')
+  const d = String(fin.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function hoyStr() {
+  const hoy = new Date()
+  const y = hoy.getFullYear()
+  const m = String(hoy.getMonth() + 1).padStart(2, '0')
+  const d = String(hoy.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export default function HorarioSemanalForm({ initialData, onSave, onCancel, instructores = [], categorias = [] }) {
   const [formData, setFormData] = useState({
     instructorId: initialData?.instructor?.id || '',
@@ -13,6 +31,8 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, inst
     horaInicio: initialData?.horaInicio || '',
     horaFin: initialData?.horaFin || '',
     capacidadMaxima: initialData?.capacidadMaxima || '',
+    // Solo aplica al crear: hasta qué fecha generar las clases automáticamente
+    generarHasta: initialData ? '' : finDeMesSiguiente(),
   })
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
@@ -40,6 +60,15 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, inst
     const cap = parseInt(capacidadMaxima)
     if (!capacidadMaxima || cap < 1) newErrors.capacidadMaxima = 'Debe ser al menos 1'
 
+    // La fecha de generación solo se pide al crear
+    if (!initialData) {
+      if (!formData.generarHasta) {
+        newErrors.generarHasta = 'Elige hasta qué fecha generar las clases'
+      } else if (formData.generarHasta < hoyStr()) {
+        newErrors.generarHasta = 'La fecha debe ser hoy o posterior'
+      }
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -50,14 +79,17 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, inst
 
     setSaving(true)
     try {
-      await onSave({
+      const payload = {
         instructorId: parseInt(formData.instructorId),
         categoriaId: parseInt(formData.categoriaId),
         diaSemana: formData.diaSemana,
         horaInicio: formData.horaInicio,
         horaFin: formData.horaFin,
         capacidadMaxima: parseInt(formData.capacidadMaxima),
-      })
+      }
+      // Al crear, incluir la fecha hasta la que se autogeneran las clases
+      if (!initialData) payload.generarHasta = formData.generarHasta
+      await onSave(payload)
     } finally {
       setSaving(false)
     }
@@ -130,6 +162,25 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, inst
         required
       />
       {errors.capacidadMaxima && <p className="form-error">{errors.capacidadMaxima}</p>}
+
+      {!initialData && (
+        <>
+          <Input
+            label="Generar clases hasta"
+            name="generarHasta"
+            type="date"
+            value={formData.generarHasta}
+            onChange={handleChange}
+            min={hoyStr()}
+            required
+          />
+          <p className="form-hint">
+            Al guardar, se crearán automáticamente las clases de este horario, semana a semana,
+            hasta la fecha elegida. Después podrás extenderlas cuando quieras.
+          </p>
+          {errors.generarHasta && <p className="form-error">{errors.generarHasta}</p>}
+        </>
+      )}
 
       <div className="form-actions">
         <Button type="submit" disabled={saving}>

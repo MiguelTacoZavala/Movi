@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react'
+import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
 import Alert from '../../components/common/Alert'
 import api from '../../services/api'
+import { useFlashMessage } from '../../hooks/useFlashMessage'
 import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
@@ -36,11 +37,7 @@ export default function Clases() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [cancelTargetClase, setCancelTargetClase] = useState(null)
   const [error, setError] = useState('')
-  const [mensaje, setMensaje] = useState('')
-  const [generarOpen, setGenerarOpen] = useState(false)
-  const [semanasInput, setSemanasInput] = useState('4')
-  const [generarError, setGenerarError] = useState('')
-  const [generando, setGenerando] = useState(false)
+  const [mensaje, setMensaje] = useFlashMessage()
 
   const cargar = async () => {
     try {
@@ -145,33 +142,6 @@ export default function Clases() {
     )},
   ]
 
-  const openGenerar = () => {
-    setSemanasInput('4')
-    setGenerarError('')
-    setGenerarOpen(true)
-  }
-
-  const doGenerar = async () => {
-    const semanas = parseInt(semanasInput)
-    if (!semanas || semanas < 1 || semanas > 52) {
-      setGenerarError('Ingresa un número de semanas entre 1 y 52.')
-      return
-    }
-    setError('')
-    setMensaje('')
-    setGenerando(true)
-    try {
-      const r = await api.post('/clases/generate', { semanas })
-      setMensaje(`Listo: ${r.creadas} clase(s) creada(s), ${r.omitidas} ya existían.`)
-      setGenerarOpen(false)
-      await cargar()
-    } catch (e) {
-      setGenerarError(mensajeError(e, 'No se pudieron generar las clases.'))
-    } finally {
-      setGenerando(false)
-    }
-  }
-
   const handleViewParticipants = async (clase) => {
     setError('')
     try {
@@ -226,10 +196,6 @@ export default function Clases() {
           Clases Generadas
         </h1>
         <div className="filters">
-          <Button onClick={openGenerar}>
-            <RefreshCw size={18} />
-            Generar Clases
-          </Button>
           <div className="form-group">
             <label htmlFor="filtroFecha">Fecha</label>
             <input
@@ -395,41 +361,6 @@ export default function Clases() {
         )}
       </Modal>
 
-      <Modal
-        isOpen={generarOpen}
-        onClose={() => setGenerarOpen(false)}
-        title="Generar clases"
-      >
-        <p className="modal-subtitle">
-          Se crearán las clases de los horarios activos para las próximas semanas. Las que ya existen o cuya fecha pasó se omiten.
-        </p>
-        {generarError && (
-          <Alert type="danger">
-            <AlertCircle size={18} />
-            <span>{generarError}</span>
-          </Alert>
-        )}
-        <div className="form-group">
-          <label htmlFor="semanas">¿Para cuántas semanas? (1-52)</label>
-          <input
-            id="semanas"
-            type="number"
-            min="1"
-            max="52"
-            value={semanasInput}
-            onChange={(e) => { if (generarError) setGenerarError(''); setSemanasInput(e.target.value) }}
-            style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', border: '1px solid var(--gray-200)', borderRadius: '8px' }}
-          />
-        </div>
-        <div className="form-actions">
-          <Button onClick={doGenerar} disabled={generando}>
-            {generando ? 'Generando...' : 'Generar'}
-          </Button>
-          <Button variant="secondary" onClick={() => setGenerarOpen(false)} disabled={generando}>
-            Cancelar
-          </Button>
-        </div>
-      </Modal>
     </div>
   )
 }

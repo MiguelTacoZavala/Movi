@@ -22,8 +22,8 @@ async function obtener(req, res, next) {
 
 async function crear(req, res, next) {
   try {
-    const { categoriaId, instructorId, diaSemana, horaInicio, horaFin, capacidadMaxima, minimoParticipantes } = req.body
-    const horario = await horarioService.crear({
+    const { categoriaId, instructorId, diaSemana, horaInicio, horaFin, capacidadMaxima, minimoParticipantes, generarHasta } = req.body
+    const { horario, generacion } = await horarioService.crear({
       categoriaId,
       instructorId,
       diaSemana,
@@ -31,9 +31,10 @@ async function crear(req, res, next) {
       horaFin,
       capacidadMaxima,
       minimoParticipantes,
+      generarHasta,
       createdBy: req.user.id,
     })
-    res.status(201).json({ horario })
+    res.status(201).json({ horario, generacion })
   } catch (error) {
     if (error.overlap) return res.status(409).json({ error: 'El instructor ya tiene un horario en ese día y hora. Elige otro día, hora o instructor.' })
     if (error.code === 'P2002') return res.status(409).json({ error: 'Ya existe un horario idéntico para ese instructor' })
@@ -59,10 +60,26 @@ async function actualizar(req, res, next) {
 async function toggleActivo(req, res, next) {
   try {
     const id = Number(req.params.id)
-    const resultado = await horarioService.toggleActivo(id)
+    const cancelarFuturas = req.body?.cancelarFuturas === true
+    const resultado = await horarioService.toggleActivo(id, { cancelarFuturas })
     if (!resultado) return res.status(404).json({ error: 'Horario no encontrado' })
     res.json(resultado)
   } catch (error) {
+    next(error)
+  }
+}
+
+async function extender(req, res, next) {
+  try {
+    const id = Number(req.params.id)
+    const { hasta } = req.body
+    const resultado = await horarioService.extender(id, hasta)
+    if (!resultado) return res.status(404).json({ error: 'Horario no encontrado' })
+    res.json(resultado)
+  } catch (error) {
+    if (error.inactivo) {
+      return res.status(409).json({ error: 'El horario está inactivo. Actívalo antes de generar clases.' })
+    }
     next(error)
   }
 }
@@ -78,4 +95,4 @@ async function eliminar(req, res, next) {
   }
 }
 
-module.exports = { listar, obtener, crear, actualizar, toggleActivo, eliminar }
+module.exports = { listar, obtener, crear, actualizar, toggleActivo, eliminar, extender }

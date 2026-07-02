@@ -3067,6 +3067,14 @@ body {
   margin-bottom: 0.5rem;
 }
 
+.form-hint {
+  color: var(--gray-500);
+  font-size: 0.8rem;
+  margin-top: -0.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
 .field-error {
   color: var(--danger);
   font-size: 0.8rem;

@@ -148,6 +148,128 @@ async function generar({ semanas }) {
   return { creadas, omitidas, pasadas, semanas }
 }
 
+// Tope de seguridad para el bucle por fecha (~2 años), evita loops infinitos
+const MAX_SEMANAS = 104
+
+// Crea las sesiones de UN horario desde esta semana hasta la fecha `hasta` (inclusive).
+// Idempotente: omite las que ya existen y las de días que ya pasaron.
+async function crearSesionesHorario(horario, hastaStr) {
+  const monday = getMondayOfCurrentWeek()
+
+  const hoy = new Date()
+  hoy.setUTCHours(0, 0, 0, 0)
+
+  const hasta = new Date(hastaStr)
+  hasta.setUTCHours(0, 0, 0, 0)
+
+  let creadas = 0
+  let omitidas = 0
+  let pasadas = 0
+
+  for (let week = 0; week < MAX_SEMANAS; week++) {
+    const fecha = getFechaClase(monday, horario.diaSemana, week)
+
+    // Las fechas crecen de forma monótona: si pasamos la fecha tope, terminamos
+    if (fecha > hasta) break
+
+    if (fecha < hoy) {
+      pasadas++
+      continue
+    }
+
+    const existing = await prisma.clase.findUnique({
+      where: { horarioSemanalId_fecha: { horarioSemanalId: horario.id, fecha } },
+    })
+
+    if (existing) {
+      omitidas++
+      continue
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const clase = await tx.clase.create({
+        data: {
+          horarioSemanalId: horario.id,
+          fecha,
+          horaInicio: horario.horaInicio,
+          horaFin: horario.horaFin,
+          capacidadMaxima: horario.capacidadMaxima,
+          minimoParticipantes: horario.minimoParticipantes,
+        },
+      })
+
+      const posiciones = Array.from({ length: horario.capacidadMaxima }, (_, i) => ({
+        claseId: clase.id,
+        numero: i + 1,
+      }))
+
+      await tx.posicionClase.createMany({ data: posiciones })
+    })
+
+    creadas++
+  }
+
+  return { creadas, omitidas, pasadas }
+}
+
+// Genera/extiende las clases de un horario concreto hasta la fecha indicada.
+async function generarDesdeHorario(horarioId, hasta) {
+  const horario = await prisma.horarioSemanal.findUnique({ where: { id: horarioId } })
+  if (!horario) return null
+
+  const resultado = await crearSesionesHorario(horario, hasta)
+  console.log(
+    `Horario ${horarioId}: ${resultado.creadas} clases nuevas hasta ${hasta} (${resultado.omitidas} ya existentes)`
+  )
+  return resultado
+}
+
+// Cancela todas las clases futuras PROGRAMADAS de un horario y genera créditos
+// para las reservas confirmadas (misma regla que cancelar una clase suelta).
+async function cancelarFuturasDeHorario(horarioId) {
+  const hoy = new Date()
+  hoy.setUTCHours(0, 0, 0, 0)
+
+  const clases = await prisma.clase.findMany({
+    where: { horarioSemanalId: horarioId, fecha: { gte: hoy }, estado: 'PROGRAMADA' },
+    include: {
+      reservas: { where: { estado: 'CONFIRMADA' }, select: { id: true, usuarioId: true } },
+    },
+  })
+
+  let clasesCanceladas = 0
+  let creditosGenerados = 0
+
+  for (const clase of clases) {
+    await prisma.$transaction(async (tx) => {
+      await tx.clase.update({
+        where: { id: clase.id },
+        data: { estado: 'CANCELADA', updatedAt: new Date() },
+      })
+
+      for (const reserva of clase.reservas) {
+        await tx.credito.create({
+          data: { usuarioId: reserva.usuarioId, claseId: clase.id, reservaId: reserva.id },
+        })
+        await tx.reserva.update({
+          where: { id: reserva.id },
+          data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
+        })
+        creditosGenerados++
+      }
+
+      await tx.reserva.updateMany({
+        where: { claseId: clase.id, estado: 'PENDIENTE' },
+        data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
+      })
+    })
+    clasesCanceladas++
+  }
+
+  console.log(`Horario ${horarioId}: ${clasesCanceladas} clases futuras canceladas, ${creditosGenerados} créditos`)
+  return { clasesCanceladas, creditosGenerados }
+}
+
 // Marca como FINALIZADA toda clase cuya fecha ya pasó y seguía activa
 async function finalizarClasesPasadas() {
   const hoy = new Date()
@@ -266,4 +388,11 @@ async function cancelar(id) {
   return { creditosGenerados }
 }
 
-module.exports = { generar, listar, obtener, cancelar }
+module.exports = {
+  generar,
+  listar,
+  obtener,
+  cancelar,
+  generarDesdeHorario,
+  cancelarFuturasDeHorario,
+}
