@@ -2520,6 +2520,149 @@ body {
   font-weight: 600;
 }
 
+/* ── Próximas clases (Dashboard) ── */
+.proximas-day-group {
+  margin-bottom: 1rem;
+}
+
+.proximas-day-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+.proxima-clase-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: var(--white);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+@media (hover: hover) {
+  .proxima-clase-card:hover {
+    border-color: var(--gray-300);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+}
+
+.proxima-clase-card:active {
+  transform: scale(0.98);
+}
+
+.proxima-clase-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.proxima-clase-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.proxima-clase-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 0.15rem;
+}
+
+.proxima-clase-instructor {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-bottom: 0.4rem;
+}
+
+.proxima-clase-time {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.proxima-clase-bar-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--gray-200);
+  overflow: hidden;
+  margin-bottom: 0.15rem;
+}
+
+.proxima-clase-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.proxima-clase-bar-fill.safe {
+  background: var(--success);
+}
+
+.proxima-clase-bar-fill.warm {
+  background: var(--warning);
+}
+
+.proxima-clase-bar-fill.hot {
+  background: var(--danger);
+}
+
+.proxima-clase-ocupacion-text {
+  font-size: 0.7rem;
+  color: var(--gray-400);
+  font-weight: 500;
+}
+
+.price-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #059669;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.5;
+  margin-bottom: 0.4rem;
+}
+
+.price-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--success-bg);
+  border: 1px solid var(--success);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.price-card-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.price-card-icon {
+  color: var(--success);
+}
+
 /* ==============================
    DETAILLE CLASE PAGE
    ============================== */
@@ -2776,7 +2919,6 @@ body {
 }
 
 .page-fade-in {
-  animation: fadeIn 0.3s ease;
 }
 
 /* Slim card active tap feedback */
@@ -2964,6 +3106,13 @@ body {
   display: block;
 }
 
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+  display: block;
+}
+
 /* ── Clase info summary (participant modal) ── */
 
 .clase-info-summary {
@@ -3025,6 +3174,155 @@ body {
   border-color: #1e8449;
 }
 
+/* ── :focus-visible (teclado) ── */
+
+:focus-visible {
+  outline: 2px solid var(--primary-medium) !important;
+  outline-offset: 2px;
+}
+
+/* ── Keyboard shortcuts help modal ── */
+
+.keyboard-help-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  max-width: 420px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  animation: fadeIn 0.2s ease;
+}
+
+.keyboard-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.keyboard-help-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.keyboard-help-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--gray-500);
+  padding: 0.25rem;
+}
+
+.keyboard-help-close:hover {
+  color: var(--text-primary);
+}
+
+.keyboard-help-list {
+  padding: 0.75rem 1.5rem 1rem;
+}
+
+.keyboard-help-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  gap: 1rem;
+}
+
+.keyboard-help-row + .keyboard-help-row {
+  border-top: 1px solid var(--gray-100);
+}
+
+.keyboard-help-kbd {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.keyboard-help-seq-sep {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin: 0 0.25rem;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  border-radius: 5px;
+  box-shadow: 0 1px 0 var(--gray-300);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.keyboard-help-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.keyboard-help-footnote {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  padding: 0.75rem 1.5rem 1.25rem;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+.keyboard-help-footnote kbd {
+  font-size: 0.7rem;
+  min-width: 24px;
+  height: 22px;
+}
+
+[data-theme="dark"] kbd {
+  background: var(--gray-200);
+  border-color: var(--gray-300);
+  box-shadow: 0 1px 0 var(--gray-300);
+}
+
+[data-theme="dark"] .keyboard-help-modal {
+  border: 1px solid var(--gray-200);
+}
+
+/* ── Skeleton loading ── */
+
+.skeleton {
+  background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-100) 50%, var(--gray-200) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skeleton-inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #3a3030 25%, #2a2424 50%, #3a3030 75%);
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ── Theme transition (smooth dark/light switch) ── */
 
 .theme-transitioning,
@@ -3034,22 +3332,85 @@ body {
   transition-timing-function: ease !important;
 }
 
-/* ── Desactivar animaciones (user toggle + OS preference) ── */
+/* ── Hold payment section ── */
 
-[data-reduced-motion="true"] .page-fade-in,
-[data-reduced-motion="true"] .clase-card-slim,
-[data-reduced-motion="true"] .date-carousel,
-[data-reduced-motion="true"] .back-btn,
-[data-reduced-motion="true"] .category-active-header {
-  animation: none !important;
+.hold-payment-section {
+  background: var(--primary-soft);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  border: 1px solid var(--gray-200);
+  animation: fadeIn 0.3s ease;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .page-fade-in,
-  .clase-card-slim,
-  .date-carousel,
-  .back-btn,
-  .category-active-header {
-    animation: none !important;
-  }
+/* ── Accessibility: text size ── */
+
+html[data-text-size="grande"] {
+  font-size: 120%;
+}
+
+/* ── Accessibility: line spacing ── */
+
+html[data-line-spacing="relajado"] * {
+  line-height: 1.8 !important;
+}
+
+html[data-line-spacing="extra"] * {
+  line-height: 2 !important;
+}
+
+/* ── Accessibility: dyslexia (letter spacing) ── */
+
+html[data-dyslexia="true"] * {
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+}
+
+/* ── Accessibility: pill buttons in Perfil ── */
+
+.accesibilidad-opciones {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.accesibilidad-btn {
+  padding: 0.35rem 0.85rem;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  font-family: inherit;
+}
+
+.accesibilidad-btn:hover {
+  border-color: var(--primary-medium);
+  color: var(--primary-medium);
+}
+
+.accesibilidad-btn.active {
+  background: var(--primary-medium);
+  color: #fff;
+  border-color: var(--primary-medium);
+}
+
+[data-theme="dark"] .accesibilidad-btn {
+  border-color: #4a3a3a;
+  color: var(--gray-300);
+}
+
+[data-theme="dark"] .accesibilidad-btn:hover {
+  border-color: #e8c97a;
+  color: #e8c97a;
+}
+
+[data-theme="dark"] .accesibilidad-btn.active {
+  background: #e8c97a;
+  color: #1a1414;
+  border-color: #e8c97a;
 }

@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronRight, AlertCircle } from 'lucide-react'
 import api from '../../services/api'
 import { formatHoraAMPM } from '../../utils/helpers'
+import Button from '../../components/common/Button'
 import '../../App.css'
 
 const CATEGORIA_APARIENCIA = {
@@ -78,22 +79,28 @@ export default function ClasesDisponibles() {
   const [selectedCategoria, setSelectedCategoria] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
   const diasSemana = useMemo(() => generarProximosDias(), [])
 
-  useEffect(() => {
+  const cargar = useCallback(() => {
+    setLoading(true)
+    setError('')
     Promise.all([
-      api.get('/categorias'),
-      api.get('/clases?limit=500'),
+      api.cachedGet('/categorias'),
+      api.cachedGet('/clases?limit=500'),
     ]).then(([catData, clsData]) => {
       setCategorias(catData.categorias || [])
       setClases(clsData.clases || [])
     }).catch(() => {
       setCategorias([])
       setClases([])
+      setError('No pudimos cargar las clases. Revisa tu conexión.')
     }).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { cargar() }, [])
 
   const hoyStr = useMemo(() => {
     const d = new Date()
@@ -121,7 +128,16 @@ export default function ClasesDisponibles() {
   const grupos = agruparPorFranja(clasesFiltradas)
   const tieneClases = Object.values(grupos).some(g => g.length > 0)
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (error) {
+    return (
+      <div className="empty-state">
+        <AlertCircle size={48} className="icon-muted" />
+        <h3>No pudimos cargar las clases</h3>
+        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: '0.5rem 0' }}>{error}</p>
+        <Button onClick={cargar} style={{ marginTop: '1rem' }}>Reintentar</Button>
+      </div>
+    )
+  }
 
   if (!selectedCategoria) {
     return (
@@ -129,33 +145,39 @@ export default function ClasesDisponibles() {
         <h2 className="client-section-title">Elige tu estilo</h2>
         <p className="client-section-subtitle">Selecciona el tipo de baile que deseas practicar</p>
         <div className="category-selector">
-          {categorias.map((cat, i) => {
-            const apa = CATEGORIA_APARIENCIA[cat.nombre] || { icon: 'Flame', color: '#666', bgColor: '#f5f5f5', gradient: 'linear-gradient(135deg, #666, #444)', desc: cat.descripcion }
-            const Icon = ICON_MAP[apa.icon]
-            return (
-              <button
-                key={cat.id}
-                className="category-card"
-                style={{
-                  '--cat-color': apa.color,
-                  '--cat-bg': apa.bgColor,
-                  '--cat-gradient': apa.gradient,
-                  animationDelay: `${i * 0.08}s`,
-                }}
-                onClick={() => handleSelectCategoria(cat.nombre)}
-              >
-                <div className="category-card-accent" style={{ background: apa.gradient }} />
-                <div className="category-card-icon" style={{ background: apa.gradient, color: '#fff' }}>
-                  <Icon size={24} />
+          {loading && categorias.length === 0
+            ? [1, 2, 3].map(i => (
+                <div key={i} className="category-card" style={{ pointerEvents: 'none' }}>
+                  <div className="skeleton" style={{ width: '100%', height: 90, borderRadius: 12 }} />
                 </div>
-                <div className="category-card-info">
-                  <h3 className="category-card-title">{cat.nombre}</h3>
-                  <p className="category-card-desc">{apa.desc}</p>
-                </div>
-                <ChevronRight size={20} className="category-card-chevron" style={{ color: apa.color }} />
-              </button>
-            )
-          })}
+              ))
+            : categorias.map((cat, i) => {
+              const apa = CATEGORIA_APARIENCIA[cat.nombre] || { icon: 'Flame', color: '#666', bgColor: '#f5f5f5', gradient: 'linear-gradient(135deg, #666, #444)', desc: cat.descripcion }
+              const Icon = ICON_MAP[apa.icon]
+              return (
+                <button
+                  key={cat.id}
+                  className="category-card"
+                  style={{
+                    '--cat-color': apa.color,
+                    '--cat-bg': apa.bgColor,
+                    '--cat-gradient': apa.gradient,
+                    animationDelay: `${i * 0.08}s`,
+                  }}
+                  onClick={() => handleSelectCategoria(cat.nombre)}
+                >
+                  <div className="category-card-accent" style={{ background: apa.gradient }} />
+                  <div className="category-card-icon" style={{ background: apa.gradient, color: '#fff' }}>
+                    <Icon size={24} />
+                  </div>
+                  <div className="category-card-info">
+                    <h3 className="category-card-title">{cat.nombre}</h3>
+                    <p className="category-card-desc">{apa.desc}</p>
+                  </div>
+                  <ChevronRight size={20} className="category-card-chevron" style={{ color: apa.color }} />
+                </button>
+              )
+            })}
         </div>
       </div>
     )
@@ -236,7 +258,7 @@ export default function ClasesDisponibles() {
                           <div className="clase-card-slim-name">{clase.instructor?.nombres} {clase.instructor?.apellidos}</div>
                         </div>
                         <div className="clase-card-slim-meta">
-                          <div style={{ fontWeight: 600, color: 'var(--primary-medium)', fontSize: '0.85rem' }}>
+                          <div className="price-badge">
                             S/ {clase.precio ?? 15}
                           </div>
                           <div className="clase-card-slim-participants">

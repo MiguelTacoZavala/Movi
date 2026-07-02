@@ -3,12 +3,12 @@ import { LayoutDashboard, Music, Users, BookOpen, Calendar, UserCircle, LogOut }
 import { useAuth } from '../../context/AuthContext'
 
 const menuItems = [
-  { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/admin/clases', label: 'Clases', icon: Music },
-  { path: '/admin/horarios', label: 'Horarios', icon: Calendar },
-  { path: '/admin/instructores', label: 'Instructores', icon: Users },
-  { path: '/admin/categorias', label: 'Categorías', icon: BookOpen },
-  { path: '/admin/clientes', label: 'Clientes', icon: UserCircle },
+  { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'g d' },
+  { path: '/admin/clases', label: 'Clases', icon: Music, shortcut: 'g c' },
+  { path: '/admin/horarios', label: 'Horarios', icon: Calendar, shortcut: 'g h' },
+  { path: '/admin/instructores', label: 'Instructores', icon: Users, shortcut: 'g i' },
+  { path: '/admin/categorias', label: 'Categorías', icon: BookOpen, shortcut: 'g a' },
+  { path: '/admin/clientes', label: 'Clientes', icon: UserCircle, shortcut: 'g e' },
 ]
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
@@ -35,6 +35,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
                 <NavLink
                   to={item.path}
                   onClick={onClose}
+                  aria-keyshortcuts={item.shortcut}
                   className={({ isActive }) => isActive ? 'active' : ''}
                 >
                   <span className="menu-icon">

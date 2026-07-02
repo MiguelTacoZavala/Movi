@@ -26,4 +26,17 @@ async function listarPorUsuario(usuarioId) {
   }))
 }
 
-module.exports = { listarPorUsuario }
+async function usarCredito(usuarioId, claseId, reservaId) {
+  const credito = await prisma.credito.findFirst({
+    where: { usuarioId, usado: false },
+    orderBy: { fechaCreacion: 'asc' },
+  })
+  if (!credito) return null
+
+  return prisma.credito.update({
+    where: { id: credito.id },
+    data: { usado: true, fechaUso: new Date(), reservaId, claseId },
+  })
+}
+
+module.exports = { listarPorUsuario, usarCredito }

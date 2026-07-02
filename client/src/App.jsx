@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { AccesibilidadProvider } from './context/AccesibilidadContext'
 import AdminLayout from './components/layout/AdminLayout'
 import ClientLayout from './components/layout/ClientLayout'
 import Login from './pages/admin/Login'
@@ -28,6 +29,7 @@ import './App.css'
 
 function App() {
   return (
+    <AccesibilidadProvider>
     <ThemeProvider>
       <AuthProvider>
         <Router>
@@ -72,6 +74,7 @@ function App() {
         </Router>
       </AuthProvider>
     </ThemeProvider>
+    </AccesibilidadProvider>
   )
 }
 

@@ -1,4 +1,4 @@
-export default function Input({ label, name, value, onChange, type = 'text', placeholder, required, min, max }) {
+export default function Input({ label, hint, name, value, onChange, type = 'text', placeholder, required, min, max }) {
   return (
     <div className="form-group">
       {label && <label htmlFor={name}>{label}</label>}
@@ -13,6 +13,7 @@ export default function Input({ label, name, value, onChange, type = 'text', pla
         min={min}
         max={max}
       />
+      {hint && <span className="form-hint">{hint}</span>}
     </div>
   )
 }

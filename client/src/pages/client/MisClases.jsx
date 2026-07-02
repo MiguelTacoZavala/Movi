@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle } from 'lucide-react'
+import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
@@ -11,8 +11,11 @@ function toDate(fechaStr) {
   return new Date(y, m - 1, d)
 }
 
-const estadoLabel = { CONFIRMADA: 'Confirmada', CANCELADA: 'Cancelada', PENDIENTE: 'Pendiente', EXPIRADA: 'Expirada' }
-const estadoClass = { CONFIRMADA: 'status-active', CANCELADA: 'status-danger', PENDIENTE: 'status-warning', EXPIRADA: 'status-inactive' }
+const estadoLabel = { CONFIRMADA: 'Confirmada', FINALIZADA: 'Finalizada', CANCELADA: 'Cancelada', PENDIENTE: 'Pendiente', EXPIRADA: 'Expirada' }
+const estadoClass = { CONFIRMADA: 'status-active', FINALIZADA: 'status-inactive', CANCELADA: 'status-danger', PENDIENTE: 'status-warning', EXPIRADA: 'status-inactive' }
+const estadoIcon = { CONFIRMADA: CheckCircle, FINALIZADA: CheckCircle, CANCELADA: X, PENDIENTE: Timer, EXPIRADA: AlertTriangle }
+
+function estado(r) { return r.estadoDisplay || r.estado }
 
 export default function MisClases() {
   const [reservas, setReservas] = useState([])
@@ -22,7 +25,7 @@ export default function MisClases() {
   const [comprobante, setComprobante] = useState(null)
 
   useEffect(() => {
-    api.get('/reservas/mis-reservas').then(data => {
+    api.cachedGet('/reservas/mis-reservas').then(data => {
       setReservas(data.reservas)
     }).catch(() => {
       alert('No pudimos cargar tus reservas. Revisa tu conexión.')
@@ -31,9 +34,10 @@ export default function MisClases() {
 
   const hoy = new Date()
   const filtradas = reservas.filter(r => {
+    const st = estado(r)
     const f = toDate(r.clase.fecha)
-    if (filtro === 'proximas') return f >= hoy && r.estado !== 'CANCELADA' && r.estado !== 'EXPIRADA'
-    if (filtro === 'pasadas') return f < hoy || r.estado === 'CANCELADA' || r.estado === 'EXPIRADA'
+    if (filtro === 'proximas') return f >= hoy && st !== 'CANCELADA' && st !== 'EXPIRADA' && st !== 'FINALIZADA'
+    if (filtro === 'pasadas') return f < hoy || st === 'CANCELADA' || st === 'EXPIRADA' || st === 'FINALIZADA'
     return true
   })
 
@@ -43,12 +47,11 @@ export default function MisClases() {
       const data = await api.patch(`/reservas/${cancelando.id}/cancelar`)
       setReservas(reservas.map(r => r.id === cancelando.id ? data.reserva : r))
       setCancelando(null)
+      api.invalidateCache()
     } catch {
       alert('No se pudo cancelar la reserva. Intenta de nuevo.')
     }
   }
-
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
 
   return (
     <div>
@@ -84,7 +87,7 @@ export default function MisClases() {
                 <CheckCircle size={24} color="#059669" />
               </div>
               <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--gray-900)' }}>
-                {estadoLabel[comprobante.estado] || comprobante.estado}
+                {estadoLabel[estado(comprobante)] || estado(comprobante)}
               </div>
               {comprobante.codigoPago && (
                 <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--primary-medium)', fontWeight: 600, marginTop: '0.25rem' }}>
@@ -147,15 +150,29 @@ export default function MisClases() {
       </div>
 
       <div>
-        {filtradas.length === 0 ? (
+        {loading ? (
+          [1, 2, 3].map(i => (
+            <div key={i} className="clase-card proxima" style={{ pointerEvents: 'none' }}>
+              <div className="clase-card-header">
+                <div className="skeleton" style={{ width: '35%', height: 20 }} />
+                <div className="skeleton" style={{ width: '25%', height: 20 }} />
+              </div>
+              <div style={{ padding: '0.75rem 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="skeleton" style={{ width: '60%', height: 14 }} />
+                <div className="skeleton" style={{ width: '45%', height: 14 }} />
+              </div>
+            </div>
+          ))
+        ) : filtradas.length === 0 ? (
           <div className="empty-state">
             <Calendar size={48} className="icon-muted" />
             <h3>No hay clases</h3>
             <p>{filtro === 'proximas' ? 'No tienes clases próximas' : 'No tienes clases pasadas'}</p>
           </div>
         ) : filtradas.map((r, idx) => {
+          const st = estado(r)
           const f = toDate(r.clase.fecha)
-          const esProxima = f >= hoy && r.estado !== 'CANCELADA' && r.estado !== 'EXPIRADA'
+          const esProxima = f >= hoy && st !== 'CANCELADA' && st !== 'EXPIRADA' && st !== 'FINALIZADA'
 
           return (
             <div
@@ -166,10 +183,9 @@ export default function MisClases() {
             >
               <div className="clase-card-header">
                 <h3 className="clase-card-title">{r.clase.categoria?.nombre}</h3>
-                <span className={`status-badge ${estadoClass[r.estado] || ''}`}>
-                  {r.estado === 'CONFIRMADA' && <CheckCircle size={12} />}
-                  {r.estado === 'CANCELADA' && <X size={12} />}
-                  {estadoLabel[r.estado] || r.estado}
+                <span className={`status-badge ${estadoClass[st] || ''}`}>
+                  {(() => { const Icon = estadoIcon[st]; return Icon ? <Icon size={12} /> : null })()}
+                  {estadoLabel[st] || st}
                 </span>
               </div>
 

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, Moon, Sun, Camera } from 'lucide-react'
+import { User, Moon, Sun, Camera, AlertCircle, Type, AlignLeft, ChevronDown, CaseSensitive } from 'lucide-react'
 import Ayuda from '../../components/common/Ayuda'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useAccesibilidad } from '../../context/AccesibilidadContext'
 import api from '../../services/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -12,18 +13,23 @@ import '../../App.css'
 export default function MiPerfil() {
   const { user, updateUser } = useAuth()
   const { theme, toggleTheme, reducedMotion, toggleReducedMotion } = useTheme()
+  const { textSize, lineSpacing, dyslexiaFont, setTextSize, setLineSpacing, setDyslexiaFont } = useAccesibilidad()
+  const [accExpanded, setAccExpanded] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editData, setEditData] = useState({ nombres: '', apellidos: '', telefono: '' })
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [creditos, setCreditos] = useState(0)
+  const [creditosError, setCreditosError] = useState('')
   const fileInputRef = useRef(null)
 
   useEffect(() => {
-    api.get('/creditos').then(res => {
+    api.cachedGet('/creditos').then(res => {
       const disponibles = (res.creditos || []).filter(c => !c.usado).length
       setCreditos(disponibles)
-    }).catch(() => {})
+    }).catch(() => {
+      setCreditosError('No pudimos cargar tus créditos.')
+    })
   }, [])
 
   const openEditModal = () => {
@@ -37,7 +43,8 @@ export default function MiPerfil() {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target
-    setEditData({ ...editData, [name]: value })
+    const cleaned = ['nombres', 'apellidos'].includes(name) ? value.replace(/\d/g, '') : value
+    setEditData({ ...editData, [name]: cleaned })
   }
 
   const handleSave = async () => {
@@ -90,6 +97,7 @@ export default function MiPerfil() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <Input
             label="Nombres"
+            hint="Solo letras"
             name="nombres"
             value={editData.nombres}
             onChange={handleEditChange}
@@ -97,6 +105,7 @@ export default function MiPerfil() {
           />
           <Input
             label="Apellidos"
+            hint="Solo letras"
             name="apellidos"
             value={editData.apellidos}
             onChange={handleEditChange}
@@ -143,12 +152,17 @@ export default function MiPerfil() {
           ) : (
             <User size={40} />
           )}
-          <div style={{
-            position: 'absolute', bottom: 0, right: 0,
-            background: 'var(--primary-medium)', borderRadius: '50%',
-            width: 28, height: 28, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', color: '#fff',
-          }}>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Cambiar foto de perfil"
+            style={{
+              position: 'absolute', bottom: 0, right: 0,
+              background: 'var(--primary-medium)', borderRadius: '50%',
+              width: 28, height: 28, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#fff', cursor: 'pointer',
+            }}
+          >
             <Camera size={14} />
           </div>
         </div>
@@ -167,6 +181,12 @@ export default function MiPerfil() {
       <div style={{ textAlign: 'center', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
         Créditos disponibles
       </div>
+      {creditosError && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          <AlertCircle size={14} />
+          <span>{creditosError}</span>
+        </div>
+      )}
 
       <Button variant="secondary" style={{ width: '100%', marginBottom: '1.5rem' }} onClick={openEditModal} title="Modificar tus datos personales">
         Editar Perfil
@@ -201,19 +221,19 @@ export default function MiPerfil() {
           </div>
           <div
             onClick={toggleReducedMotion}
-            title="Desactivar animaciones al cambiar de página"
+            title="Activar o desactivar animaciones al cambiar de página"
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' }}
           >
-            <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Desactivar animaciones</span>
+            <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Animaciones</span>
             <div style={{
               width: 44, height: 24, borderRadius: 12, padding: 2,
-              background: reducedMotion ? 'var(--success)' : 'var(--gray-300)',
+              background: reducedMotion ? 'var(--gray-300)' : 'var(--success)',
               transition: 'background 0.2s ease', position: 'relative',
             }}>
               <div style={{
                 width: 20, height: 20, borderRadius: '50%', background: '#fff',
                 position: 'absolute', top: 2,
-                left: reducedMotion ? 22 : 2,
+                left: reducedMotion ? 2 : 22,
                 transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
               }} />
             </div>
@@ -248,6 +268,108 @@ export default function MiPerfil() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="client-card" style={{ marginBottom: '1rem' }}>
+        <div
+          className="client-card-title"
+          onClick={() => setAccExpanded(v => !v)}
+          style={{ cursor: 'pointer', userSelect: 'none' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Type size={20} className="icon-primary" />
+              Accesibilidad
+            </div>
+            <ChevronDown
+              size={18}
+              className="icon-primary"
+              style={{
+                transition: 'transform 0.3s ease',
+                transform: accExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+            />
+          </div>
+        </div>
+        {accExpanded && (
+          <div className="client-card-content">
+            <div style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Type size={18} className="icon-primary" />
+                <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Tamaño de texto</span>
+              </div>
+              <div className="accesibilidad-opciones">
+                <button
+                  className={`accesibilidad-btn ${textSize === 'normal' ? 'active' : ''}`}
+                  onClick={() => setTextSize('normal')}
+                  aria-pressed={textSize === 'normal'}
+                >
+                  Normal
+                </button>
+                <button
+                  className={`accesibilidad-btn ${textSize === 'grande' ? 'active' : ''}`}
+                  onClick={() => setTextSize('grande')}
+                  aria-pressed={textSize === 'grande'}
+                >
+                  Grande
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlignLeft size={18} className="icon-primary" />
+                <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Interlineado</span>
+              </div>
+              <div className="accesibilidad-opciones">
+                <button
+                  className={`accesibilidad-btn ${lineSpacing === 'normal' ? 'active' : ''}`}
+                  onClick={() => setLineSpacing('normal')}
+                  aria-pressed={lineSpacing === 'normal'}
+                >
+                  Normal
+                </button>
+                <button
+                  className={`accesibilidad-btn ${lineSpacing === 'relajado' ? 'active' : ''}`}
+                  onClick={() => setLineSpacing('relajado')}
+                  aria-pressed={lineSpacing === 'relajado'}
+                >
+                  Relajado
+                </button>
+                <button
+                  className={`accesibilidad-btn ${lineSpacing === 'extra' ? 'active' : ''}`}
+                  onClick={() => setLineSpacing('extra')}
+                  aria-pressed={lineSpacing === 'extra'}
+                >
+                  Extra
+                </button>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setDyslexiaFont(!dyslexiaFont)}
+              title="Activar o desactivar espaciado para dislexia"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CaseSensitive size={18} className="icon-primary" />
+                <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Espaciado para dislexia</span>
+              </div>
+              <div style={{
+                width: 44, height: 24, borderRadius: 12, padding: 2,
+                background: dyslexiaFont ? 'var(--success)' : 'var(--gray-300)',
+                transition: 'background 0.2s ease', position: 'relative',
+              }}>
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 2,
+                  left: dyslexiaFont ? 22 : 2,
+                  transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <Ayuda role="cliente" />

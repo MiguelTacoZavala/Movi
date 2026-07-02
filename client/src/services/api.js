@@ -1,6 +1,8 @@
 const TOKEN_KEY = 'movi_token'
 const USER_KEY = 'movi_user'
 
+const _cache = new Map()
+
 const api = {
   getToken() {
     return localStorage.getItem(TOKEN_KEY)
@@ -58,6 +60,36 @@ const api = {
 
   get(path) {
     return api.request('GET', path)
+  },
+
+  cachedGet(path) {
+    const key = `GET ${path}`
+    const cached = _cache.get(key)
+    if (cached) {
+      return Promise.resolve(cached.data)
+    }
+    return api.get(path).then(data => {
+      _cache.set(key, { data })
+      return data
+    })
+  },
+
+  invalidateCache(pattern) {
+    if (!pattern) { _cache.clear(); return }
+    for (const key of _cache.keys()) {
+      if (key.startsWith(pattern)) _cache.delete(key)
+    }
+  },
+
+  preloadClientData() {
+    const endpoints = [
+      '/categorias',
+      '/clases?limit=500',
+      '/dashboard/cliente',
+      '/reservas/mis-reservas',
+      '/creditos',
+    ]
+    Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
   },
 
   post(path, body) {
@@ -142,9 +174,18 @@ const api = {
     return api.post('/pagos/procesar', data)
   },
 
+  async iniciarHold(data) {
+    return api.post('/pagos/hold', data)
+  },
+
+  async confirmarPago(data) {
+    return api.post('/pagos/confirmar', data)
+  },
+
   logout() {
     api.removeToken()
     api.removeUser()
+    api.invalidateCache()
   },
 }
 

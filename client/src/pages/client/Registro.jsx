@@ -32,7 +32,8 @@ export default function Registro() {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
+    const cleaned = ['nombres', 'apellidos'].includes(name) ? value.replace(/\d/g, '') : value
+    setFormData({ ...formData, [name]: cleaned })
     if (errors[name]) setErrors({ ...errors, [name]: '' })
   }
 
@@ -69,7 +70,7 @@ export default function Registro() {
         setTimeout(() => navigate('/cliente/dashboard'), 1500)
       }
     } catch (err) {
-      setServerError(err.message || 'Ocurrió un error. Inténtalo de nuevo.')
+      setServerError(err.data?.error || err.message || 'No pudimos crear tu cuenta. Revisa tus datos e intenta de nuevo.')
     } finally {
       setIsLoading(false)
     }
@@ -139,7 +140,7 @@ export default function Registro() {
           <div className="form-group">
             <label htmlFor="dni">
               <CreditCard size={16} />
-              DNI
+              DNI <small style={{ fontWeight: 400, color: 'var(--gray-500)' }}>(8 dígitos, solo números)</small>
             </label>
             <input
               id="dni"
@@ -159,7 +160,7 @@ export default function Registro() {
           <div className="form-group">
             <label htmlFor="telefono">
               <Smartphone size={16} />
-              Teléfono
+              Teléfono <small style={{ fontWeight: 400, color: 'var(--gray-500)' }}>(9 dígitos)</small>
             </label>
             <input
               id="telefono"
@@ -182,7 +183,7 @@ export default function Registro() {
           <div className="form-group">
             <label htmlFor="password">
               <Lock size={16} />
-              Contraseña
+              Contraseña <small style={{ fontWeight: 400, color: 'var(--gray-500)' }}>(mín. 6 caracteres)</small>
             </label>
             <div className="input-with-icon">
               <input
