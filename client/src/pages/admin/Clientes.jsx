@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Search, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX } from 'lucide-react'
+import { Search, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX, AlertCircle } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Input from '../../components/common/Input'
+import Alert from '../../components/common/Alert'
 import api from '../../services/api'
+import { mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Clientes() {
@@ -13,13 +15,15 @@ export default function Clientes() {
   const [search, setSearch] = useState('')
   const [selectedCliente, setSelectedCliente] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [error, setError] = useState('')
+  const [detailError, setDetailError] = useState('')
 
   const cargar = async () => {
     try {
       const data = await api.get('/clientes')
       setClientes(data.clientes)
     } catch (e) {
-      alert(e.message || 'Error al cargar clientes')
+      setError(mensajeError(e, 'No se pudieron cargar los clientes.'))
     } finally {
       setLoading(false)
     }
@@ -38,12 +42,13 @@ export default function Clientes() {
 
   const handleVerDetalle = async (cliente) => {
     setSelectedCliente({ ...cliente, stats: null })
+    setDetailError('')
     setDetailOpen(true)
     try {
       const data = await api.get(`/clientes/${cliente.id}`)
       setSelectedCliente(data.cliente)
     } catch (e) {
-      alert(e.message || 'Error al cargar el detalle')
+      setDetailError(mensajeError(e, 'No se pudo cargar el detalle del cliente.'))
     }
   }
 
@@ -104,6 +109,14 @@ export default function Clientes() {
         </div>
       </div>
 
+      {error && (
+        <Alert type="danger">
+          <AlertCircle size={18} />
+          <span style={{ flex: 1 }}>{error}</span>
+          <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+        </Alert>
+      )}
+
       <Table columns={columns} data={filteredClientes} emptyMessage="No hay clientes registrados" />
 
       <Modal
@@ -111,6 +124,12 @@ export default function Clientes() {
         onClose={() => setDetailOpen(false)}
         title={`Detalle: ${selectedCliente ? `${selectedCliente.nombres} ${selectedCliente.apellidos}` : ''}`}
       >
+        {detailError && (
+          <Alert type="danger">
+            <AlertCircle size={18} />
+            <span>{detailError}</span>
+          </Alert>
+        )}
         {selectedCliente && (
           <div className="cliente-detalle">
             <p><strong>DNI:</strong> {selectedCliente.dni || '—'}</p>

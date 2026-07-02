@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Music, Clock, AlertTriangle, DollarSign, BarChart2 } from 'lucide-react'
+import { Music, Clock, AlertTriangle, DollarSign, BarChart2, AlertCircle } from 'lucide-react'
+import Alert from '../../components/common/Alert'
+import Button from '../../components/common/Button'
 import api from '../../services/api'
-import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
+import { formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
 function soles(n) {
@@ -11,22 +13,33 @@ function soles(n) {
 export default function Dashboard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get('/dashboard/admin')
-        setData(res)
-      } catch (e) {
-        alert(e.message || 'Error al cargar el dashboard')
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [])
+  const cargar = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await api.get('/dashboard/admin')
+      setData(res)
+    } catch (e) {
+      setError(mensajeError(e, 'No se pudo cargar el dashboard.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { cargar() }, [])
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
-  if (!data) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>No se pudo cargar el dashboard</div>
+  if (!data) return (
+    <div style={{ padding: '2rem' }}>
+      <Alert type="danger">
+        <AlertCircle size={18} />
+        <span style={{ flex: 1 }}>{error || 'No se pudo cargar el dashboard.'}</span>
+        <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+      </Alert>
+    </div>
+  )
 
   const ingresos = data.ingresos || { hoy: 0, semana: 0, mes: 0 }
   const clasesHoy = data.clasesHoy || []

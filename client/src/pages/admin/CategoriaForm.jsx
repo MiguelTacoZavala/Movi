@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { AlertCircle } from 'lucide-react'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
+import Alert from '../../components/common/Alert'
 
 export default function CategoriaForm({ initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -8,16 +10,18 @@ export default function CategoriaForm({ initialData, onSave, onCancel }) {
     descripcion: initialData?.descripcion || '',
     precio: initialData?.precio ?? 15,
   })
+  const [error, setError] = useState('')
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    if (error) setError('')
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!formData.nombre.trim()) {
-      alert('El nombre de la categoría es obligatorio')
+      setError('El nombre de la categoría es obligatorio.')
       return
     }
     onSave({ ...formData, nombre: formData.nombre.trim(), precio: Number(formData.precio) })
@@ -25,6 +29,12 @@ export default function CategoriaForm({ initialData, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="form-container">
+      {error && (
+        <Alert type="danger">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+        </Alert>
+      )}
       <Input
         label="Nombre"
         name="nombre"
