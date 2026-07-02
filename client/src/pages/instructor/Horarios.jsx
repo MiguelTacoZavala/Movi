@@ -1,18 +1,22 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Calendar, Clock, Users } from 'lucide-react'
 import api from '../../services/api'
+import Alert from '../../components/common/Alert'
 import { formatHoraAMPM, DIAS_SEMANA } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Horarios() {
   const [horarios, setHorarios] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     api.get('/instructores/mis-horarios').then(res => {
       setHorarios(res.horarios || [])
+      setError(null)
     }).catch(() => {
       setHorarios([])
+      setError('Tuvimos un problema al obtener tus horarios programados. Por favor, intenta de nuevo.')
     }).finally(() => setLoading(false))
   }, [])
 
@@ -28,9 +32,11 @@ export default function Horarios() {
       <h2 className="client-section-title">Mis Horarios</h2>
       <p className="client-section-subtitle">Horarios semanales asignados</p>
 
+      {error && <Alert type="danger">{error}</Alert>}
+
       {ordenados.length === 0 ? (
         <div className="empty-state">
-          <Calendar size={48} className="icon-muted" />
+          <Calendar size={48} className="icon-muted" aria-hidden="true" />
           <h3>Sin horarios</h3>
           <p>No tienes horarios asignados</p>
         </div>
@@ -46,11 +52,11 @@ export default function Horarios() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Clock size={16} className="icon-muted" />
+                  <Clock size={16} className="icon-muted" aria-hidden="true" />
                   {formatHoraAMPM(h.horaInicio)} — {formatHoraAMPM(h.horaFin)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Users size={16} className="icon-muted" />
+                  <Users size={16} className="icon-muted" aria-hidden="true" />
                   Capacidad: {h.capacidadMaxima} · Mínimo: {h.minimoParticipantes}
                 </div>
               </div>
