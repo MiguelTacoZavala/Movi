@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
+import Alert from '../../components/common/Alert'
 import api from '../../services/api'
-import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
+import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
 const estadoConfig = {
@@ -13,6 +14,12 @@ const estadoConfig = {
   EN_CURSO: { label: 'En Curso', className: 'status-active' },
   CANCELADA: { label: 'Cancelada', className: 'status-inactive' },
   FINALIZADA: { label: 'Finalizada', className: 'status-warning' },
+}
+
+// Una clase con fecha anterior a hoy ya no se puede cancelar
+function esClasePasada(fecha) {
+  const hoy = new Date().toISOString().substring(0, 10)
+  return fecha < hoy
 }
 
 export default function Clases() {
@@ -28,6 +35,12 @@ export default function Clases() {
   const [participantsOpen, setParticipantsOpen] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [cancelTargetClase, setCancelTargetClase] = useState(null)
+  const [error, setError] = useState('')
+  const [mensaje, setMensaje] = useState('')
+  const [generarOpen, setGenerarOpen] = useState(false)
+  const [semanasInput, setSemanasInput] = useState('4')
+  const [generarError, setGenerarError] = useState('')
+  const [generando, setGenerando] = useState(false)
 
   const cargar = async () => {
     try {
@@ -38,7 +51,7 @@ export default function Clases() {
       setClases(cData.clases)
       setInstructores(iData.instructores)
     } catch (e) {
-      alert(e.message || 'Error al cargar clases')
+      setError(mensajeError(e, 'No se pudieron cargar las clases.'))
     } finally {
       setLoading(false)
     }
@@ -46,14 +59,30 @@ export default function Clases() {
 
   useEffect(() => { cargar() }, [])
 
-  const filteredClases = useMemo(() =>
-    clases.filter(c => {
-      if (filtroEstado && c.estado !== filtroEstado) return false
-      if (filtroFecha && c.fecha !== filtroFecha) return false
-      if (filtroInstructor && c.instructor?.id !== parseInt(filtroInstructor)) return false
-      return true
-    }), [clases, filtroEstado, filtroFecha, filtroInstructor]
-  )
+  const filteredClases = useMemo(() => {
+    // Orden por estado: Programadas/activas (0) arriba, Canceladas (1) en medio, Finalizadas (2) al fondo
+    const rango = (c) => {
+      if (c.estado === 'FINALIZADA') return 2
+      if (c.estado === 'CANCELADA') return 1
+      return 0
+    }
+
+    return clases
+      .filter(c => {
+        if (filtroEstado && c.estado !== filtroEstado) return false
+        if (filtroFecha && c.fecha !== filtroFecha) return false
+        if (filtroInstructor && c.instructor?.id !== parseInt(filtroInstructor)) return false
+        return true
+      })
+      .sort((a, b) => {
+        const ra = rango(a)
+        const rb = rango(b)
+        if (ra !== rb) return ra - rb
+        // Dentro de cada grupo: próximas de la más cercana a la más lejana; cerradas de la más reciente primero
+        const cmp = a.fecha.localeCompare(b.fecha) || (a.horaInicio || '').localeCompare(b.horaInicio || '')
+        return ra === 0 ? cmp : -cmp
+      })
+  }, [clases, filtroEstado, filtroFecha, filtroInstructor])
 
   useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor])
 
@@ -107,7 +136,7 @@ export default function Clases() {
         <Button size="small" variant="ghost" onClick={() => handleViewParticipants(row)} title="Ver participantes">
           <Users size={16} />
         </Button>
-          {row.estado === 'PROGRAMADA' && (
+          {row.estado === 'PROGRAMADA' && !esClasePasada(row.fecha) && (
             <Button size="small" variant="ghost" onClick={() => openCancelConfirm(row)} title="Cancelar clase" className="icon-danger">
               <XCircle size={16} />
             </Button>
@@ -116,30 +145,41 @@ export default function Clases() {
     )},
   ]
 
-  const handleGenerar = async () => {
-    const input = window.prompt('¿Para cuántas semanas generar clases? (1-52)', '4')
-    if (input === null) return
-    const semanas = parseInt(input)
+  const openGenerar = () => {
+    setSemanasInput('4')
+    setGenerarError('')
+    setGenerarOpen(true)
+  }
+
+  const doGenerar = async () => {
+    const semanas = parseInt(semanasInput)
     if (!semanas || semanas < 1 || semanas > 52) {
-      alert('Ingresa un número de semanas entre 1 y 52')
+      setGenerarError('Ingresa un número de semanas entre 1 y 52.')
       return
     }
+    setError('')
+    setMensaje('')
+    setGenerando(true)
     try {
       const r = await api.post('/clases/generate', { semanas })
-      alert(`Listo: ${r.creadas} clase(s) creada(s), ${r.omitidas} ya existían.`)
+      setMensaje(`Listo: ${r.creadas} clase(s) creada(s), ${r.omitidas} ya existían.`)
+      setGenerarOpen(false)
       await cargar()
     } catch (e) {
-      alert(e.message || 'Error al generar clases')
+      setGenerarError(mensajeError(e, 'No se pudieron generar las clases.'))
+    } finally {
+      setGenerando(false)
     }
   }
 
   const handleViewParticipants = async (clase) => {
+    setError('')
     try {
       const data = await api.get(`/clases/${clase.id}`)
       setSelectedClase(data.clase)
       setParticipantsOpen(true)
     } catch (e) {
-      alert(e.message || 'Error al cargar participantes')
+      setError(mensajeError(e, 'No se pudieron cargar los participantes.'))
     }
   }
 
@@ -150,16 +190,18 @@ export default function Clases() {
 
   const confirmCancel = async () => {
     if (!cancelTargetClase) return
+    setError('')
+    setMensaje('')
     try {
       const r = await api.patch(`/clases/${cancelTargetClase.id}/cancel`)
       setClases(clases.map(c =>
         c.id === cancelTargetClase.id ? { ...c, estado: 'CANCELADA' } : c
       ))
-      alert(r.creditosGenerados > 0
+      setMensaje(r.creditosGenerados > 0
         ? `Clase cancelada. Se generaron ${r.creditosGenerados} crédito(s).`
         : 'Clase cancelada.')
     } catch (e) {
-      alert(e.message || 'Error al cancelar la clase')
+      setError(mensajeError(e, 'No se pudo cancelar la clase.'))
     } finally {
       setCancelConfirmOpen(false)
       setCancelTargetClase(null)
@@ -184,7 +226,7 @@ export default function Clases() {
           Clases Generadas
         </h1>
         <div className="filters">
-          <Button onClick={handleGenerar}>
+          <Button onClick={openGenerar}>
             <RefreshCw size={18} />
             Generar Clases
           </Button>
@@ -217,6 +259,20 @@ export default function Clases() {
           />
         </div>
       </div>
+
+      {error && (
+        <Alert type="danger">
+          <AlertCircle size={18} />
+          <span style={{ flex: 1 }}>{error}</span>
+          <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+        </Alert>
+      )}
+      {mensaje && (
+        <Alert type="success">
+          <CheckCircle size={18} />
+          <span>{mensaje}</span>
+        </Alert>
+      )}
 
       <div className="stats-summary">
         <div className="stat-card">
@@ -333,6 +389,42 @@ export default function Clases() {
             </div>
           </>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={generarOpen}
+        onClose={() => setGenerarOpen(false)}
+        title="Generar clases"
+      >
+        <p className="modal-subtitle">
+          Se crearán las clases de los horarios activos para las próximas semanas. Las que ya existen o cuya fecha pasó se omiten.
+        </p>
+        {generarError && (
+          <Alert type="danger">
+            <AlertCircle size={18} />
+            <span>{generarError}</span>
+          </Alert>
+        )}
+        <div className="form-group">
+          <label htmlFor="semanas">¿Para cuántas semanas? (1-52)</label>
+          <input
+            id="semanas"
+            type="number"
+            min="1"
+            max="52"
+            value={semanasInput}
+            onChange={(e) => { if (generarError) setGenerarError(''); setSemanasInput(e.target.value) }}
+            style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', border: '1px solid var(--gray-200)', borderRadius: '8px' }}
+          />
+        </div>
+        <div className="form-actions">
+          <Button onClick={doGenerar} disabled={generando}>
+            {generando ? 'Generando...' : 'Generar'}
+          </Button>
+          <Button variant="secondary" onClick={() => setGenerarOpen(false)} disabled={generando}>
+            Cancelar
+          </Button>
+        </div>
       </Modal>
     </div>
   )

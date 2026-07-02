@@ -33,7 +33,7 @@ async function crear(req, res, next) {
 
     const existeEmail = await prisma.usuario.findUnique({ where: { email } })
     if (existeEmail) {
-      return res.status(409).json({ error: 'Ya existe un usuario con ese email' })
+      return res.status(409).json({ error: 'Ya existe un usuario con ese email. Usa otro email o edita el instructor existente.' })
     }
 
     const rolInstructor = await prisma.role.findUnique({ where: { nombre: 'INSTRUCTOR' } })
@@ -92,7 +92,7 @@ async function actualizar(req, res, next) {
         where: { email, NOT: { id: instructor.usuarioId } },
       })
       if (duplicado) {
-        return res.status(409).json({ error: 'El email ya está en uso por otro usuario' })
+        return res.status(409).json({ error: 'El email ya está en uso por otro usuario. Elige un email distinto.' })
       }
       usuarioData.email = email
     }

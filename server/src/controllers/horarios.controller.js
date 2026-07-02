@@ -35,7 +35,7 @@ async function crear(req, res, next) {
     })
     res.status(201).json({ horario })
   } catch (error) {
-    if (error.overlap) return res.status(409).json({ error: 'El instructor ya tiene un horario en ese día y hora' })
+    if (error.overlap) return res.status(409).json({ error: 'El instructor ya tiene un horario en ese día y hora. Elige otro día, hora o instructor.' })
     if (error.code === 'P2002') return res.status(409).json({ error: 'Ya existe un horario idéntico para ese instructor' })
     if (error.code === 'P2003') return res.status(404).json({ error: 'Categoría o instructor no encontrado' })
     next(error)
@@ -49,7 +49,7 @@ async function actualizar(req, res, next) {
     if (!horario) return res.status(404).json({ error: 'Horario no encontrado' })
     res.json({ horario })
   } catch (error) {
-    if (error.overlap) return res.status(409).json({ error: 'El instructor ya tiene un horario en ese día y hora' })
+    if (error.overlap) return res.status(409).json({ error: 'El instructor ya tiene un horario en ese día y hora. Elige otro día, hora o instructor.' })
     if (error.code === 'P2025') return res.status(404).json({ error: 'Horario no encontrado' })
     if (error.code === 'P2003') return res.status(404).json({ error: 'Categoría o instructor no encontrado' })
     next(error)

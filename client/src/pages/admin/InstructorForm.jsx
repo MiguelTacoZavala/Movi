@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { AlertCircle } from 'lucide-react'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Select from '../../components/common/Select'
+import Alert from '../../components/common/Alert'
 import '../../App.css'
 
 const ESPECIALIDADES = ['Salsa', 'Bachata', 'Tango', 'Merengue', 'Cumbia', 'Reggaeton', 'Hip Hop', 'Ballet']
@@ -15,20 +17,22 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
     telefono: initialData?.telefono || '',
     password: '',
   })
+  const [error, setError] = useState('')
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    if (error) setError('')
     setFormData({ ...formData, [name]: value })
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!formData.nombres.trim() || !formData.apellidos.trim() || !formData.especialidad) {
-      alert('Nombres, apellidos y especialidad son requeridos')
+      setError('Nombres, apellidos y especialidad son requeridos.')
       return
     }
     if (!initialData && !formData.password) {
-      alert('La contraseña es requerida para crear un nuevo instructor')
+      setError('La contraseña es requerida para crear un nuevo instructor.')
       return
     }
     onSave(formData)
@@ -36,6 +40,12 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="form-container">
+      {error && (
+        <Alert type="danger">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+        </Alert>
+      )}
       <Input
         label="Nombres"
         name="nombres"

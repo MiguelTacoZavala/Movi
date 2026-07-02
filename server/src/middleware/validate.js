@@ -8,13 +8,15 @@ function validate(schema) {
       next()
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return _res.status(400).json({
-          error: 'Datos inválidos',
-          detalles: error.errors.map((e) => ({
-            campo: e.path.join('.'),
-            mensaje: e.message,
-          })),
-        })
+        const detalles = error.errors.map((e) => ({
+          campo: e.path.join('.'),
+          mensaje: e.message,
+        }))
+        console.warn(
+          'Validacion fallida:',
+          detalles.map((d) => `${d.campo}: ${d.mensaje}`).join(' | ')
+        )
+        return _res.status(400).json({ error: 'Datos inválidos', detalles })
       }
       next(error)
     }

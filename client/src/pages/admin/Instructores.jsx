@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, User, Phone, UserCheck, UserX, Mail } from 'lucide-react'
+import { Plus, Edit2, User, Phone, UserCheck, UserX, Mail, AlertCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
+import Alert from '../../components/common/Alert'
 import InstructorForm from './InstructorForm'
 import api from '../../services/api'
+import { mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Instructores() {
@@ -12,13 +14,15 @@ export default function Instructores() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingInstructor, setEditingInstructor] = useState(null)
+  const [error, setError] = useState('')
+  const [formError, setFormError] = useState('')
 
   const cargar = async () => {
     try {
       const data = await api.get('/instructores')
       setInstructores(data.instructores)
     } catch (e) {
-      alert(e.message || 'Error al cargar instructores')
+      setError(mensajeError(e, 'No se pudieron cargar los instructores.'))
     } finally {
       setLoading(false)
     }
@@ -72,26 +76,35 @@ export default function Instructores() {
 
   const handleCreate = () => {
     setEditingInstructor(null)
+    setFormError('')
     setModalOpen(true)
   }
 
   const handleEdit = (instructor) => {
     setEditingInstructor(instructor)
+    setFormError('')
     setModalOpen(true)
   }
 
+  const closeModal = () => {
+    setModalOpen(false)
+    setFormError('')
+  }
+
   const handleToggleStatus = async (instructor) => {
+    setError('')
     try {
       const data = await api.patch(`/instructores/${instructor.id}/status`)
       setInstructores(instructores.map(inst =>
         inst.id === instructor.id ? data.instructor : inst
       ))
     } catch (e) {
-      alert(e.message || 'Error al cambiar estado')
+      setError(mensajeError(e, 'No se pudo cambiar el estado del instructor.'))
     }
   }
 
   const handleSave = async (formData) => {
+    setFormError('')
     try {
       if (editingInstructor) {
         const data = await api.put(`/instructores/${editingInstructor.id}`, formData)
@@ -102,9 +115,9 @@ export default function Instructores() {
         const data = await api.post('/instructores', formData)
         setInstructores([...instructores, data.instructor])
       }
-      setModalOpen(false)
+      closeModal()
     } catch (e) {
-      alert(e.message || 'Error al guardar')
+      setFormError(mensajeError(e, 'No se pudo guardar el instructor.'))
     }
   }
 
@@ -123,20 +136,34 @@ export default function Instructores() {
         </Button>
       </div>
 
+      {error && (
+        <Alert type="danger">
+          <AlertCircle size={18} />
+          <span style={{ flex: 1 }}>{error}</span>
+          <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+        </Alert>
+      )}
+
       <Table columns={columns} data={instructores} emptyMessage="No hay instructores registrados" />
 
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editingInstructor ? 'Editar Instructor' : 'Nuevo Instructor'}
       >
         <p className="modal-subtitle">
           {editingInstructor ? 'Modifica los datos del instructor' : 'Completa la información para registrar un nuevo instructor'}
         </p>
+        {formError && (
+          <Alert type="danger">
+            <AlertCircle size={18} />
+            <span>{formError}</span>
+          </Alert>
+        )}
         <InstructorForm
           initialData={editingInstructor}
           onSave={handleSave}
-          onCancel={() => setModalOpen(false)}
+          onCancel={closeModal}
         />
       </Modal>
     </div>

@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Edit2, Trash2, Calendar, Clock, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Edit2, Trash2, Calendar, Clock, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
+import Alert from '../../components/common/Alert'
 import HorarioSemanalForm from './HorarioSemanalForm'
 import api from '../../services/api'
-import { DIAS_SEMANA, formatHoraAMPM } from '../../utils/helpers'
+import { DIAS_SEMANA, formatHoraAMPM, mensajeError } from '../../utils/helpers'
 
 const diaLabel = {
   LUNES: 'Lunes', MARTES: 'Martes', MIERCOLES: 'Miércoles',
@@ -23,6 +24,9 @@ export default function HorariosSemanales() {
   const [filtroInstructor, setFiltroInstructor] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroDia, setFiltroDia] = useState('')
+  const [error, setError] = useState('')
+  const [formError, setFormError] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const cargar = async () => {
     try {
@@ -35,7 +39,7 @@ export default function HorariosSemanales() {
       setInstructores(iData.instructores)
       setCategorias(cData.categorias)
     } catch (e) {
-      alert(e.message || 'Error al cargar horarios')
+      setError(mensajeError(e, 'No se pudieron cargar los horarios.'))
     } finally {
       setLoading(false)
     }
@@ -90,34 +94,50 @@ export default function HorariosSemanales() {
 
   const handleCreate = () => {
     setEditing(null)
+    setFormError('')
     setModalOpen(true)
   }
 
   const handleEdit = (h) => {
     setEditing(h)
+    setFormError('')
     setModalOpen(true)
   }
 
+  const closeModal = () => {
+    setModalOpen(false)
+    setFormError('')
+  }
+
   const handleToggle = async (h) => {
+    setError('')
     try {
       const result = await api.patch(`/horarios/${h.id}/status`)
       setHorarios(horarios.map(x => x.id === h.id ? { ...x, activo: result.activo } : x))
     } catch (e) {
-      alert(e.message || 'Error al cambiar estado')
+      setError(mensajeError(e, 'No se pudo cambiar el estado del horario.'))
     }
   }
 
-  const handleDelete = async (h) => {
-    if (!window.confirm(`¿Eliminar el horario de ${h.instructor.nombres} ${h.instructor.apellidos} (${diaLabel[h.diaSemana]})?`)) return
+  const handleDelete = (h) => {
+    setDeleteTarget(h)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setError('')
     try {
-      await api.del(`/horarios/${h.id}`)
-      setHorarios(horarios.filter(x => x.id !== h.id))
+      await api.del(`/horarios/${deleteTarget.id}`)
+      setHorarios(horarios.filter(x => x.id !== deleteTarget.id))
     } catch (e) {
-      alert(e.message || 'Error al eliminar')
+      setError(mensajeError(e, 'No se pudo eliminar el horario.'))
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
   const handleSave = async (formData) => {
+    setFormError('')
     try {
       if (editing) {
         const data = await api.put(`/horarios/${editing.id}`, formData)
@@ -126,9 +146,9 @@ export default function HorariosSemanales() {
         const data = await api.post('/horarios', formData)
         setHorarios([...horarios, data.horario])
       }
-      setModalOpen(false)
+      closeModal()
     } catch (e) {
-      alert(e.message || 'Error al guardar el horario')
+      setFormError(mensajeError(e, 'No se pudo guardar el horario.'))
     }
   }
 
@@ -177,11 +197,19 @@ export default function HorariosSemanales() {
         />
       </div>
 
+      {error && (
+        <Alert type="danger">
+          <AlertCircle size={18} />
+          <span style={{ flex: 1 }}>{error}</span>
+          <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+        </Alert>
+      )}
+
       <Table columns={columns} data={filteredHorarios} emptyMessage="No hay horarios registrados" />
 
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editing ? 'Editar Horario Semanal' : 'Nuevo Horario Semanal'}
         size="large"
       >
@@ -190,13 +218,35 @@ export default function HorariosSemanales() {
             ? 'Modifica el horario semanal del instructor'
             : 'Configura un nuevo horario semanal recurrente'}
         </p>
+        {formError && (
+          <Alert type="danger">
+            <AlertCircle size={18} />
+            <span>{formError}</span>
+          </Alert>
+        )}
         <HorarioSemanalForm
           initialData={editing}
           onSave={handleSave}
-          onCancel={() => setModalOpen(false)}
+          onCancel={closeModal}
           instructores={instructores}
           categorias={categorias}
         />
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Eliminar horario"
+      >
+        <p style={{ marginBottom: '1.5rem' }}>
+          ¿Seguro que deseas eliminar el horario de{' '}
+          <strong>{deleteTarget ? `${deleteTarget.instructor.nombres} ${deleteTarget.instructor.apellidos}` : ''}</strong>
+          {deleteTarget ? ` (${diaLabel[deleteTarget.diaSemana]})` : ''}? Esta acción no se puede deshacer.
+        </p>
+        <div className="form-actions">
+          <Button variant="danger" onClick={confirmDelete}>Sí, eliminar</Button>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+        </div>
       </Modal>
     </div>
   )

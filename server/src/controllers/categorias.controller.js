@@ -17,7 +17,7 @@ async function crear(req, res, next) {
 
     const existe = await prisma.categoriaBaile.findUnique({ where: { nombre } })
     if (existe) {
-      return res.status(409).json({ error: 'Ya existe una categoría con ese nombre' })
+      return res.status(409).json({ error: 'Ya existe una categoría con ese nombre. Usa un nombre diferente.' })
     }
 
     const categoria = await prisma.categoriaBaile.create({
@@ -44,7 +44,7 @@ async function actualizar(req, res, next) {
       where: { nombre, NOT: { id: Number(id) } },
     })
     if (duplicado) {
-      return res.status(409).json({ error: 'Ya existe otra categoría con ese nombre' })
+      return res.status(409).json({ error: 'Ya existe otra categoría con ese nombre. Elige un nombre distinto.' })
     }
 
     const categoria = await prisma.categoriaBaile.update({
@@ -72,7 +72,7 @@ async function eliminar(req, res, next) {
     })
     if (horarios > 0) {
       return res.status(409).json({
-        error: `No se puede eliminar porque tiene ${horarios} horario(s) vinculado(s)`,
+        error: `No se puede eliminar: la categoría tiene ${horarios} horario(s) vinculado(s). Elimina o reasigna esos horarios primero.`,
       })
     }
 

@@ -15,6 +15,16 @@ export function formatDateStr(date) {
   return date.toISOString().split('T')[0]
 }
 
+// Construye un mensaje de error claro a partir de la respuesta del backend.
+// Si hay detalles de validación (campo + motivo), los lista; si no, usa el mensaje general.
+export function mensajeError(err, fallback = 'Ocurrió un error. Inténtalo de nuevo.') {
+  const detalles = err?.data?.detalles
+  if (Array.isArray(detalles) && detalles.length > 0) {
+    return detalles.map((d) => (d.campo ? `${d.campo}: ${d.mensaje}` : d.mensaje)).join(' · ')
+  }
+  return err?.message || fallback
+}
+
 export const DIAS_SEMANA = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO']
 export const DIAS_SEMANA_MAP = { LUNES: 1, MARTES: 2, MIERCOLES: 3, JUEVES: 4, VIERNES: 5, SABADO: 6 }
 export const ESTADOS_CLASE = ['PROGRAMADA', 'EN_CURSO', 'CANCELADA', 'FINALIZADA']
