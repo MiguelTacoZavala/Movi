@@ -276,7 +276,11 @@ export default function DetalleClase() {
 
       <div className="instructor-section">
         <div className="instructor-photo">
-          <span>{instrName.charAt(0) || '?'}</span>
+          {clase.instructor?.fotoUrl ? (
+            <img src={clase.instructor.fotoUrl} alt={instrName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span>{instrName.charAt(0) || '?'}</span>
+          )}
         </div>
         <div className="instructor-info">
           <h3>{instrName}</h3>

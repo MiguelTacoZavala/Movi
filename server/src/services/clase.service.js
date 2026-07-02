@@ -28,7 +28,7 @@ const includeBase = {
       instructor: {
         select: {
           id: true,
-          usuario: { select: { nombres: true, apellidos: true } },
+          usuario: { select: { nombres: true, apellidos: true, fotoUrl: true } },
         },
       },
     },
@@ -44,7 +44,7 @@ const includeDetalle = {
       instructor: {
         select: {
           id: true,
-          usuario: { select: { nombres: true, apellidos: true } },
+          usuario: { select: { nombres: true, apellidos: true, fotoUrl: true } },
         },
       },
     },
@@ -80,6 +80,7 @@ function formatear(clase) {
           id: clase.horarioSemanal.instructor.id,
           nombres: clase.horarioSemanal.instructor.usuario.nombres,
           apellidos: clase.horarioSemanal.instructor.usuario.apellidos,
+          fotoUrl: clase.horarioSemanal.instructor.usuario.fotoUrl,
         }
       : undefined,
     posiciones: clase.posiciones,
