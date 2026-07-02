@@ -14,7 +14,7 @@ export default function Table({ columns, data, emptyMessage = 'No hay datos disp
           <thead>
             <tr>
               {columns.map((col, index) => (
-                <th key={index}>{col.label}</th>
+                <th key={index} scope="col">{col.label}</th>
               ))}
             </tr>
           </thead>
