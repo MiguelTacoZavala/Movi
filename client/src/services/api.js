@@ -2,6 +2,7 @@ const TOKEN_KEY = 'movi_token'
 const USER_KEY = 'movi_user'
 
 const _cache = new Map()
+const BASE_URL = import.meta.env.VITE_API_URL || ''
 
 const api = {
   getToken() {
@@ -45,7 +46,7 @@ const api = {
       options.body = JSON.stringify(body)
     }
 
-    const res = await fetch(`/api${path}`, options)
+    const res = await fetch(`${BASE_URL}/api${path}`, options)
     const data = await res.json()
 
     if (!res.ok) {
@@ -118,7 +119,7 @@ const api = {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const res = await fetch(`/api${path}`, {
+    const res = await fetch(`${BASE_URL}/api${path}`, {
       method: 'POST',
       headers,
       body: formData,
