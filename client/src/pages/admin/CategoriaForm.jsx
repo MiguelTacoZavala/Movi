@@ -51,8 +51,9 @@ export default function CategoriaForm({ initialData, onSave, onCancel }) {
         placeholder="Breve descripción de la categoría"
       />
       <div className="form-group">
-        <label>Precio por clase (S/)</label>
+        <label htmlFor="precio">Precio por clase (S/)</label>
         <input
+          id="precio"
           type="number"
           name="precio"
           value={formData.precio}

@@ -40,6 +40,8 @@ vite.svg
 # Cache
 .cache/
 
+*.md
+
 # Archivos generados
 *.tsbuildinfo
 AGENTS.md
