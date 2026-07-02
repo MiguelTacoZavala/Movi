@@ -167,6 +167,13 @@
 html, body {
   width: 100%;
   max-width: 100%;
+}
+
+/* overflow-x solo en html: se propaga al viewport y recorta el scroll horizontal
+   sin convertir a <body> en un contenedor de scroll. Ponerlo en <body> hacía que
+   el header (position: sticky) se anclara a <body> —que no scrollea— en vez del
+   viewport, por lo que solo reaparecía al llegar hasta arriba del todo. */
+html {
   overflow-x: hidden;
 }
 
@@ -305,7 +312,10 @@ body {
   min-height: 100vh;
   width: calc(100vw - 260px);
   max-width: calc(100vw - 260px);
-  overflow-x: hidden;
+  /* clip (no hidden): recorta el desborde horizontal sin crear un contenedor de
+     scroll, que rompería el position:sticky del header (queda anclado arriba
+     incluso al bajar en listas largas en móvil). */
+  overflow-x: clip;
 }
 
 .header {

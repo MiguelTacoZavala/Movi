@@ -148,7 +148,8 @@ export default function Dashboard() {
             No hay clases programadas para hoy
           </div>
         ) : (
-          <table className="table">
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table className="table" style={{ minWidth: '560px' }}>
             <thead>
               <tr>
                 <th>Categoría</th>
@@ -188,6 +189,7 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
