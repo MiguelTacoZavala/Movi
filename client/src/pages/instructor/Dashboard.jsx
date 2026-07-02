@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Calendar, Clock, Users, Music } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import Alert from '../../components/common/Alert'
 import { formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
@@ -9,12 +10,15 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     api.get('/instructores/dashboard').then(res => {
       setData(res)
+      setError(null)
     }).catch(() => {
       setData(null)
+      setError('No logramos cargar la información de tu panel. Por favor, intenta de nuevo en unos momentos.')
     }).finally(() => setLoading(false))
   }, [])
 
@@ -31,11 +35,13 @@ export default function Dashboard() {
         </h2>
       </div>
 
+      {error && <Alert type="danger">{error}</Alert>}
+
       {proximaClase ? (
         <div className="client-card" style={{ borderLeft: '4px solid var(--success)', marginBottom: '1rem' }}>
           <div className="client-card-title">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Music size={20} className="icon-primary" />
+              <Music size={20} className="icon-primary" aria-hidden="true" />
               Tu próxima clase
             </div>
           </div>
@@ -45,15 +51,15 @@ export default function Dashboard() {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.95rem', color: 'var(--gray-600)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Calendar size={18} className="icon-muted" />
+                <Calendar size={18} className="icon-muted" aria-hidden="true" />
                 {proximaClase.fecha}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={18} className="icon-muted" />
+                <Clock size={18} className="icon-muted" aria-hidden="true" />
                 {formatHoraAMPM(proximaClase.horaInicio)} — {formatHoraAMPM(proximaClase.horaFin)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={18} className="icon-muted" />
+                <Users size={18} className="icon-muted" aria-hidden="true" />
                 {proximaClase.inscritos}/{proximaClase.capacidadMaxima} participantes
               </div>
             </div>
@@ -72,7 +78,7 @@ export default function Dashboard() {
       <div className="client-card">
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Calendar size={20} className="icon-primary" />
+            <Calendar size={20} className="icon-primary" aria-hidden="true" />
             Clases de hoy
           </div>
         </div>
