@@ -36,7 +36,7 @@ export default function Perfil() {
 
   const handleSave = async () => {
     if (!editData.nombres.trim()) {
-      alert('El nombre es obligatorio')
+      alert('El nombre es un campo obligatorio. Por favor, ingrésalo antes de guardar.')
       return
     }
     try {
@@ -54,7 +54,7 @@ export default function Perfil() {
       })
       setModalOpen(false)
     } catch {
-      alert('No se pudieron guardar los cambios. Revisa los campos e intenta de nuevo.')
+      alert('No logramos guardar los cambios en tu perfil. Por favor, verifica la información e inténtalo nuevamente.')
     }
   }
 
@@ -72,7 +72,7 @@ export default function Perfil() {
       updateUser({ fotoUrl: result.fotoUrl })
       setPreviewUrl(null)
     } catch {
-      alert('No se pudo subir la foto. Intenta con otro archivo.')
+      alert('Hubo un inconveniente al subir la foto de perfil. Por favor, asegúrate de seleccionar un archivo de imagen válido e intenta de nuevo.')
     } finally {
       setUploading(false)
     }
@@ -102,18 +102,27 @@ export default function Perfil() {
         <div
           style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
           onClick={() => fileInputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          aria-label="Cambiar foto de perfil"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              fileInputRef.current?.click()
+            }
+          }}
         >
           {fotoSource ? (
             <img src={fotoSource} alt="Foto de perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <User size={40} className="icon-primary" />
+            <User size={40} className="icon-primary" aria-hidden="true" />
           )}
           <div style={{
             position: 'absolute', bottom: 0, right: 0,
             background: 'var(--primary-medium)', borderRadius: '50%',
             width: 28, height: 28, display: 'flex', alignItems: 'center',
             justifyContent: 'center', color: '#fff',
-          }}>
+          }} aria-hidden="true">
             <Camera size={14} />
           </div>
         </div>
@@ -123,6 +132,7 @@ export default function Perfil() {
           accept="image/*"
           style={{ display: 'none' }}
           onChange={handleFileSelect}
+          aria-label="Subir foto de perfil"
         />
         <h3 style={{ marginTop: '1rem', fontSize: '1.2rem', color: 'var(--gray-900)' }}>
           {user?.nombres} {user?.apellidos}
@@ -137,7 +147,7 @@ export default function Perfil() {
       <div className="client-card" style={{ marginBottom: '1rem' }}>
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {theme === 'dark' ? <Moon size={20} className="icon-primary" /> : <Sun size={20} className="icon-primary" />}
+            {theme === 'dark' ? <Moon size={20} className="icon-primary" aria-hidden="true" /> : <Sun size={20} className="icon-primary" aria-hidden="true" />}
             Preferencias
           </div>
         </div>
@@ -146,6 +156,16 @@ export default function Perfil() {
             onClick={toggleTheme}
             title="Alternar entre tema claro y oscuro"
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer' }}
+            role="switch"
+            aria-checked={theme === 'dark'}
+            tabIndex={0}
+            aria-label="Alternar tema oscuro"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleTheme()
+              }
+            }}
           >
             <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Tema oscuro</span>
             <div style={{
@@ -165,6 +185,16 @@ export default function Perfil() {
             onClick={toggleReducedMotion}
             title="Activar o desactivar animaciones al cambiar de página"
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' }}
+            role="switch"
+            aria-checked={!reducedMotion}
+            tabIndex={0}
+            aria-label="Alternar animaciones"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleReducedMotion()
+              }
+            }}
           >
             <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Animaciones</span>
             <div style={{
@@ -186,7 +216,7 @@ export default function Perfil() {
       <div className="client-card">
         <div className="client-card-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <User size={20} className="icon-primary" />
+            <User size={20} className="icon-primary" aria-hidden="true" />
             Información Personal
           </div>
         </div>

@@ -76,8 +76,8 @@ export default function InstructorLayout() {
           <h1 className="client-logo">MOVI</h1>
           <div className="client-user-menu">
             <span className="client-user-name">{user?.nombres}</span>
-            <button onClick={() => setShowLogoutModal(true)} className="btn btn-ghost btn-small" title="Cerrar sesión">
-              <LogOut size={18} />
+            <button onClick={() => setShowLogoutModal(true)} className="btn btn-ghost btn-small" title="Cerrar sesión" aria-label="Cerrar sesión">
+              <LogOut size={18} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -103,23 +103,23 @@ export default function InstructorLayout() {
 
       <nav className="client-nav">
         <NavLink to="/instructor/dashboard" aria-keyshortcuts="g i" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
-          <LayoutDashboard size={20} />
+          <LayoutDashboard size={20} aria-hidden="true" />
           <span>Inicio</span>
         </NavLink>
         <NavLink to="/instructor/horarios" aria-keyshortcuts="g h" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
-          <Calendar size={20} />
+          <Calendar size={20} aria-hidden="true" />
           <span>Horarios</span>
         </NavLink>
         <NavLink to="/instructor/clases" aria-keyshortcuts="g c" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
-          <Music size={20} />
+          <Music size={20} aria-hidden="true" />
           <span>Clases</span>
         </NavLink>
         <NavLink to="/instructor/historial" aria-keyshortcuts="g t" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
-          <Clock size={20} />
+          <Clock size={20} aria-hidden="true" />
           <span>Historial</span>
         </NavLink>
         <NavLink to="/instructor/perfil" aria-keyshortcuts="g p" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
-          <User size={20} />
+          <User size={20} aria-hidden="true" />
           <span>Perfil</span>
         </NavLink>
       </nav>

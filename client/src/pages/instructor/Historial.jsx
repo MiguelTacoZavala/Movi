@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react'
 import { Clock, Calendar, Users } from 'lucide-react'
 import api from '../../services/api'
+import Alert from '../../components/common/Alert'
 import { formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Historial() {
   const [clases, setClases] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     api.get('/instructores/historial').then(res => {
       setClases(res.clases || [])
+      setError(null)
     }).catch(() => {
       setClases([])
+      setError('No pudimos recuperar tu historial de clases en este momento. Por favor, intenta de nuevo más tarde.')
     }).finally(() => setLoading(false))
   }, [])
 
@@ -23,9 +27,11 @@ export default function Historial() {
       <h2 className="client-section-title">Historial</h2>
       <p className="client-section-subtitle">Clases anteriores</p>
 
+      {error && <Alert type="danger">{error}</Alert>}
+
       {clases.length === 0 ? (
         <div className="empty-state">
-          <Clock size={48} className="icon-muted" />
+          <Clock size={48} className="icon-muted" aria-hidden="true" />
           <h3>Sin historial</h3>
           <p>No hay clases anteriores registradas</p>
         </div>
@@ -43,15 +49,15 @@ export default function Historial() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Calendar size={16} className="icon-muted" />
+                  <Calendar size={16} className="icon-muted" aria-hidden="true" />
                   {clase.fecha}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Clock size={16} className="icon-muted" />
+                  <Clock size={16} className="icon-muted" aria-hidden="true" />
                   {formatHoraAMPM(clase.horaInicio)} — {formatHoraAMPM(clase.horaFin)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Users size={16} className="icon-muted" />
+                  <Users size={16} className="icon-muted" aria-hidden="true" />
                   {clase.inscritos} participantes
                 </div>
               </div>
