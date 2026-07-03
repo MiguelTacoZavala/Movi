@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronRight, AlertCircle } from 'lucide-react'
 import api from '../../services/api'
 import { formatHoraAMPM } from '../../utils/helpers'
@@ -76,11 +76,21 @@ const DIAS_LABEL = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB']
 export default function ClasesDisponibles() {
   const [categorias, setCategorias] = useState([])
   const [clases, setClases] = useState([])
-  const [selectedCategoria, setSelectedCategoria] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedCategoria = searchParams.get('cat')
+  const selectedDate = searchParams.get('fecha')
+
+  // Guardamos categoría y día en la URL para que, al volver desde el detalle
+  // de una clase, se restaure la vista de horarios en lugar de reiniciarse.
+  const updateSeleccion = useCallback((cat, fecha) => {
+    const params = {}
+    if (cat) params.cat = cat
+    if (fecha) params.fecha = fecha
+    setSearchParams(params, { replace: true })
+  }, [setSearchParams])
 
   const diasSemana = useMemo(() => generarProximosDias(), [])
 
@@ -116,12 +126,12 @@ export default function ClasesDisponibles() {
     : []
 
   const handleSelectCategoria = (nombre) => {
-    setSelectedCategoria(nombre)
     const fechaConClases = diasSemana.find(f => {
       const fs = f.toISOString().split('T')[0]
       return clases.some(c => c.categoria?.nombre === nombre && c.fecha === fs && c.estado === 'PROGRAMADA')
     })
-    setSelectedDate(fechaConClases ? fechaConClases.toISOString().split('T')[0] : diasSemana[0]?.toISOString().split('T')[0])
+    const fecha = fechaConClases ? fechaConClases.toISOString().split('T')[0] : diasSemana[0]?.toISOString().split('T')[0]
+    updateSeleccion(nombre, fecha)
   }
 
   const apariencia = CATEGORIA_APARIENCIA[selectedCategoria] || { color: '#666', bgColor: '#f5f5f5', gradient: 'linear-gradient(135deg, #666, #444)', desc: '' }
@@ -185,7 +195,7 @@ export default function ClasesDisponibles() {
 
   return (
     <div key={selectedCategoria}>
-      <button className="back-btn" onClick={() => setSelectedCategoria(null)}>
+      <button className="back-btn" onClick={() => updateSeleccion(null, null)}>
         <ArrowLeft size={20} />
         <span>Todos los estilos</span>
       </button>
@@ -207,7 +217,7 @@ export default function ClasesDisponibles() {
             <button
               key={fs}
               className={`date-item${isActive ? ' active' : ''}${!hasClases || esPasado ? ' disabled' : ''}${fs === hoyStr ? ' today' : ''}`}
-              onClick={() => !esPasado && hasClases && setSelectedDate(fs)}
+              onClick={() => !esPasado && hasClases && updateSeleccion(selectedCategoria, fs)}
               disabled={!hasClases || esPasado}
             >
               <span className="date-item-day">{dia}</span>

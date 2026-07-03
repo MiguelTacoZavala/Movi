@@ -272,9 +272,18 @@ export default function DetalleClase() {
 
   const instrName = clase?.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : ''
 
+  const volverAClases = () => {
+    if (clase?.categoria?.nombre && clase?.fecha) {
+      const params = new URLSearchParams({ cat: clase.categoria.nombre, fecha: clase.fecha })
+      navigate(`/cliente/clases?${params.toString()}`)
+    } else {
+      navigate('/cliente/clases')
+    }
+  }
+
   return (
     <div className="detalle-clase" style={{ animation: 'fadeIn 0.3s ease' }}>
-      <button onClick={() => navigate('/cliente/clases')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+      <button onClick={volverAClases} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
         <ArrowLeft size={18} />
         Volver a Clases
       </button>
