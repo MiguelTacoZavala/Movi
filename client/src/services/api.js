@@ -2,6 +2,9 @@ const TOKEN_KEY = 'movi_token'
 const USER_KEY = 'movi_user'
 
 const _cache = new Map()
+// TTL del caché en memoria: las revisitas rápidas salen de caché (instantáneas);
+// pasado este tiempo se vuelve a pedir al servidor para no mostrar datos viejos.
+const CACHE_TTL = 60_000 // 1 minuto
 const BASE_URL = import.meta.env.VITE_API_URL || ''
 
 const api = {
@@ -66,19 +69,22 @@ const api = {
   cachedGet(path) {
     const key = `GET ${path}`
     const cached = _cache.get(key)
-    if (cached) {
+    if (cached && Date.now() - cached.at < CACHE_TTL) {
       return Promise.resolve(cached.data)
     }
     return api.get(path).then(data => {
-      _cache.set(key, { data })
+      _cache.set(key, { data, at: Date.now() })
       return data
     })
   },
 
-  invalidateCache(pattern) {
-    if (!pattern) { _cache.clear(); return }
+  // Borra del caché las entradas cuya clave empieza por alguno de los patrones dados.
+  // Acepta un string, un array de strings, o nada (limpia todo el caché).
+  invalidateCache(patterns) {
+    if (!patterns) { _cache.clear(); return }
+    const list = Array.isArray(patterns) ? patterns : [patterns]
     for (const key of _cache.keys()) {
-      if (key.startsWith(pattern)) _cache.delete(key)
+      if (list.some(p => key.startsWith(p))) _cache.delete(key)
     }
   },
 
@@ -89,6 +95,20 @@ const api = {
       '/dashboard/cliente',
       '/reservas/mis-reservas',
       '/creditos',
+    ]
+    Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
+  },
+
+  // Gemelo de preloadClientData para el admin: al iniciar sesión se precargan en
+  // segundo plano las secciones, de modo que abrirlas sea instantáneo.
+  preloadAdminData() {
+    const endpoints = [
+      '/dashboard/admin',
+      '/clases?limit=500',
+      '/instructores',
+      '/categorias',
+      '/horarios',
+      '/clientes',
     ]
     Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
   },

@@ -19,7 +19,7 @@ export default function Dashboard() {
     setLoading(true)
     setError('')
     try {
-      const res = await api.get('/dashboard/admin')
+      const res = await api.cachedGet('/dashboard/admin')
       setData(res)
     } catch (e) {
       setError(mensajeError(e, 'No se pudo cargar el dashboard.'))

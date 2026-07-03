@@ -9,6 +9,10 @@ import api from '../../services/api'
 import { mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
+// Al cambiar una categoría se invalidan también los listados que la muestran embebida
+// (su nombre aparece en horarios, clases y el dashboard).
+const CACHE_KEYS = ['GET /categorias', 'GET /horarios', 'GET /clases', 'GET /dashboard']
+
 export default function Categorias() {
   const [categorias, setCategorias] = useState([])
   const [loading, setLoading] = useState(true)
@@ -20,7 +24,7 @@ export default function Categorias() {
 
   const cargar = async () => {
     try {
-      const data = await api.get('/categorias')
+      const data = await api.cachedGet('/categorias')
       setCategorias(data.categorias)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar las categorías.'))
@@ -82,6 +86,7 @@ export default function Categorias() {
     setError('')
     try {
       await api.del(`/categorias/${deleteTarget.id}`)
+      api.invalidateCache(CACHE_KEYS)
       setCategorias(categorias.filter(c => c.id !== deleteTarget.id))
     } catch (e) {
       setError(mensajeError(e, 'No se pudo eliminar la categoría.'))
@@ -100,6 +105,7 @@ export default function Categorias() {
         const data = await api.post('/categorias', formData)
         setCategorias([...categorias, data.categoria])
       }
+      api.invalidateCache(CACHE_KEYS)
       closeModal()
     } catch (e) {
       setFormError(mensajeError(e, 'No se pudo guardar la categoría.'))

@@ -9,6 +9,10 @@ import api from '../../services/api'
 import { mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
+// Un instructor aparece embebido en horarios, clases y el dashboard, así que al
+// crearlo/editarlo/cambiar su estado se invalidan también esos listados.
+const CACHE_KEYS = ['GET /instructores', 'GET /horarios', 'GET /clases', 'GET /dashboard']
+
 export default function Instructores() {
   const [instructores, setInstructores] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,7 +23,7 @@ export default function Instructores() {
 
   const cargar = async () => {
     try {
-      const data = await api.get('/instructores')
+      const data = await api.cachedGet('/instructores')
       setInstructores(data.instructores)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los instructores.'))
@@ -95,6 +99,7 @@ export default function Instructores() {
     setError('')
     try {
       const data = await api.patch(`/instructores/${instructor.id}/status`)
+      api.invalidateCache(CACHE_KEYS)
       setInstructores(instructores.map(inst =>
         inst.id === instructor.id ? data.instructor : inst
       ))
@@ -115,6 +120,7 @@ export default function Instructores() {
         const data = await api.post('/instructores', formData)
         setInstructores([...instructores, data.instructor])
       }
+      api.invalidateCache(CACHE_KEYS)
       closeModal()
     } catch (e) {
       setFormError(mensajeError(e, 'No se pudo guardar el instructor.'))

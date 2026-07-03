@@ -10,6 +10,10 @@ import { useFlashMessage } from '../../hooks/useFlashMessage'
 import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
+// Cancelar una clase cambia su estado, genera créditos y afecta al dashboard y al
+// contador de "próximas clases" de los horarios.
+const CACHE_KEYS = ['GET /clases', 'GET /dashboard', 'GET /horarios']
+
 const estadoConfig = {
   PROGRAMADA: { label: 'Programada', className: 'status-info' },
   EN_CURSO: { label: 'En Curso', className: 'status-active' },
@@ -42,8 +46,8 @@ export default function Clases() {
   const cargar = async () => {
     try {
       const [cData, iData] = await Promise.all([
-        api.get('/clases?limit=500'),
-        api.get('/instructores'),
+        api.cachedGet('/clases?limit=500'),
+        api.cachedGet('/instructores'),
       ])
       setClases(cData.clases)
       setInstructores(iData.instructores)
@@ -164,6 +168,7 @@ export default function Clases() {
     setMensaje('')
     try {
       const r = await api.patch(`/clases/${cancelTargetClase.id}/cancel`)
+      api.invalidateCache(CACHE_KEYS)
       setClases(clases.map(c =>
         c.id === cancelTargetClase.id ? { ...c, estado: 'CANCELADA' } : c
       ))

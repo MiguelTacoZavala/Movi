@@ -42,6 +42,7 @@ export default function Login() {
 
         setTimeout(() => {
           if (result.rol === 'admin') {
+            api.preloadAdminData()
             navigate('/admin/dashboard')
           } else if (result.rol === 'cliente') {
             api.preloadClientData()

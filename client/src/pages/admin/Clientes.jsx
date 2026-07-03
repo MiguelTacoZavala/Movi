@@ -20,7 +20,7 @@ export default function Clientes() {
 
   const cargar = async () => {
     try {
-      const data = await api.get('/clientes')
+      const data = await api.cachedGet('/clientes')
       setClientes(data.clientes)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los clientes.'))

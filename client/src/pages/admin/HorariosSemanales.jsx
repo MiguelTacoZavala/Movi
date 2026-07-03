@@ -10,6 +10,10 @@ import api from '../../services/api'
 import { useFlashMessage } from '../../hooks/useFlashMessage'
 import { DIAS_SEMANA, formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
 
+// Crear/editar/activar/extender/eliminar un horario genera o cancela clases y afecta
+// al dashboard, por eso se invalidan también esos listados.
+const CACHE_KEYS = ['GET /horarios', 'GET /clases', 'GET /dashboard']
+
 // Fecha (YYYY-MM-DD) de hoy y del fin del mes siguiente, para el modal de extender
 function hoyStr() {
   const d = new Date()
@@ -51,9 +55,9 @@ export default function HorariosSemanales() {
   const cargar = async () => {
     try {
       const [hData, iData, cData] = await Promise.all([
-        api.get('/horarios'),
-        api.get('/instructores'),
-        api.get('/categorias'),
+        api.cachedGet('/horarios'),
+        api.cachedGet('/instructores'),
+        api.cachedGet('/categorias'),
       ])
       setHorarios(hData.horarios)
       setInstructores(iData.instructores)
@@ -163,6 +167,7 @@ export default function HorariosSemanales() {
     setMensaje('')
     try {
       const result = await api.patch(`/horarios/${h.id}/status`, { cancelarFuturas })
+      api.invalidateCache(CACHE_KEYS)
       setDeactivateTarget(null)
       if (result.cancelacion?.clasesCanceladas > 0) {
         const { clasesCanceladas, creditosGenerados } = result.cancelacion
@@ -198,6 +203,7 @@ export default function HorariosSemanales() {
     setMensaje('')
     try {
       const r = await api.post(`/horarios/${extendTarget.id}/generar`, { hasta: extendHasta })
+      api.invalidateCache(CACHE_KEYS)
       setExtendTarget(null)
       setMensaje(
         r.creadas > 0
@@ -221,6 +227,7 @@ export default function HorariosSemanales() {
     setError('')
     try {
       await api.del(`/horarios/${deleteTarget.id}`)
+      api.invalidateCache(CACHE_KEYS)
       setHorarios(horarios.filter(x => x.id !== deleteTarget.id))
     } catch (e) {
       setError(mensajeError(e, 'No se pudo eliminar el horario.'))
@@ -247,6 +254,7 @@ export default function HorariosSemanales() {
             : 'Horario creado. Aún no había fechas por generar hasta la fecha elegida.'
         )
       }
+      api.invalidateCache(CACHE_KEYS)
       closeModal()
     } catch (e) {
       setFormError(mensajeError(e, 'No se pudo guardar el horario.'))
