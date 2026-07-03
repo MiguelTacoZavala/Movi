@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Music2, AlertCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, Music2, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Alert from '../../components/common/Alert'
 import CategoriaForm from './CategoriaForm'
 import api from '../../services/api'
+import { useFlashMessage } from '../../hooks/useFlashMessage'
 import { mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
@@ -21,6 +22,7 @@ export default function Categorias() {
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [mensaje, setMensaje] = useFlashMessage()
 
   const cargar = async () => {
     try {
@@ -84,10 +86,12 @@ export default function Categorias() {
   const confirmDelete = async () => {
     if (!deleteTarget) return
     setError('')
+    const nombre = deleteTarget.nombre
     try {
       await api.del(`/categorias/${deleteTarget.id}`)
       api.invalidateCache(CACHE_KEYS)
       setCategorias(categorias.filter(c => c.id !== deleteTarget.id))
+      setMensaje(`Categoría "${nombre}" eliminada.`)
     } catch (e) {
       setError(mensajeError(e, 'No se pudo eliminar la categoría.'))
     } finally {
@@ -101,9 +105,11 @@ export default function Categorias() {
       if (editing) {
         const data = await api.put(`/categorias/${editing.id}`, formData)
         setCategorias(categorias.map(c => c.id === editing.id ? data.categoria : c))
+        setMensaje(`Categoría "${data.categoria.nombre}" actualizada.`)
       } else {
         const data = await api.post('/categorias', formData)
         setCategorias([...categorias, data.categoria])
+        setMensaje(`Categoría "${data.categoria.nombre}" creada.`)
       }
       api.invalidateCache(CACHE_KEYS)
       closeModal()
@@ -132,6 +138,12 @@ export default function Categorias() {
           <AlertCircle size={18} />
           <span style={{ flex: 1 }}>{error}</span>
           <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+        </Alert>
+      )}
+      {mensaje && (
+        <Alert type="success">
+          <CheckCircle size={18} />
+          <span>{mensaje}</span>
         </Alert>
       )}
 

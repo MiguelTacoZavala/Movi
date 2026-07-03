@@ -1499,15 +1499,15 @@ body {
 }
 
 .alert-success {
-  background-color: var(--accent);
-  color: var(--primary-text);
-  border-left-color: var(--accent);
+  background-color: var(--success);
+  color: var(--success-text);
+  border-left-color: var(--success);
 }
 
 .alert-danger {
-  background-color: var(--primary);
-  color: var(--primary-text);
-  border-left-color: var(--primary);
+  background-color: var(--danger);
+  color: var(--danger-text);
+  border-left-color: var(--danger);
 }
 
 /* ==============================

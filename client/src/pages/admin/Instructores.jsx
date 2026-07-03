@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, User, Phone, UserCheck, UserX, Mail, AlertCircle } from 'lucide-react'
+import { Plus, Edit2, User, Phone, UserCheck, UserX, Mail, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Alert from '../../components/common/Alert'
 import InstructorForm from './InstructorForm'
 import api from '../../services/api'
+import { useFlashMessage } from '../../hooks/useFlashMessage'
 import { mensajeError } from '../../utils/helpers'
 import '../../App.css'
 
@@ -20,6 +21,7 @@ export default function Instructores() {
   const [editingInstructor, setEditingInstructor] = useState(null)
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
+  const [mensaje, setMensaje] = useFlashMessage()
 
   const cargar = async () => {
     try {
@@ -103,6 +105,7 @@ export default function Instructores() {
       setInstructores(instructores.map(inst =>
         inst.id === instructor.id ? data.instructor : inst
       ))
+      setMensaje(`${data.instructor.nombres} ${data.instructor.apellidos} ${data.instructor.estado ? 'activado' : 'desactivado'}.`)
     } catch (e) {
       setError(mensajeError(e, 'No se pudo cambiar el estado del instructor.'))
     }
@@ -116,9 +119,11 @@ export default function Instructores() {
         setInstructores(instructores.map(inst =>
           inst.id === editingInstructor.id ? data.instructor : inst
         ))
+        setMensaje(`Instructor ${data.instructor.nombres} ${data.instructor.apellidos} actualizado.`)
       } else {
         const data = await api.post('/instructores', formData)
         setInstructores([...instructores, data.instructor])
+        setMensaje(`Instructor ${data.instructor.nombres} ${data.instructor.apellidos} creado.`)
       }
       api.invalidateCache(CACHE_KEYS)
       closeModal()
@@ -147,6 +152,12 @@ export default function Instructores() {
           <AlertCircle size={18} />
           <span style={{ flex: 1 }}>{error}</span>
           <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+        </Alert>
+      )}
+      {mensaje && (
+        <Alert type="success">
+          <CheckCircle size={18} />
+          <span>{mensaje}</span>
         </Alert>
       )}
 

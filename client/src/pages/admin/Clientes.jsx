@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX, AlertCircle } from 'lucide-react'
+import { Eye, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX, AlertCircle } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -86,7 +86,7 @@ export default function Clientes() {
     )},
     { key: 'acciones', label: 'Acciones', render: (_, row) => (
       <Button size="small" variant="ghost" onClick={() => handleVerDetalle(row)} title="Ver detalle">
-        <Search size={16} />
+        <Eye size={16} />
       </Button>
     )},
   ]
