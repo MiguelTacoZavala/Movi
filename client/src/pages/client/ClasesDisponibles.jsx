@@ -252,7 +252,11 @@ export default function ClasesDisponibles() {
                           <span className="clase-duration-text">{calcularDuracion(clase.horaInicio, clase.horaFin)}</span>
                         </div>
                         <div className="instructor-avatar">
-                          <span>{clase.instructor?.nombres?.charAt(0) || '?'}</span>
+                          {clase.instructor?.fotoUrl ? (
+                            <img src={clase.instructor.fotoUrl} alt={`${clase.instructor.nombres} ${clase.instructor.apellidos}`} />
+                          ) : (
+                            <span>{clase.instructor?.nombres?.charAt(0) || '?'}</span>
+                          )}
                         </div>
                         <div className="clase-card-slim-info">
                           <div className="clase-card-slim-name">{clase.instructor?.nombres} {clase.instructor?.apellidos}</div>
