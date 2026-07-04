@@ -33,6 +33,7 @@ export default function MisClases() {
   }, [])
 
   const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
   const filtradas = reservas.filter(r => {
     const st = estado(r)
     const f = toDate(r.clase.fecha)

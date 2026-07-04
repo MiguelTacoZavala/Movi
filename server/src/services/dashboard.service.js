@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { limpiarHoldsExpirados } = require('./reserva.service')
 
 const includeClase = {
   horarioSemanal: {
@@ -101,6 +102,8 @@ async function resumenAdmin() {
 }
 
 async function resumenCliente(usuarioId) {
+  await limpiarHoldsExpirados()
+
   const ahora = new Date()
   const hoy = new Date(ahora)
   hoy.setUTCHours(0, 0, 0, 0)

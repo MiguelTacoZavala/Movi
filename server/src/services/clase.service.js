@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { limpiarHoldsExpirados } = require('./reserva.service')
 
 const DIA_OFFSET = {
   LUNES: 0, MARTES: 1, MIERCOLES: 2, JUEVES: 3,
@@ -18,6 +19,12 @@ function getFechaClase(monday, diaSemana, weekOffset) {
   const fecha = new Date(monday)
   fecha.setUTCDate(monday.getUTCDate() + weekOffset * 7 + DIA_OFFSET[diaSemana])
   return fecha
+}
+
+function combinarFechaHora(fecha, horaRef) {
+  const d = new Date(fecha)
+  d.setUTCHours(horaRef.getUTCHours(), horaRef.getUTCMinutes(), 0, 0)
+  return d
 }
 
 const includeBase = {
@@ -118,13 +125,16 @@ async function generar({ semanas }) {
         continue
       }
 
+      const hInicio = combinarFechaHora(fecha, horario.horaInicio)
+      const hFin = combinarFechaHora(fecha, horario.horaFin)
+
       await prisma.$transaction(async (tx) => {
         const clase = await tx.clase.create({
           data: {
             horarioSemanalId: horario.id,
             fecha,
-            horaInicio: horario.horaInicio,
-            horaFin: horario.horaFin,
+            horaInicio: hInicio,
+            horaFin: hFin,
             capacidadMaxima: horario.capacidadMaxima,
             minimoParticipantes: horario.minimoParticipantes,
           },
@@ -187,13 +197,16 @@ async function crearSesionesHorario(horario, hastaStr) {
       continue
     }
 
+    const hInicio = combinarFechaHora(fecha, horario.horaInicio)
+    const hFin = combinarFechaHora(fecha, horario.horaFin)
+
     await prisma.$transaction(async (tx) => {
       const clase = await tx.clase.create({
         data: {
           horarioSemanalId: horario.id,
           fecha,
-          horaInicio: horario.horaInicio,
-          horaFin: horario.horaFin,
+          horaInicio: hInicio,
+          horaFin: hFin,
           capacidadMaxima: horario.capacidadMaxima,
           minimoParticipantes: horario.minimoParticipantes,
         },
@@ -271,17 +284,21 @@ async function cancelarFuturasDeHorario(horarioId) {
   return { clasesCanceladas, creditosGenerados }
 }
 
-// Marca como FINALIZADA toda clase cuya fecha ya pasó y seguía activa
+// Marca como FINALIZADA toda clase que ya pasó (fecha anterior o mismo día pero horaFin vencida)
 async function finalizarClasesPasadas() {
+  const ahora = new Date()
   const hoy = new Date()
   hoy.setUTCHours(0, 0, 0, 0)
 
   const { count } = await prisma.clase.updateMany({
     where: {
-      fecha: { lt: hoy },
       estado: { in: ['PROGRAMADA', 'EN_CURSO'] },
+      OR: [
+        { fecha: { lt: hoy } },
+        { horaFin: { lt: ahora } },
+      ],
     },
-    data: { estado: 'FINALIZADA', updatedAt: new Date() },
+    data: { estado: 'FINALIZADA', updatedAt: ahora },
   })
 
   if (count > 0) {
@@ -335,6 +352,8 @@ async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limi
 }
 
 async function obtener(id) {
+  await limpiarHoldsExpirados()
+
   const clase = await prisma.clase.findUnique({ where: { id }, include: includeDetalle })
   return clase ? formatear(clase) : null
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronRight, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 import api from '../../services/api'
 import { formatHoraAMPM } from '../../utils/helpers'
 import Button from '../../components/common/Button'
@@ -39,11 +39,19 @@ const FRANJAS = [
   { key: 'nocturnas', label: 'Nocturnas', icon: Moon },
 ]
 
-function generarProximosDias() {
+function formatLocalDate(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function generarDiasSemana(offset) {
   const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
   const diaSem = hoy.getDay()
   const lunes = new Date(hoy)
-  lunes.setDate(hoy.getDate() - ((diaSem + 6) % 7))
+  lunes.setDate(hoy.getDate() - ((diaSem + 6) % 7) + offset * 7)
   const dias = []
   for (let i = 0; i < 6; i++) {
     const fecha = new Date(lunes)
@@ -51,6 +59,21 @@ function generarProximosDias() {
     dias.push(fecha)
   }
   return dias
+}
+
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+function formatMesLabel(dias) {
+  if (!dias || dias.length === 0) return ''
+  const m0 = dias[0].getMonth()
+  const a0 = dias[0].getFullYear()
+  const ultimo = dias[dias.length - 1]
+  const m1 = ultimo.getMonth()
+  const a1 = ultimo.getFullYear()
+  if (m0 !== m1 || a0 !== a1) {
+    return `${MESES_CORTOS[m0]} ${a0} - ${MESES_CORTOS[m1]} ${a1}`
+  }
+  return `${MESES_CORTOS[m0]} ${a0}`
 }
 
 function calcularDuracion(inicio, fin) {
@@ -78,6 +101,7 @@ export default function ClasesDisponibles() {
   const [clases, setClases] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [semanaOffset, setSemanaOffset] = useState(0)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedCategoria = searchParams.get('cat')
@@ -92,7 +116,7 @@ export default function ClasesDisponibles() {
     setSearchParams(params, { replace: true })
   }, [setSearchParams])
 
-  const diasSemana = useMemo(() => generarProximosDias(), [])
+  const diasSemana = useMemo(() => generarDiasSemana(semanaOffset), [semanaOffset])
 
   const cargar = useCallback(() => {
     setLoading(true)
@@ -112,9 +136,18 @@ export default function ClasesDisponibles() {
 
   useEffect(() => { cargar() }, [])
 
+  // Al cambiar de semana, si la fecha seleccionada no está en el rango visible, auto-seleccionar el lunes
+  useEffect(() => {
+    if (!selectedCategoria || !selectedDate || diasSemana.length === 0) return
+    const inRange = diasSemana.some(d => formatLocalDate(d) === selectedDate)
+    if (!inRange) {
+      updateSeleccion(selectedCategoria, formatLocalDate(diasSemana[0]))
+    }
+  }, [semanaOffset, selectedCategoria, selectedDate, diasSemana, updateSeleccion])
+
   const hoyStr = useMemo(() => {
     const d = new Date()
-    return d.toISOString().split('T')[0]
+    return formatLocalDate(d)
   }, [])
 
   const clasesFiltradas = selectedCategoria
@@ -126,11 +159,12 @@ export default function ClasesDisponibles() {
     : []
 
   const handleSelectCategoria = (nombre) => {
+    setSemanaOffset(0)
     const fechaConClases = diasSemana.find(f => {
-      const fs = f.toISOString().split('T')[0]
+      const fs = formatLocalDate(f)
       return clases.some(c => c.categoria?.nombre === nombre && c.fecha === fs && c.estado === 'PROGRAMADA')
     })
-    const fecha = fechaConClases ? fechaConClases.toISOString().split('T')[0] : diasSemana[0]?.toISOString().split('T')[0]
+    const fecha = fechaConClases ? formatLocalDate(fechaConClases) : formatLocalDate(diasSemana[0])
     updateSeleccion(nombre, fecha)
   }
 
@@ -204,9 +238,29 @@ export default function ClasesDisponibles() {
         <h2>{selectedCategoria}</h2>
       </div>
 
+      <div className="date-carousel-header">
+        <button
+          className="carousel-arrow"
+          disabled={semanaOffset === 0}
+          onClick={() => setSemanaOffset(prev => Math.max(0, prev - 1))}
+          title="Semana anterior"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <span className="carousel-week-label">{formatMesLabel(diasSemana)}</span>
+        <button
+          className="carousel-arrow"
+          disabled={semanaOffset >= 3}
+          onClick={() => setSemanaOffset(prev => Math.min(3, prev + 1))}
+          title="Siguiente semana"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+
       <div className="date-carousel">
         {diasSemana.map((fecha) => {
-          const fs = fecha.toISOString().split('T')[0]
+          const fs = formatLocalDate(fecha)
           const dia = DIAS_LABEL[fecha.getDay()]
           const numero = fecha.getDate().toString().padStart(2, '0')
           const isActive = fs === selectedDate
