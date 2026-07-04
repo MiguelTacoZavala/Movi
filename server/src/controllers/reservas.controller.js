@@ -17,6 +17,7 @@ async function cancelarReserva(req, res, next) {
     res.json({ reserva })
   } catch (error) {
     if (error.yaCancelada) return res.status(409).json({ error: 'La reserva ya está cancelada' })
+    if (error.yaExpirada) return res.status(410).json({ error: 'La reserva expiró y no puede cancelarse' })
     next(error)
   }
 }

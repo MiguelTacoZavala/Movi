@@ -2415,11 +2415,49 @@ body {
   margin: 0 0 1rem 0;
 }
 
+/* Date carousel header (week navigation) */
+.date-carousel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.carousel-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: var(--gray-100);
+  cursor: pointer;
+  color: var(--gray-600);
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.carousel-arrow:hover:not(:disabled) {
+  background: var(--primary-soft);
+  color: var(--primary-medium);
+}
+
+.carousel-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.carousel-week-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
 /* Date carousel */
 .date-carousel {
   display: flex;
   gap: 0.3rem;
-  padding-bottom: 0.5rem;
   margin-bottom: 1.25rem;
 }
 

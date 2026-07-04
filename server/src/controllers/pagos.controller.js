@@ -1,6 +1,5 @@
 const prisma = require('../lib/prisma')
 const culqiService = require('../services/culqi.service')
-const { usarCredito } = require('../services/credito.service')
 
 function generarCodigoPago() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -11,18 +10,31 @@ function generarCodigoPago() {
   return codigo
 }
 
+function claseHaPasado(clase) {
+  const ahora = new Date().toISOString()
+  const hoyStr = ahora.substring(0, 10)
+  const ahoraTimeStr = ahora.substring(11, 19)
+  const fechaStr = clase.fecha.toISOString().substring(0, 10)
+  const horaFinStr = clase.horaFin.toISOString().substring(11, 19)
+  return fechaStr < hoyStr || (fechaStr === hoyStr && horaFinStr < ahoraTimeStr)
+}
+
 async function verificarDisponibilidad(claseId, posicionClaseId) {
+  const ahora = new Date()
+
+  await prisma.reserva.updateMany({
+    where: { posicionClaseId, estado: 'PENDIENTE', expiracionReserva: { lt: ahora } },
+    data: { estado: 'EXPIRADA', updatedAt: ahora },
+  })
+
   const posicion = await prisma.posicionClase.findUnique({
     where: { id: posicionClaseId },
-    include: { reservas: true },
+    include: { reservas: { where: { estado: { notIn: ['CANCELADA', 'EXPIRADA'] } } } },
   })
   if (!posicion || posicion.claseId !== claseId) {
     return { error: 'Posición no válida', status: 400 }
   }
-  const ocupada = posicion.reservas.some(
-    (r) => r.estado !== 'CANCELADA' && r.estado !== 'EXPIRADA'
-  )
-  if (ocupada) {
+  if (posicion.reservas.length > 0) {
     return { error: 'El asiento ya está ocupado', status: 409 }
   }
   return { ok: true }
@@ -38,6 +50,7 @@ async function iniciarHold(req, res, next) {
       include: { horarioSemanal: { include: { categoria: true } } },
     })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
+    if (claseHaPasado(clase)) return res.status(409).json({ error: 'La clase ya pasó' })
 
     const disp = await verificarDisponibilidad(claseId, posicionClaseId)
     if (!disp.ok) return res.status(disp.status).json({ error: disp.error })
@@ -85,6 +98,13 @@ async function confirmarPago(req, res, next) {
     }
     if (reserva.estado !== 'PENDIENTE') {
       return res.status(400).json({ error: 'La reserva ya fue procesada o cancelada' })
+    }
+    if (claseHaPasado(reserva.clase)) {
+      await prisma.reserva.update({
+        where: { id: holdId },
+        data: { estado: 'EXPIRADA', updatedAt: new Date() },
+      })
+      return res.status(409).json({ error: 'La clase ya pasó' })
     }
     if (reserva.expiracionReserva && new Date() > new Date(reserva.expiracionReserva)) {
       await prisma.reserva.update({
@@ -166,54 +186,68 @@ async function procesarPago(req, res, next) {
       include: { horarioSemanal: { include: { categoria: true } } },
     })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
+    if (claseHaPasado(clase)) return res.status(409).json({ error: 'La clase ya pasó' })
 
     const disp = await verificarDisponibilidad(claseId, posicionClaseId)
     if (!disp.ok) return res.status(disp.status).json({ error: disp.error })
 
     const precio = Number(clase.horarioSemanal.categoria.precio)
-    const creditoUsado = await usarCredito(usuarioId, claseId, null)
-
-    if (!creditoUsado) {
-      return res.status(402).json({ error: 'No tienes créditos disponibles' })
-    }
-
     const codigoPago = generarCodigoPago()
-    const reserva = await prisma.reserva.create({
-      data: {
-        usuarioId,
-        claseId,
-        posicionClaseId,
-        codigoPago,
-        estado: 'CONFIRMADA',
-        fechaConfirmacion: new Date(),
-        usoCredito: true,
-      },
-    })
 
-    await prisma.credito.update({
-      where: { id: creditoUsado.id },
-      data: { reservaId: reserva.id },
-    })
+    const result = await prisma.$transaction(async (tx) => {
+      const credito = await tx.credito.findFirst({
+        where: { usuarioId, usado: false },
+        orderBy: { fechaCreacion: 'asc' },
+      })
+      if (!credito) {
+        throw new Error('No tienes créditos disponibles')
+      }
 
-    await prisma.pago.create({
-      data: {
-        reservaId: reserva.id,
-        metodoPago: 'creditos',
-        monto: precio,
-        estado: 'PAGADO',
-        fechaPago: new Date(),
-      },
+      await tx.credito.update({
+        where: { id: credito.id },
+        data: { usado: true, fechaUso: new Date(), claseId },
+      })
+
+      const reserva = await tx.reserva.create({
+        data: {
+          usuarioId,
+          claseId,
+          posicionClaseId,
+          codigoPago,
+          estado: 'CONFIRMADA',
+          fechaConfirmacion: new Date(),
+          usoCredito: true,
+        },
+      })
+
+      await tx.credito.update({
+        where: { id: credito.id },
+        data: { reservaId: reserva.id },
+      })
+
+      await tx.pago.create({
+        data: {
+          reservaId: reserva.id,
+          metodoPago: 'creditos',
+          monto: precio,
+          estado: 'PAGADO',
+          fechaPago: new Date(),
+        },
+      })
+
+      return { codigoPago, reservaId: reserva.id, monto: precio }
     })
 
     res.status(201).json({
       success: true,
-      codigoPago,
-      reservaId: reserva.id,
-      monto: precio,
+      ...result,
       metodoPago: 'creditos',
       creditoUsado: true,
     })
   } catch (error) {
+    if (error.message === 'No tienes créditos disponibles') {
+      return res.status(402).json({ error: error.message })
+    }
     next(error)
   }
 }
