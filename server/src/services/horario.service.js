@@ -34,7 +34,7 @@ function formatear(horario) {
 function parsearHora(horaStr) {
   const [h, m] = horaStr.split(':').map(Number)
   const d = new Date('1970-01-01T00:00:00.000Z')
-  d.setUTCHours(h, m, 0, 0)
+  d.setHours(h, m, 0, 0)
   return d
 }
 
@@ -55,7 +55,7 @@ async function listar() {
 
   // Cuántas clases futuras PROGRAMADAS tiene cada horario (para avisar cuando se acaban)
   const hoy = new Date()
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
   const counts = await prisma.clase.groupBy({
     by: ['horarioSemanalId'],
     where: { fecha: { gte: hoy }, estado: 'PROGRAMADA' },

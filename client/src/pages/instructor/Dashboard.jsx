@@ -3,7 +3,7 @@ import { Calendar, Clock, Users, Music } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
-import { formatHoraAMPM } from '../../utils/helpers'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Dashboard() {
@@ -52,7 +52,7 @@ export default function Dashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.95rem', color: 'var(--gray-600)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Calendar size={18} className="icon-muted" aria-hidden="true" />
-                {proximaClase.fecha}
+                {formatFechaBonita(proximaClase.fecha)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Clock size={18} className="icon-muted" aria-hidden="true" />

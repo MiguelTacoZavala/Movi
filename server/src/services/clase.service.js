@@ -8,22 +8,29 @@ const DIA_OFFSET = {
 
 function getMondayOfCurrentWeek() {
   const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
-  const day = today.getUTCDay() // 0=Dom, 1=Lun, ..., 6=Sab
+  today.setHours(0, 0, 0, 0)
+  const day = today.getDay()
   const diasDesdeLunes = day === 0 ? 6 : day - 1
-  today.setUTCDate(today.getUTCDate() - diasDesdeLunes)
+  today.setDate(today.getDate() - diasDesdeLunes)
   return today
 }
 
 function getFechaClase(monday, diaSemana, weekOffset) {
   const fecha = new Date(monday)
-  fecha.setUTCDate(monday.getUTCDate() + weekOffset * 7 + DIA_OFFSET[diaSemana])
+  fecha.setDate(monday.getDate() + weekOffset * 7 + DIA_OFFSET[diaSemana])
   return fecha
+}
+
+function hhmm(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+function yyyymmdd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function combinarFechaHora(fecha, horaRef) {
   const d = new Date(fecha)
-  d.setUTCHours(horaRef.getUTCHours(), horaRef.getUTCMinutes(), 0, 0)
+  d.setHours(horaRef.getHours(), horaRef.getMinutes(), 0, 0)
   return d
 }
 
@@ -71,9 +78,9 @@ const includeDetalle = {
 function formatear(clase) {
   return {
     id: clase.id,
-    fecha: clase.fecha.toISOString().substring(0, 10),
-    horaInicio: clase.horaInicio.toISOString().substring(11, 16),
-    horaFin: clase.horaFin.toISOString().substring(11, 16),
+    fecha: yyyymmdd(clase.fecha),
+    horaInicio: hhmm(clase.horaInicio),
+    horaFin: hhmm(clase.horaFin),
     capacidadMaxima: clase.capacidadMaxima,
     minimoParticipantes: clase.minimoParticipantes,
     tematica: clase.tematica,
@@ -100,7 +107,7 @@ async function generar({ semanas }) {
   const monday = getMondayOfCurrentWeek()
 
   const hoy = new Date()
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
 
   let creadas = 0
   let omitidas = 0
@@ -168,10 +175,10 @@ async function crearSesionesHorario(horario, hastaStr) {
   const monday = getMondayOfCurrentWeek()
 
   const hoy = new Date()
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
 
   const hasta = new Date(hastaStr)
-  hasta.setUTCHours(0, 0, 0, 0)
+  hasta.setHours(0, 0, 0, 0)
 
   let creadas = 0
   let omitidas = 0
@@ -242,7 +249,7 @@ async function generarDesdeHorario(horarioId, hasta) {
 // para las reservas confirmadas (misma regla que cancelar una clase suelta).
 async function cancelarFuturasDeHorario(horarioId) {
   const hoy = new Date()
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
 
   const clases = await prisma.clase.findMany({
     where: { horarioSemanalId: horarioId, fecha: { gte: hoy }, estado: 'PROGRAMADA' },
@@ -288,7 +295,7 @@ async function cancelarFuturasDeHorario(horarioId) {
 async function finalizarClasesPasadas() {
   const ahora = new Date()
   const hoy = new Date()
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
 
   const { count } = await prisma.clase.updateMany({
     where: {
@@ -315,9 +322,9 @@ async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limi
 
   if (fecha) {
     const d = new Date(fecha)
-    d.setUTCHours(0, 0, 0, 0)
+    d.setHours(0, 0, 0, 0)
     const siguiente = new Date(d)
-    siguiente.setUTCDate(d.getUTCDate() + 1)
+    siguiente.setDate(d.getDate() + 1)
     where.fecha = { gte: d, lt: siguiente }
   }
 
@@ -372,7 +379,7 @@ async function cancelar(id) {
   if (!clase) return null
 
   const hoy = new Date()
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
   if (clase.fecha < hoy) throw { yaPasada: true }
 
   if (clase.estado === 'CANCELADA') throw { yaCancelada: true }

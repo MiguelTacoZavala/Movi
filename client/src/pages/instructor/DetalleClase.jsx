@@ -4,7 +4,7 @@ import { ArrowLeft, Calendar, Clock, Users, User, Edit3, Check, X } from 'lucide
 import Button from '../../components/common/Button'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
-import { formatHoraAMPM } from '../../utils/helpers'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function DetalleClase() {
@@ -84,12 +84,14 @@ export default function DetalleClase() {
             <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--gray-900)' }}>
               {clase.categoria || 'Clase'}
             </h2>
-            <span className="status-badge status-info">Programada</span>
+            <span className={`status-badge ${clase.estado === 'EN_CURSO' ? 'status-active' : clase.estado === 'CANCELADA' ? 'status-danger' : clase.estado === 'FINALIZADA' ? 'status-warning' : 'status-info'}`}>
+              {clase.estado === 'EN_CURSO' ? 'En Curso' : clase.estado === 'CANCELADA' ? 'Cancelada' : clase.estado === 'FINALIZADA' ? 'Finalizada' : 'Programada'}
+            </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Calendar size={16} className="icon-muted" aria-hidden="true" />
-              {clase.fecha}
+              {formatFechaBonita(clase.fecha)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Clock size={16} className="icon-muted" aria-hidden="true" />

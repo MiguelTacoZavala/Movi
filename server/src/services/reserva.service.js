@@ -1,5 +1,15 @@
 const prisma = require('../lib/prisma')
 
+function hhmm(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+function yyyymmdd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function hhmmss(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
+}
+
 const includeClase = {
   clase: {
     select: {
@@ -26,11 +36,11 @@ const includeClase = {
 }
 
 function haPasado(clase) {
-  const ahora = new Date().toISOString()
-  const hoyStr = ahora.substring(0, 10)
-  const ahoraTimeStr = ahora.substring(11, 19)
-  const fechaStr = clase.fecha.toISOString().substring(0, 10)
-  const horaFinStr = clase.horaFin.toISOString().substring(11, 19)
+  const ahora = new Date()
+  const hoyStr = yyyymmdd(ahora)
+  const ahoraTimeStr = hhmmss(ahora)
+  const fechaStr = yyyymmdd(clase.fecha)
+  const horaFinStr = hhmmss(clase.horaFin)
   return fechaStr < hoyStr || (fechaStr === hoyStr && horaFinStr < ahoraTimeStr)
 }
 
@@ -51,9 +61,9 @@ function formatear(reserva) {
     asiento: reserva.posicionClase?.numero,
     clase: {
       id: reserva.clase.id,
-      fecha: reserva.clase.fecha.toISOString().substring(0, 10),
-      horaInicio: reserva.clase.horaInicio.toISOString().substring(11, 16),
-      horaFin: reserva.clase.horaFin.toISOString().substring(11, 16),
+      fecha: yyyymmdd(reserva.clase.fecha),
+      horaInicio: hhmm(reserva.clase.horaInicio),
+      horaFin: hhmm(reserva.clase.horaFin),
       estado: reserva.clase.estado,
       capacidadMaxima: reserva.clase.capacidadMaxima,
       tematica: reserva.clase.tematica,

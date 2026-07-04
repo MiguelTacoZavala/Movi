@@ -10,12 +10,19 @@ function generarCodigoPago() {
   return codigo
 }
 
+function yyyymmdd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function hhmmss(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
+}
+
 function claseHaPasado(clase) {
-  const ahora = new Date().toISOString()
-  const hoyStr = ahora.substring(0, 10)
-  const ahoraTimeStr = ahora.substring(11, 19)
-  const fechaStr = clase.fecha.toISOString().substring(0, 10)
-  const horaFinStr = clase.horaFin.toISOString().substring(11, 19)
+  const ahora = new Date()
+  const hoyStr = yyyymmdd(ahora)
+  const ahoraTimeStr = hhmmss(ahora)
+  const fechaStr = yyyymmdd(clase.fecha)
+  const horaFinStr = hhmmss(clase.horaFin)
   return fechaStr < hoyStr || (fechaStr === hoyStr && horaFinStr < ahoraTimeStr)
 }
 
@@ -134,7 +141,7 @@ async function confirmarPago(req, res, next) {
         tokenId,
         monto: precio,
         email: usuario.email || 'cliente@movi.com',
-        descripcion: `${reserva.clase.horarioSemanal.categoria.nombre} - ${reserva.clase.fecha.toISOString().split('T')[0]}`,
+        descripcion: `${reserva.clase.horarioSemanal.categoria.nombre} - ${yyyymmdd(reserva.clase.fecha)}`,
       })
       chargeId = cargo.chargeId
     } catch (culqiError) {
