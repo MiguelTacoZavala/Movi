@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Clock, Calendar, Users } from 'lucide-react'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
-import { formatHoraAMPM } from '../../utils/helpers'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Historial() {
@@ -50,7 +50,7 @@ export default function Historial() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Calendar size={16} className="icon-muted" aria-hidden="true" />
-                  {clase.fecha}
+                  {formatFechaBonita(clase.fecha)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={16} className="icon-muted" aria-hidden="true" />

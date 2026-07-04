@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Music, Calendar, Clock, Users, ChevronRight } from 'lucide-react'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
-import { formatHoraAMPM } from '../../utils/helpers'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Clases() {
@@ -73,7 +73,7 @@ export default function Clases() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Calendar size={16} className="icon-muted" aria-hidden="true" />
-                  {clase.fecha}
+                  {formatFechaBonita(clase.fecha)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={16} className="icon-muted" aria-hidden="true" />

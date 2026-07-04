@@ -1,6 +1,13 @@
 const prisma = require('../lib/prisma')
 const { limpiarHoldsExpirados } = require('./reserva.service')
 
+function hhmm(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+function yyyymmdd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const includeClase = {
   horarioSemanal: {
     select: {
@@ -16,9 +23,9 @@ const includeClase = {
 function formatearClase(c) {
   return {
     id: c.id,
-    fecha: c.fecha.toISOString().substring(0, 10),
-    horaInicio: c.horaInicio.toISOString().substring(11, 16),
-    horaFin: c.horaFin.toISOString().substring(11, 16),
+    fecha: yyyymmdd(c.fecha),
+    horaInicio: hhmm(c.horaInicio),
+    horaFin: hhmm(c.horaFin),
     estado: c.estado,
     tematica: c.tematica,
     inscritos: c._count.reservas,
@@ -37,20 +44,26 @@ async function resumenAdmin() {
   const ahora = new Date()
 
   const hoy = new Date(ahora)
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
   const mañana = new Date(hoy)
-  mañana.setUTCDate(hoy.getUTCDate() + 1)
+  mañana.setDate(hoy.getDate() + 1)
 
-  const diasDesdeLunes = ahora.getUTCDay() === 0 ? 6 : ahora.getUTCDay() - 1
+  const diasDesdeLunes = ahora.getDay() === 0 ? 6 : ahora.getDay() - 1
   const lunes = new Date(hoy)
-  lunes.setUTCDate(hoy.getUTCDate() - diasDesdeLunes)
+  lunes.setDate(hoy.getDate() - diasDesdeLunes)
   const proximoLunes = new Date(lunes)
-  proximoLunes.setUTCDate(lunes.getUTCDate() + 7)
+  proximoLunes.setDate(lunes.getDate() + 7)
 
-  const inicioMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1))
-  const finMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1))
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+  const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1)
 
-  const [pagoHoy, pagoSemana, pagoMes, clasesHoyRaw, todasCategorias, clasesEnRiesgoRaw] =
+  const clasesHoyRaw = await prisma.clase.findMany({
+    where: { fecha: { gte: hoy, lt: mañana } },
+    include: includeClase,
+    orderBy: { horaInicio: 'asc' },
+  })
+
+  const [pagoHoy, pagoSemana, pagoMes, todasCategorias, clasesEnRiesgoRaw] =
     await Promise.all([
       prisma.pago.aggregate({
         _sum: { monto: true },
@@ -63,11 +76,6 @@ async function resumenAdmin() {
       prisma.pago.aggregate({
         _sum: { monto: true },
         where: { estado: 'PAGADO', fechaPago: { gte: inicioMes, lt: finMes } },
-      }),
-      prisma.clase.findMany({
-        where: { fecha: { gte: hoy, lt: mañana } },
-        include: includeClase,
-        orderBy: { horaInicio: 'asc' },
       }),
       prisma.categoriaBaile.findMany({ select: { id: true, nombre: true } }),
       prisma.clase.findMany({
@@ -106,7 +114,7 @@ async function resumenCliente(usuarioId) {
 
   const ahora = new Date()
   const hoy = new Date(ahora)
-  hoy.setUTCHours(0, 0, 0, 0)
+  hoy.setHours(0, 0, 0, 0)
 
   const reservas = await prisma.reserva.findMany({
     where: { usuarioId, estado: 'CONFIRMADA', clase: { fecha: { gte: hoy } } },
@@ -129,24 +137,23 @@ async function resumenCliente(usuarioId) {
     take: 5,
   })
 
-  const ahoraISO = ahora.toISOString()
-  const ahoraDateStr = ahoraISO.substring(0, 10)
-  const ahoraTimeStr = ahoraISO.substring(11, 19)
+  const ahoraDateStr = yyyymmdd(ahora)
+  const ahoraTimeStr = hhmm(ahora) + ':' + String(ahora.getSeconds()).padStart(2, '0')
 
   function claseHaPasado(c) {
-    const fechaStr = c.fecha.toISOString().substring(0, 10)
-    const horaFinStr = c.horaFin.toISOString().substring(11, 19)
+    const fechaStr = yyyymmdd(c.fecha)
+    const horaFinStr = hhmm(c.horaFin) + ':' + String(c.horaFin.getSeconds()).padStart(2, '0')
     return fechaStr < ahoraDateStr || (fechaStr === ahoraDateStr && horaFinStr < ahoraTimeStr)
   }
 
   const reservaValida = reservas.find(r => {
     if (!r.clase) return false
     const c = r.clase
-    const fechaStr = c.fecha.toISOString().substring(0, 10)
+    const fechaStr = yyyymmdd(c.fecha)
 
     if (fechaStr < ahoraDateStr) return false
     if (fechaStr > ahoraDateStr) return !claseHaPasado(c)
-    const horaStr = c.horaInicio.toISOString().substring(11, 19)
+    const horaStr = hhmm(c.horaInicio) + ':' + String(c.horaInicio.getSeconds()).padStart(2, '0')
     return horaStr > ahoraTimeStr
   })
 
@@ -158,9 +165,9 @@ async function resumenCliente(usuarioId) {
         estadoDisplay: 'CONFIRMADA',
         clase: {
           id: reservaValida.clase.id,
-          fecha: reservaValida.clase.fecha.toISOString().substring(0, 10),
-          horaInicio: reservaValida.clase.horaInicio.toISOString().substring(11, 16),
-          horaFin: reservaValida.clase.horaFin.toISOString().substring(11, 16),
+          fecha: yyyymmdd(reservaValida.clase.fecha),
+          horaInicio: hhmm(reservaValida.clase.horaInicio),
+          horaFin: hhmm(reservaValida.clase.horaFin),
           categoria: reservaValida.clase.horarioSemanal?.categoria,
           instructor: reservaValida.clase.horarioSemanal?.instructor
             ? {
@@ -198,9 +205,9 @@ async function resumenCliente(usuarioId) {
     .filter(c => c._count.reservas < c.capacidadMaxima)
     .map(c => ({
       id: c.id,
-      fecha: c.fecha.toISOString().substring(0, 10),
-      horaInicio: c.horaInicio.toISOString().substring(11, 16),
-      horaFin: c.horaFin.toISOString().substring(11, 16),
+      fecha: yyyymmdd(c.fecha),
+      horaInicio: hhmm(c.horaInicio),
+      horaFin: hhmm(c.horaFin),
       ocupacion: c._count.reservas,
       capacidadMaxima: c.capacidadMaxima,
       categoria: c.horarioSemanal.categoria,

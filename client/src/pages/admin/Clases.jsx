@@ -23,7 +23,8 @@ const estadoConfig = {
 
 // Una clase con fecha anterior a hoy ya no se puede cancelar
 function esClasePasada(fecha) {
-  const hoy = new Date().toISOString().substring(0, 10)
+  const now = new Date()
+  const hoy = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   return fecha < hoy
 }
 

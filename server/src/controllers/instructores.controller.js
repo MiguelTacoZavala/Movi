@@ -1,6 +1,13 @@
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
 
+function hhmm(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+function yyyymmdd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function formatearInstructor(inst) {
   return {
     id: inst.id,
@@ -192,9 +199,9 @@ const includeClaseBase = {
 function formatearClase(c) {
   return {
     id: c.id,
-    fecha: c.fecha.toISOString().substring(0, 10),
-    horaInicio: c.horaInicio.toISOString().substring(11, 16),
-    horaFin: c.horaFin.toISOString().substring(11, 16),
+    fecha: yyyymmdd(c.fecha),
+    horaInicio: hhmm(c.horaInicio),
+    horaFin: hhmm(c.horaFin),
     estado: c.estado,
     tematica: c.tematica,
     capacidadMaxima: c.capacidadMaxima,
@@ -212,9 +219,9 @@ async function dashboard(req, res, next) {
 
     const ahora = new Date()
     const hoy = new Date(ahora)
-    hoy.setUTCHours(0, 0, 0, 0)
+    hoy.setHours(0, 0, 0, 0)
     const mañana = new Date(hoy)
-    mañana.setUTCDate(hoy.getUTCDate() + 1)
+    mañana.setDate(hoy.getDate() + 1)
 
     const [proximaClase, clasesHoy] = await Promise.all([
       prisma.clase.findFirst({
@@ -282,7 +289,7 @@ async function misClases(req, res, next) {
 
     const ahora = new Date()
     const hoy = new Date(ahora)
-    hoy.setUTCHours(0, 0, 0, 0)
+    hoy.setHours(0, 0, 0, 0)
 
     const clases = await prisma.clase.findMany({
       where: {
@@ -342,11 +349,12 @@ async function obtenerParticipantes(req, res, next) {
     res.json({
       clase: {
         id: clase.id,
-        fecha: clase.fecha.toISOString().substring(0, 10),
-        horaInicio: clase.horaInicio.toISOString().substring(11, 16),
-        horaFin: clase.horaFin.toISOString().substring(11, 16),
+        fecha: yyyymmdd(clase.fecha),
+        horaInicio: hhmm(clase.horaInicio),
+        horaFin: hhmm(clase.horaFin),
         capacidadMaxima: clase.capacidadMaxima,
         tematica: clase.tematica,
+        estado: clase.estado,
         categoria: clase.horarioSemanal?.categoria?.nombre || null,
       },
       participantes,
