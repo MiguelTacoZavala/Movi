@@ -40,15 +40,10 @@ vite.svg
 # Cache
 .cache/
 
-*.md
-
 # Archivos generados
 *.tsbuildinfo
-AGENTS.md
-CLAUDE.md
-evaluacion.md
 
-vercel.json
-
-usuarios.txt
-evaluacionwcag3.3.md
+# Documentos de seguimiento (no versionar)
+correcciones.md
+COMMITS_GUIDE.md
+historias_usuario_jira.txt
