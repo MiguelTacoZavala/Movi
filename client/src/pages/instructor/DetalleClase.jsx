@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Clock, Users, User, Edit3, Check, X } from 'lucide-react'
 import Button from '../../components/common/Button'
+import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
@@ -17,10 +18,11 @@ export default function DetalleClase() {
   const [tematicaInput, setTematicaInput] = useState('')
   const [guardandoTematica, setGuardandoTematica] = useState(false)
   const [error, setError] = useState(null)
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false)
 
   useEffect(() => {
     setLoading(true)
-    api.get(`/instructores/clases/${id}/participantes`).then(res => {
+    api.cachedGet(`/instructores/clases/${id}/participantes`).then(res => {
       setClase(res.clase)
       setParticipantes(res.participantes || [])
       setError(null)
@@ -43,6 +45,11 @@ export default function DetalleClase() {
       await api.patch(`/instructores/clases/${id}/tematica`, { tematica: val })
       setClase(prev => ({ ...prev, tematica: val }))
       setEditandoTematica(false)
+      api.invalidateCache([
+        '/instructores/mis-clases',
+        '/instructores/dashboard',
+        `/instructores/clases/${id}/participantes`
+      ])
     } catch {
       alert('Ocurrió un error al guardar la temática. Por favor, inténtalo de nuevo en unos momentos.')
     } finally {
@@ -115,12 +122,12 @@ export default function DetalleClase() {
                     style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid var(--gray-300)', fontSize: '0.9rem', width: '180px' }}
                     placeholder="LIBRE"
                     autoFocus
-                    aria-label="Campo temática"
+                    aria-label="Campo temática de clase"
                   />
-                  <button onClick={guardarTematica} disabled={guardandoTematica} style={{ background: 'var(--success)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }} aria-label="Guardar temática" title="Guardar temática">
+                  <button onClick={() => setConfirmModalOpen(true)} style={{ background: 'var(--success)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }} aria-label="Confirmar cambio de temática" title="Confirmar cambio de temática">
                     <Check size={14} aria-hidden="true" />
                   </button>
-                  <button onClick={cancelarEdicion} style={{ background: 'var(--gray-200)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--gray-600)' }} aria-label="Cancelar edición" title="Cancelar edición">
+                  <button onClick={cancelarEdicion} style={{ background: 'var(--gray-200)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--gray-600)' }} aria-label="Cancelar edición de temática" title="Cancelar edición de temática">
                     <X size={14} aria-hidden="true" />
                   </button>
                 </div>
@@ -129,7 +136,7 @@ export default function DetalleClase() {
               )}
             </div>
             {!editandoTematica && (
-              <button onClick={iniciarEdicion} title="Cambiar la temática de la clase" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-medium)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }} aria-label="Editar temática">
+              <button onClick={iniciarEdicion} title="Cambiar la temática de la clase" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-medium)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }} aria-label="Editar temática de la clase">
                 <Edit3 size={14} aria-hidden="true" />
                 Editar
               </button>
@@ -166,6 +173,33 @@ export default function DetalleClase() {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={confirmModalOpen}
+        onClose={() => setConfirmModalOpen(false)}
+        title="Confirmar Cambio de Temática"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+          <p style={{ color: 'var(--gray-600)', fontSize: '0.95rem', lineHeight: '1.5' }}>
+            ¿Estás seguro de que deseas cambiar la temática de la clase a <strong>"{tematicaInput}"</strong>? 
+            Este cambio será visible inmediatamente para todos los alumnos inscritos.
+          </p>
+          <div className="modal-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <Button 
+              onClick={async () => {
+                await guardarTematica()
+                setConfirmModalOpen(false)
+              }}
+              disabled={guardandoTematica}
+            >
+              {guardandoTematica ? 'Guardando...' : 'Confirmar'}
+            </Button>
+            <Button variant="secondary" onClick={() => setConfirmModalOpen(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
