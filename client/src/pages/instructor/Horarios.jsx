@@ -11,7 +11,7 @@ export default function Horarios() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/instructores/mis-horarios').then(res => {
+    api.cachedGet('/instructores/mis-horarios').then(res => {
       setHorarios(res.horarios || [])
       setError(null)
     }).catch(() => {
@@ -42,7 +42,12 @@ export default function Horarios() {
         </div>
       ) : (
         ordenados.map((h, idx) => (
-          <div key={h.id} className="client-card" style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}>
+          <div
+            key={h.id}
+            className="client-card"
+            style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}
+            aria-label={`Clase de ${h.categoria?.nombre || ''} los días ${h.diaSemana?.charAt(0) + h.diaSemana?.slice(1).toLowerCase() || ''} de ${formatHoraAMPM(h.horaInicio)} a ${formatHoraAMPM(h.horaFin)}. Capacidad máxima de ${h.capacidadMaxima} alumnos.`}
+          >
             <div className="client-card-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--gray-900)' }}>

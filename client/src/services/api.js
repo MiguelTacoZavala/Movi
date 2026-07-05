@@ -113,6 +113,16 @@ const api = {
     Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
   },
 
+  preloadInstructorData() {
+    const endpoints = [
+      '/instructores/dashboard',
+      '/instructores/mis-clases',
+      '/instructores/mis-horarios',
+      '/instructores/historial',
+    ]
+    Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
+  },
+
   post(path, body) {
     return api.request('POST', path, body)
   },
