@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/instructores/dashboard').then(res => {
+    api.cachedGet('/instructores/dashboard').then(res => {
       setData(res)
       setError(null)
     }).catch(() => {

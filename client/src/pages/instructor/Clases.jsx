@@ -13,7 +13,7 @@ export default function Clases() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/instructores/mis-clases').then(res => {
+    api.cachedGet('/instructores/mis-clases').then(res => {
       setClases(res.clases || [])
       setError(null)
     }).catch(() => {
@@ -28,7 +28,7 @@ export default function Clases() {
       EN_CURSO: { label: 'En Curso', className: 'status-active' },
     }
     const cfg = map[estado] || { label: estado, className: '' }
-    return <span className={`status-badge ${cfg.className}`}>{cfg.label}</span>
+    return <span className={`status-badge ${cfg.className}`} aria-label={`Estado: ${cfg.label}`}>{cfg.label}</span>
   }
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
