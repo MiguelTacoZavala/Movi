@@ -22,7 +22,9 @@ export default function MisClases() {
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('proximas')
   const [cancelando, setCancelando] = useState(null)
+  const [cancelandoLoading, setCancelandoLoading] = useState(false)
   const [comprobante, setComprobante] = useState(null)
+  const [mensaje, setMensaje] = useState('')
 
   useEffect(() => {
     api.cachedGet('/reservas/mis-reservas').then(data => {
@@ -44,19 +46,24 @@ export default function MisClases() {
 
   const confirmarCancel = async () => {
     if (!cancelando) return
+    setCancelandoLoading(true)
     try {
       const data = await api.patch(`/reservas/${cancelando.id}/cancelar`)
       setReservas(reservas.map(r => r.id === cancelando.id ? data.reserva : r))
       setCancelando(null)
       api.invalidateCache()
+      setMensaje('Reserva cancelada. Se generó un crédito para futuras inscripciones.')
+      setTimeout(() => setMensaje(''), 5000)
     } catch {
       alert('No se pudo cancelar la reserva. Intenta de nuevo.')
+    } finally {
+      setCancelandoLoading(false)
     }
   }
 
   return (
     <div>
-      <Modal isOpen={!!cancelando} onClose={() => setCancelando(null)} title="¿Cancelar inscripción?">
+      <Modal isOpen={!!cancelando} onClose={() => !cancelandoLoading && setCancelando(null)} title="¿Cancelar inscripción?">
         {cancelando && (
           <>
             <div className="cancel-inscripcion-preview">
@@ -71,10 +78,21 @@ export default function MisClases() {
               </p>
             )}
             <AlertTriangle size={48} style={{ display: 'block', margin: '1rem auto', color: 'var(--warning)' }} />
-            <p className="modal-subtitle">Esta acción no se puede deshacer.</p>
+            <p className="modal-subtitle">
+              {cancelandoLoading
+                ? 'Cancelando tu inscripción...'
+                : cancelando.usoCredito
+                  ? 'Se restaurará tu crédito al cancelar.'
+                  : 'Se generará un crédito de devolución. Esta acción no se puede deshacer.'
+              }
+            </p>
             <div className="modal-actions">
-              <Button variant="secondary" onClick={() => setCancelando(null)}>No, mantener</Button>
-              <Button variant="danger" onClick={confirmarCancel}>Sí, cancelar</Button>
+              <Button variant="secondary" onClick={() => setCancelando(null)} disabled={cancelandoLoading}>
+                No, mantener
+              </Button>
+              <Button variant="danger" onClick={confirmarCancel} disabled={cancelandoLoading}>
+                {cancelandoLoading ? 'Cancelando...' : 'Sí, cancelar'}
+              </Button>
             </div>
           </>
         )}
@@ -149,6 +167,13 @@ export default function MisClases() {
           Pasadas
         </Button>
       </div>
+
+      {mensaje && (
+        <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
+          <CheckCircle size={18} />
+          <span>{mensaje}</span>
+        </div>
+      )}
 
       <div>
         {loading ? (

@@ -46,6 +46,7 @@ export default function DetalleClase() {
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState('')
   const [pagandoYape, setPagandoYape] = useState(false)
+  const [procesandoPagoYape, setProcesandoPagoYape] = useState(false)
 
   useEffect(() => {
     api.get(`/clases/${id}`).then(res => {
@@ -54,6 +55,10 @@ export default function DetalleClase() {
       setClase(null)
     }).finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    return () => { culqi.close() }
+  }, [])
 
   useEffect(() => {
     if (!holdActive) return
@@ -110,6 +115,54 @@ export default function DetalleClase() {
     setShowResumenModal(true)
   }
 
+  const openCulqiYape = async (holdIdState, precioState) => {
+    setPagandoYape(true)
+    setError('')
+    try {
+      const tokenId = await culqi.generarToken({
+        amount: precioState,
+        email: user?.email || 'cliente@movi.com',
+        description: `${clase.categoria?.nombre} - ${clase.fecha}`,
+      })
+
+      setPagandoYape(false)
+      setProcesandoPagoYape(true)
+
+      const result = await api.confirmarPago({
+        holdId: holdIdState,
+        tokenId,
+      })
+
+      api.invalidateCache()
+      setInscripcionData({
+        categoria: clase.categoria?.nombre,
+        instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
+        fecha: clase.fecha,
+        hora_inicio: clase.horaInicio,
+        asiento: selectedSeat.numero,
+        metodoPago: 'yape',
+        tematica: clase.tematica || 'LIBRE',
+        codigoPago: result.codigoPago,
+        monto: result.monto,
+      })
+      setHoldActive(false)
+      setInscripcionExitosa(true)
+    } catch (e) {
+      setError(e.data?.error || e.message || 'No pudimos completar el pago con Yape. Intenta de nuevo.')
+      if (e.status === 410 || e.status === 409 || e.status === 402) {
+        setHoldActive(false)
+        setHoldId(null)
+        setHoldCodigoPago(null)
+        setSelectedSeat(null)
+        setMetodoPago(null)
+        setHoldExpired(true)
+      }
+    } finally {
+      setPagandoYape(false)
+      setProcesandoPagoYape(false)
+    }
+  }
+
   const handleConfirmarInscripcion = async () => {
     setShowResumenModal(false)
     setError('')
@@ -155,55 +208,14 @@ export default function DetalleClase() {
         setHoldActive(true)
         setHoldSeconds(HOLD_DURATION)
         setProcesando(false)
+
+        openCulqiYape(result.holdId, precio)
       } catch (e) {
         setError(e.data?.error || e.message || 'No pudimos reservar el asiento. Intenta de nuevo.')
         setSelectedSeat(null)
         setMetodoPago(null)
         setProcesando(false)
       }
-    }
-  }
-
-  const handlePagarConYape = async () => {
-    setPagandoYape(true)
-    setError('')
-    try {
-      const tokenId = await culqi.generarToken({
-        amount: precio,
-        description: `${clase.categoria?.nombre} - ${clase.fecha}`,
-      })
-
-      const result = await api.confirmarPago({
-        holdId,
-        tokenId,
-      })
-
-      api.invalidateCache()
-      setInscripcionData({
-        categoria: clase.categoria?.nombre,
-        instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
-        fecha: clase.fecha,
-        hora_inicio: clase.horaInicio,
-        asiento: selectedSeat.numero,
-        metodoPago: 'yape',
-        tematica: clase.tematica || 'LIBRE',
-        codigoPago: result.codigoPago,
-        monto: result.monto,
-      })
-      setHoldActive(false)
-      setInscripcionExitosa(true)
-    } catch (e) {
-      setError(e.data?.error || e.message || 'No pudimos completar el pago con Yape. Intenta de nuevo.')
-      if (e.status === 410 || e.status === 409) {
-        setHoldActive(false)
-        setHoldId(null)
-        setHoldCodigoPago(null)
-        setSelectedSeat(null)
-        setMetodoPago(null)
-        setHoldExpired(true)
-      }
-    } finally {
-      setPagandoYape(false)
     }
   }
 
@@ -292,6 +304,20 @@ export default function DetalleClase() {
         <h2>{clase?.categoria?.nombre || <span className="skeleton skeleton-inline" style={{ width: 120, height: 24 }} />}</h2>
       </div>
 
+      {holdActive && metodoPago === 'yape' && !inscripcionExitosa && (
+        <div className="hold-timer" style={{ marginTop: '0.75rem' }}>
+          <Timer size={18} />
+          <span>
+            Tiempo restante: <strong>{formatTime(holdSeconds)}</strong>
+          </span>
+          {holdCodigoPago && (
+            <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginLeft: '0.5rem' }}>
+              Reserva: <strong style={{ fontFamily: 'monospace', color: 'var(--primary-medium)' }}>{holdCodigoPago}</strong>
+            </span>
+          )}
+        </div>
+      )}
+
       {holdExpired && (
         <div className="inscripcion-closed-banner cancelled">
           <Timer size={16} />
@@ -303,6 +329,22 @@ export default function DetalleClase() {
         <div className="inscripcion-closed-banner cancelled" style={{ marginTop: '0.5rem' }}>
           <AlertTriangle size={16} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {procesandoPagoYape && (
+        <div className="processing-overlay">
+          <div className="processing-card">
+            <div className="processing-spinner" />
+            <h3>Procesando tu pago</h3>
+            <p>Estamos confirmando tu pago con Yape. Por favor espera...</p>
+            {holdActive && (
+              <div className="processing-timer">
+                <Timer size={16} />
+                <span>Tiempo restante: <strong>{formatTime(holdSeconds)}</strong></span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -380,7 +422,7 @@ export default function DetalleClase() {
                     <button
                       key={asiento.id}
                       className={`seat ${isOcupado ? 'ocupado' : 'disponible'} ${isSelected ? 'selected' : ''}`}
-                      disabled={isOcupado || holdActive || procesando}
+                      disabled={isOcupado || holdActive || procesando || procesandoPagoYape}
                       onClick={() => !isOcupado && handleSelectSeat(asiento)}
                       aria-label={`Asiento ${asiento.numero}, ${isOcupado ? 'ocupado' : 'disponible'}`}
                       style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
@@ -397,8 +439,8 @@ export default function DetalleClase() {
             <h3>¿Cómo deseas pagar?</h3>
             <div className="pago-options">
               <div
-                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
-                onClick={() => !holdActive && !procesando && handleSelectPago('creditos')}
+                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape ? 'disabled' : ''}`}
+                onClick={() => !holdActive && !procesando && !procesandoPagoYape && handleSelectPago('creditos')}
                 title="Usar un crédito disponible como método de pago"
               >
                 <CreditCard size={32} />
@@ -406,9 +448,9 @@ export default function DetalleClase() {
                 <small>disponibles</small>
               </div>
               <div
-                className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
-                onClick={() => !holdActive && !procesando && handleSelectPago('yape')}
-                title="Pagar con Yape (tarjeta online)"
+                className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape ? 'disabled' : ''}`}
+                onClick={() => !holdActive && !procesando && !procesandoPagoYape && handleSelectPago('yape')}
+                title="Pagar con Yape"
               >
                 <Smartphone size={32} />
                 <span>Yape</span>
@@ -419,35 +461,14 @@ export default function DetalleClase() {
         </>
       )}
 
-      {holdActive && metodoPago === 'yape' && (
-        <>
-          <div className="hold-timer">
-            <Timer size={18} />
-            <span>
-              Tiempo restante: <strong>{formatTime(holdSeconds)}</strong>
-            </span>
-          </div>
-
-          <div style={{
-            background: 'var(--primary-soft)', borderRadius: 12, padding: '1.25rem',
-            marginBottom: '1rem', textAlign: 'center', border: '1px solid var(--gray-200)',
-          }}>
-            <Smartphone size={32} style={{ color: 'var(--primary-medium)', marginBottom: '0.5rem' }} />
-            <p style={{ fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.25rem' }}>
-              Paga con Yape
-            </p>
-            <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '1rem' }}>
-              Código de reserva: <strong style={{ fontFamily: 'monospace', color: 'var(--primary-medium)' }}>{holdCodigoPago}</strong>
-            </p>
-            <Button
-              onClick={handlePagarConYape}
-              disabled={pagandoYape}
-              title="Abrir Culqi para pagar con Yape"
-            >
-              {pagandoYape ? 'Procesando...' : 'Pagar con Yape'}
-            </Button>
-          </div>
-        </>
+      {holdActive && metodoPago === 'yape' && error && (
+        <Button
+          onClick={() => { setError(''); openCulqiYape(holdId, precio) }}
+          disabled={pagandoYape}
+          style={{ marginTop: '0.5rem' }}
+        >
+          {pagandoYape ? 'Abriendo Culqi...' : 'Reintentar pago Yape'}
+        </Button>
       )}
 
       {!loading && !holdActive && (
@@ -463,10 +484,10 @@ export default function DetalleClase() {
         <Button
           className="btn-inscribir"
           onClick={handlePagar}
-          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando}
+          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando || pagandoYape || procesandoPagoYape}
           title={holdActive ? 'Completa el pago para continuar' : 'Confirmar asiento y procesar el pago'}
         >
-          {procesando ? 'Procesando...' : holdActive ? 'Reserva en curso...' : 'Pagar e inscribirme'}
+          {procesando ? 'Procesando...' : pagandoYape ? 'Abriendo Culqi...' : procesandoPagoYape ? 'Confirmando pago...' : holdActive ? 'Reserva en curso...' : 'Pagar e inscribirme'}
         </Button>
       )}
 
