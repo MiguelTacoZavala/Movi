@@ -39,6 +39,7 @@ export default function Clases() {
   const POR_PAGINA = 10
   const [selectedClase, setSelectedClase] = useState(null)
   const [participantsOpen, setParticipantsOpen] = useState(false)
+  const [participantsLoading, setParticipantsLoading] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [cancelTargetClase, setCancelTargetClase] = useState(null)
   const [error, setError] = useState('')
@@ -149,12 +150,17 @@ export default function Clases() {
 
   const handleViewParticipants = async (clase) => {
     setError('')
+    setSelectedClase(null)
+    setParticipantsOpen(true)
+    setParticipantsLoading(true)
     try {
       const data = await api.get(`/clases/${clase.id}`)
       setSelectedClase(data.clase)
-      setParticipantsOpen(true)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los participantes.'))
+      setParticipantsOpen(false)
+    } finally {
+      setParticipantsLoading(false)
     }
   }
 
@@ -290,10 +296,15 @@ export default function Clases() {
       <Modal
         isOpen={participantsOpen}
         onClose={() => setParticipantsOpen(false)}
-        title={`Participantes: ${selectedClase?.categoria?.nombre || ''}`}
+        title={participantsLoading && !selectedClase ? 'Cargando participantes...' : `Participantes: ${selectedClase?.categoria?.nombre || ''}`}
         size="large"
       >
-        {selectedClase && (
+        {participantsLoading && !selectedClase ? (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div className="processing-spinner" style={{ margin: '0 auto 1rem' }} />
+            <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>Cargando participantes...</p>
+          </div>
+        ) : selectedClase && (
           <div>
             <div className="clase-info-summary">
               <p><strong>Instructor:</strong> {selectedClase.instructor ? `${selectedClase.instructor.nombres} ${selectedClase.instructor.apellidos}` : '—'}</p>

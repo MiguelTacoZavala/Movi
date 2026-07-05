@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer } from 'lucide-react'
+import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
@@ -25,12 +25,13 @@ export default function MisClases() {
   const [cancelandoLoading, setCancelandoLoading] = useState(false)
   const [comprobante, setComprobante] = useState(null)
   const [mensaje, setMensaje] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     api.cachedGet('/reservas/mis-reservas').then(data => {
       setReservas(data.reservas)
     }).catch(() => {
-      alert('No pudimos cargar tus reservas. Revisa tu conexión.')
+      setError('No pudimos cargar tus reservas. Revisa tu conexión.')
     }).finally(() => setLoading(false))
   }, [])
 
@@ -55,7 +56,8 @@ export default function MisClases() {
       setMensaje('Reserva cancelada. Se generó un crédito para futuras inscripciones.')
       setTimeout(() => setMensaje(''), 5000)
     } catch {
-      alert('No se pudo cancelar la reserva. Intenta de nuevo.')
+      setError('No se pudo cancelar la reserva. Intenta de nuevo.')
+      setTimeout(() => setError(''), 4000)
     } finally {
       setCancelandoLoading(false)
     }
@@ -159,7 +161,7 @@ export default function MisClases() {
         )}
       </Modal>
 
-      <div className="filters" style={{ marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <Button variant="secondary" size="small" className={filtro === 'proximas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('proximas')} title="Mostrar solo clases próximas">
           Próximas
         </Button>
@@ -172,6 +174,13 @@ export default function MisClases() {
         <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
           <CheckCircle size={18} />
           <span>{mensaje}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>
+          <AlertCircle size={16} />
+          <span>{error}</span>
         </div>
       )}
 
@@ -199,11 +208,12 @@ export default function MisClases() {
           const st = estado(r)
           const f = toDate(r.clase.fecha)
           const esProxima = f >= hoy && st !== 'CANCELADA' && st !== 'EXPIRADA' && st !== 'FINALIZADA'
+          const cardClass = st === 'CANCELADA' ? 'cancelada' : !esProxima ? 'pasada' : 'proxima'
 
           return (
             <div
               key={r.id}
-              className="clase-card proxima"
+              className={`clase-card ${cardClass}`}
               style={{ cursor: 'pointer', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}
               onClick={() => setComprobante(r)}
             >

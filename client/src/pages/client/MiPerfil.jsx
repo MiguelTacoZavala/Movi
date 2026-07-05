@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, Moon, Sun, Camera, AlertCircle, Type, AlignLeft, ChevronDown, CaseSensitive } from 'lucide-react'
+import { User, Moon, Sun, Camera, AlertCircle, Type, AlignLeft, ChevronDown, CaseSensitive, CheckCircle } from 'lucide-react'
 import Ayuda from '../../components/common/Ayuda'
 import { useAuth } from '../../context/AuthContext'
-import { useTheme } from '../../context/ThemeContext'
+import { useTheme } from '../../context/useTheme'
 import { useAccesibilidad } from '../../context/AccesibilidadContext'
 import api from '../../services/api'
 import Button from '../../components/common/Button'
@@ -21,6 +21,10 @@ export default function MiPerfil() {
   const [previewUrl, setPreviewUrl] = useState(null)
   const [creditos, setCreditos] = useState(0)
   const [creditosError, setCreditosError] = useState('')
+  const [saveLoading, setSaveLoading] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState('')
+  const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -49,9 +53,12 @@ export default function MiPerfil() {
 
   const handleSave = async () => {
     if (!editData.nombres.trim() || !editData.apellidos.trim()) {
-      alert('Nombres y apellidos son obligatorios')
+      setSaveError('Nombres y apellidos son obligatorios.')
       return
     }
+    setSaveLoading(true)
+    setSaveError('')
+    setSaveSuccess('')
     try {
       await api.updateProfile({
         nombres: editData.nombres.trim(),
@@ -64,8 +71,12 @@ export default function MiPerfil() {
         telefono: editData.telefono.trim(),
       })
       setModalOpen(false)
+      setSaveSuccess('Perfil actualizado correctamente.')
+      setTimeout(() => setSaveSuccess(''), 4000)
     } catch {
-      alert('No se pudieron guardar los cambios. Revisa los campos e intenta de nuevo.')
+      setSaveError('No se pudieron guardar los cambios. Intenta de nuevo.')
+    } finally {
+      setSaveLoading(false)
     }
   }
 
@@ -73,17 +84,25 @@ export default function MiPerfil() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('La imagen no debe superar 5 MB.')
+      setTimeout(() => setUploadError(''), 4000)
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = (ev) => setPreviewUrl(ev.target.result)
     reader.readAsDataURL(file)
 
     setUploading(true)
+    setUploadError('')
     try {
       const result = await api.uploadProfilePhoto(file)
       updateUser({ fotoUrl: result.fotoUrl })
       setPreviewUrl(null)
     } catch {
-      alert('No se pudo subir la foto. Intenta con otro archivo.')
+      setUploadError('No se pudo subir la foto. Intenta con otro archivo.')
+      setPreviewUrl(null)
     } finally {
       setUploading(false)
     }
@@ -131,8 +150,10 @@ export default function MiPerfil() {
             onChange={handleEditChange}
           />
           <div className="modal-actions" style={{ marginTop: '0.5rem' }}>
-            <Button onClick={handleSave}>Guardar cambios</Button>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saveLoading}>
+              {saveLoading ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saveLoading}>Cancelar</Button>
           </div>
         </div>
       </Modal>
@@ -175,6 +196,12 @@ export default function MiPerfil() {
         />
         <h2 className="perfil-name">{user?.nombres} {user?.apellidos}</h2>
         {uploading && <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>Subiendo foto...</p>}
+        {uploadError && (
+          <div className="alert alert-danger" style={{ marginTop: '0.5rem' }}>
+            <AlertCircle size={16} />
+            <span>{uploadError}</span>
+          </div>
+        )}
       </div>
 
       <div className="perfil-creditos">{creditos}</div>
@@ -185,6 +212,19 @@ export default function MiPerfil() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>
           <AlertCircle size={14} />
           <span>{creditosError}</span>
+        </div>
+      )}
+
+      {saveSuccess && (
+        <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
+          <CheckCircle size={18} />
+          <span>{saveSuccess}</span>
+        </div>
+      )}
+      {saveError && (
+        <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>
+          <AlertCircle size={16} />
+          <span>{saveError}</span>
         </div>
       )}
 
@@ -201,8 +241,13 @@ export default function MiPerfil() {
         </div>
         <div className="client-card-content">
           <div
+            role="switch"
+            aria-checked={theme === 'dark'}
+            aria-label="Activar o desactivar tema oscuro"
             onClick={toggleTheme}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTheme() } }}
             title="Alternar entre tema claro y oscuro"
+            tabIndex={0}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer' }}
           >
             <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Tema oscuro</span>
@@ -220,8 +265,13 @@ export default function MiPerfil() {
             </div>
           </div>
           <div
+            role="switch"
+            aria-checked={reducedMotion}
+            aria-label="Activar o desactivar animaciones"
             onClick={toggleReducedMotion}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleReducedMotion() } }}
             title="Activar o desactivar animaciones al cambiar de página"
+            tabIndex={0}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' }}
           >
             <span style={{ color: 'var(--gray-700)', fontSize: '0.95rem' }}>Animaciones</span>
@@ -347,8 +397,13 @@ export default function MiPerfil() {
             </div>
 
             <div
+              role="switch"
+              aria-checked={dyslexiaFont}
+              aria-label="Activar o desactivar espaciado para dislexia"
               onClick={() => setDyslexiaFont(!dyslexiaFont)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDyslexiaFont(!dyslexiaFont) } }}
               title="Activar o desactivar espaciado para dislexia"
+              tabIndex={0}
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

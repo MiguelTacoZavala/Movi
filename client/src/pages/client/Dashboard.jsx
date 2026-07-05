@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Clock, Users, AlertCircle } from 'lucide-react'
+import { Calendar, Clock, Users, AlertCircle, Music } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
@@ -22,6 +22,10 @@ function getBarClass(pct) {
   return 'safe'
 }
 
+function fetchDashboardData() {
+  return api.cachedGet('/dashboard/cliente')
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -29,18 +33,25 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchDashboardData()
+      .then(res => { if (mounted) setData(res) })
+      .catch(() => { if (mounted) { setData(null); setError('No pudimos cargar tu dashboard. Revisa tu conexión.') } })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = useCallback(() => {
     setLoading(true)
     setError('')
-    api.cachedGet('/dashboard/cliente').then(res => {
-      setData(res)
-    }).catch(() => {
-      setData(null)
-      setError('No pudimos cargar tu dashboard. Revisa tu conexión.')
-    }).finally(() => setLoading(false))
+    fetchDashboardData()
+      .then(res => setData(res))
+      .catch(() => { setData(null); setError('No pudimos cargar tu dashboard. Revisa tu conexión.') })
+      .finally(() => setLoading(false))
   }, [])
-
-  useEffect(() => { cargar() }, [])
 
   const prox = data?.proximaReserva
   const creditos = data?.creditosDisponibles ?? 0
@@ -132,7 +143,11 @@ export default function Dashboard() {
       )}
 
       {data && prox && (
-        <div className="client-card" style={{ borderLeft: '4px solid var(--success)' }}>
+        <div
+          className="client-card"
+          style={{ borderLeft: '4px solid var(--success)', cursor: 'pointer' }}
+          onClick={() => navigate('/cliente/mis-clases')}
+        >
           <div className="client-card-title">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Calendar size={20} className="icon-primary" />
@@ -160,6 +175,18 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {data && !loading && !prox && grupos.length === 0 && (
+        <div className="empty-state" style={{ padding: '2rem 1rem' }}>
+          <Calendar size={48} className="icon-muted" />
+          <h3>Sin reservas próximas</h3>
+          <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: '0.5rem 0' }}>Explora nuestras clases y reserva tu próximo espacio</p>
+          <Button onClick={() => navigate('/cliente/clases')} style={{ marginTop: '1rem' }}>
+            <Music size={16} style={{ marginRight: '0.35rem' }} />
+            Explorar clases
+          </Button>
         </div>
       )}
 
@@ -203,7 +230,7 @@ export default function Dashboard() {
                           />
                         </div>
                         <div className="proxima-clase-ocupacion-text">
-                          {c.ocupacion}/{c.capacidadMaxima} ocupados
+                          {c.capacidadMaxima - c.ocupacion} {c.capacidadMaxima - c.ocupacion === 1 ? 'lugar' : 'lugares'} disponible{(c.capacidadMaxima - c.ocupacion) !== 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>

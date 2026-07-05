@@ -6,7 +6,7 @@ import '../../App.css'
 const TIPS = {
   cliente: {
     '/cliente/dashboard': 'En el inicio ves tus créditos, tu próxima clase y clases con cupo disponible. Presiona una clase para ir al detalle.',
-    '/cliente/clases': 'Elige un estilo de baile, luego selecciona una fecha y una clase disponible para ver los asientos y pagar.',
+    '/cliente/clases': 'Elige un estilo de baile, luego selecciona una fecha y una clase disponible para ver los asientos y pagar. Tienes 5 minutos para completar el pago con Yape.',
     '/cliente/mis-clases': 'Aquí están tus reservas. Presiona una para ver el comprobante. Puedes cancelar desde el botón rojo.',
     '/cliente/perfil': 'Edita tus datos, cambia tu foto de perfil, activa el tema oscuro y consulta las preguntas frecuentes.',
   },
