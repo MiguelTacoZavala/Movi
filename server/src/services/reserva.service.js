@@ -124,6 +124,14 @@ async function cancelar(reservaId, usuarioId) {
         where: { reservaId, usado: true },
         data: { usado: false, fechaUso: null, reservaId: null, claseId: null },
       })
+    } else {
+      await tx.credito.create({
+        data: {
+          usuarioId: reserva.usuarioId,
+          claseId: reserva.claseId,
+          reservaId: reserva.id,
+        },
+      })
     }
   })
 

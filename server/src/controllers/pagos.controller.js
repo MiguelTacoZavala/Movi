@@ -155,21 +155,22 @@ async function confirmarPago(req, res, next) {
       })
     }
 
-    await prisma.pago.create({
-      data: {
-        reservaId: holdId,
-        metodoPago: 'yape',
-        monto: precio,
-        estado: 'PAGADO',
-        fechaPago: new Date(),
-        culqiChargeId: chargeId,
-      },
-    })
-
-    await prisma.reserva.update({
-      where: { id: holdId },
-      data: { estado: 'CONFIRMADA', fechaConfirmacion: new Date(), updatedAt: new Date() },
-    })
+    await prisma.$transaction([
+      prisma.pago.create({
+        data: {
+          reservaId: holdId,
+          metodoPago: 'yape',
+          monto: precio,
+          estado: 'PAGADO',
+          fechaPago: new Date(),
+          culqiChargeId: chargeId,
+        },
+      }),
+      prisma.reserva.update({
+        where: { id: holdId },
+        data: { estado: 'CONFIRMADA', fechaConfirmacion: new Date(), updatedAt: new Date() },
+      }),
+    ])
 
     res.status(200).json({
       success: true,
