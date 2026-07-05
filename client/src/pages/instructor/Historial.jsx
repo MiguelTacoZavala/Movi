@@ -11,7 +11,7 @@ export default function Historial() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/instructores/historial').then(res => {
+    api.cachedGet('/instructores/historial').then(res => {
       setClases(res.clases || [])
       setError(null)
     }).catch(() => {
@@ -37,7 +37,12 @@ export default function Historial() {
         </div>
       ) : (
         clases.map((clase, idx) => (
-          <div key={clase.id} className="client-card" style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}>
+          <div
+            key={clase.id}
+            className="client-card"
+            style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}
+            aria-label={`Clase de ${clase.categoria?.nombre || ''} el ${formatFechaBonita(clase.fecha)} de ${formatHoraAMPM(clase.horaInicio)} a ${formatHoraAMPM(clase.horaFin)}. Estado: ${clase.estado === 'FINALIZADA' ? 'finalizada' : 'cancelada'}. Con ${clase.inscritos || 0} participantes.`}
+          >
             <div className="client-card-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--gray-900)' }}>
