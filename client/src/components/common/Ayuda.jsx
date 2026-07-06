@@ -45,12 +45,16 @@ const FAQ_CLIENTE = [
 
 const FAQ_INSTRUCTOR = [
   {
+    q: '¿Qué veo en el Inicio?',
+    a: 'En Inicio ves un resumen con tu próxima clase y las clases del día. Presiona una clase para ver más detalles.',
+  },
+  {
     q: '¿Dónde veo mi horario semanal?',
-    a: 'En la pestaña Horarios del menú inferior. Allí aparecen todas tus clases recurrentes con día, hora y capacidad.',
+    a: 'En la pestaña Horarios del menú inferior. Allí aparecen todas tus clases recurrentes con día, hora, capacidad y mínimo de participantes.',
   },
   {
     q: '¿Cómo veo mis clases programadas?',
-    a: 'Ve a la pestaña Clases. Verás todas tus clases próximas ordenadas por fecha. Presiona sobre una clase para ver los participantes.',
+    a: 'Ve a la pestaña Clases. Verás tus clases programadas y en curso ordenadas por fecha. Presiona sobre una clase para ver los participantes.',
   },
   {
     q: '¿Cómo veo quién se inscribió?',
@@ -58,7 +62,23 @@ const FAQ_INSTRUCTOR = [
   },
   {
     q: '¿Cómo cambio la temática de una clase?',
-    a: 'Presiona sobre la clase en la pestaña Clases, luego haz clic en "Editar" junto a la temática actual. Escribe el nuevo valor y confirma con el botón ✓.',
+    a: 'Presiona sobre la clase en la pestaña Clases, luego haz clic en "Editar" junto a la temática actual. Escribe el nuevo valor, confirma con el botón ✓ y luego presiona "Confirmar" en la ventana emergente.',
+  },
+  {
+    q: '¿Qué muestra el Historial?',
+    a: 'En la pestaña Historial ves tus clases finalizadas o canceladas. Puedes consultar el registro de tus clases anteriores.',
+  },
+  {
+    q: '¿Cómo cambio mi foto de perfil?',
+    a: 'En tu Perfil, presiona sobre el círculo del avatar. Selecciona una imagen desde tu dispositivo y se subirá automáticamente.',
+  },
+  {
+    q: '¿Cómo activo el tema oscuro?',
+    a: 'En tu Perfil, busca la sección Preferencias y activa el interruptor "Tema oscuro". El cambio es instantáneo.',
+  },
+  {
+    q: '¿Cómo configuro la accesibilidad?',
+    a: 'En tu Perfil, busca la sección Accesibilidad. Puedes ajustar el tamaño del texto, el espaciado de líneas y activar una fuente amigable para dislexia.',
   },
   {
     q: '¿Cómo edito mis datos personales?',

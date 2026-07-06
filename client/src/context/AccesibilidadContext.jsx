@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
-
-const AccesibilidadContext = createContext(null)
+import { useState, useCallback, useEffect } from 'react'
+import { AccesibilidadContext } from './accesibilidad-context'
 
 const STORAGE_KEY = 'movi-accesibilidad'
 
@@ -8,7 +7,7 @@ function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw)
-  } catch {}
+  } catch { /* ignorar JSON corrupto */ }
   return { textSize: 'normal', lineSpacing: 'normal', dyslexiaFont: false }
 }
 
@@ -52,8 +51,3 @@ export function AccesibilidadProvider({ children }) {
   )
 }
 
-export function useAccesibilidad() {
-  const context = useContext(AccesibilidadContext)
-  if (!context) throw new Error('useAccesibilidad must be used within AccesibilidadProvider')
-  return context
-}

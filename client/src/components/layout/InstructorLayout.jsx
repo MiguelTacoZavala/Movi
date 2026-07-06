@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Calendar, Music, Clock, User, LogOut } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import { useTheme } from '../../context/useTheme'
 import { useHotkeys } from '../../hooks/useHotkeys'
 import Modal from '../common/Modal'

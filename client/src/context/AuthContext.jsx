@@ -1,25 +1,30 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import { AuthContext } from './auth-context'
 import api from '../services/api'
 
-const AuthContext = createContext(null)
+function fetchAuthUser() {
+  return api.me().then(() => api.getUser())
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => api.getUser())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
     const token = api.getToken()
     if (token) {
-      api.me()
-        .then(() => setUser(api.getUser()))
+      fetchAuthUser()
+        .then(u => { if (mounted) setUser(u) })
         .catch(() => {
           api.logout()
-          setUser(null)
+          if (mounted) setUser(null)
         })
-        .finally(() => setLoading(false))
+        .finally(() => { if (mounted) setLoading(false) })
     } else {
-      setLoading(false)
+      setLoading(false) // eslint-disable-line react-hooks/set-state-in-effect
     }
+    return () => { mounted = false }
   }, [])
 
   const login = async (identifier, password) => {
@@ -72,12 +77,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
-  }
-  return context
 }

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, Clock, Users, AlertCircle, Music } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import api from '../../services/api'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import Button from '../../components/common/Button'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import '../../App.css'
 
 const DOT_COLORS = [
@@ -105,42 +106,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {loading && !data && (
-        <>
-          <div className="client-card">
-            <div className="client-card-title">
-              <Calendar size={20} className="icon-primary" />
-              Tu próxima clase
-            </div>
-            <div className="client-card-content">
-              <div className="skeleton" style={{ width: '60%', height: 20, marginBottom: 12 }} />
-              <div className="skeleton" style={{ width: '80%', height: 16, marginBottom: 8 }} />
-              <div className="skeleton" style={{ width: '70%', height: 16, marginBottom: 8 }} />
-              <div className="skeleton" style={{ width: '50%', height: 16 }} />
-            </div>
-          </div>
-          <div className="client-card">
-            <div className="client-card-title">
-              <Calendar size={20} className="icon-primary" />
-              Clases disponibles
-            </div>
-            <div className="client-card-content">
-              {[1, 2, 3].map(i => (
-                <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
-                  <div className="skeleton" style={{ width: 12, height: 12, borderRadius: '50%', flexShrink: 0, marginTop: 4 }} />
-                  <div style={{ flex: 1 }}>
-                    <div className="skeleton" style={{ width: '40%', height: 16, marginBottom: 6 }} />
-                    <div className="skeleton" style={{ width: '30%', height: 12, marginBottom: 6 }} />
-                    <div className="skeleton" style={{ width: '50%', height: 10, marginBottom: 4 }} />
-                    <div className="skeleton" style={{ width: '100%', height: 5, marginBottom: 4 }} />
-                    <div className="skeleton" style={{ width: '25%', height: 10 }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+      {loading && !data && <LoadingScreen />}
 
       {data && prox && (
         <div

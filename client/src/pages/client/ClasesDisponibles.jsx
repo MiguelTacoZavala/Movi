@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronLeft, ChevronRight, 
 import api from '../../services/api'
 import { formatHoraAMPM } from '../../utils/helpers'
 import Button from '../../components/common/Button'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import '../../App.css'
 
 const CATEGORIA_APARIENCIA = {
@@ -202,11 +203,7 @@ export default function ClasesDisponibles() {
         <p className="client-section-subtitle">Selecciona el tipo de baile que deseas practicar</p>
         <div className="category-selector">
           {loading && categorias.length === 0
-            ? [1, 2, 3].map(i => (
-                <div key={i} className="category-card" style={{ pointerEvents: 'none' }}>
-                  <div className="skeleton" style={{ width: '100%', height: 90, borderRadius: 12 }} />
-                </div>
-              ))
+            ? <LoadingScreen />
             : categorias.map((cat, i) => {
               const apa = CATEGORIA_APARIENCIA[cat.nombre] || { icon: 'Flame', color: '#666', bgColor: '#f5f5f5', gradient: 'linear-gradient(135deg, #666, #444)', desc: cat.descripcion }
               const Icon = ICON_MAP[apa.icon]

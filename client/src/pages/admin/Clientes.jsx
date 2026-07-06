@@ -5,9 +5,14 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Input from '../../components/common/Input'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../services/api'
 import { mensajeError } from '../../utils/helpers'
 import '../../App.css'
+
+function fetchClientesData() {
+  return api.cachedGet('/clientes')
+}
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
@@ -18,9 +23,20 @@ export default function Clientes() {
   const [error, setError] = useState('')
   const [detailError, setDetailError] = useState('')
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchClientesData()
+      .then(res => { if (mounted) setClientes(res.clientes) })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudieron cargar los clientes.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = async () => {
     try {
-      const data = await api.cachedGet('/clientes')
+      const data = await fetchClientesData()
       setClientes(data.clientes)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los clientes.'))
@@ -28,8 +44,6 @@ export default function Clientes() {
       setLoading(false)
     }
   }
-
-  useEffect(() => { cargar() }, [])
 
   const filteredClientes = clientes.filter(c => {
     const q = search.toLowerCase()
@@ -91,7 +105,7 @@ export default function Clientes() {
     )},
   ]
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>

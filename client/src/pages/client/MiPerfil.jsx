@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { User, Moon, Sun, Camera, AlertCircle, Type, AlignLeft, ChevronDown, CaseSensitive, CheckCircle } from 'lucide-react'
 import Ayuda from '../../components/common/Ayuda'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import { useTheme } from '../../context/useTheme'
-import { useAccesibilidad } from '../../context/AccesibilidadContext'
+import { useAccesibilidad } from '../../context/useAccesibilidad'
 import api from '../../services/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -164,24 +164,27 @@ export default function MiPerfil() {
           style={{ position: 'relative', cursor: 'pointer' }}
           onClick={() => fileInputRef.current?.click()}
         >
-          {fotoSource ? (
-            <img
-              src={fotoSource}
-              alt="Foto de perfil"
-              style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }}
-            />
-          ) : (
-            <User size={40} />
-          )}
+          <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {fotoSource ? (
+              <img
+                src={fotoSource}
+                alt="Foto de perfil"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <User size={40} />
+            )}
+          </div>
           <div
             role="button"
             tabIndex={0}
             aria-label="Cambiar foto de perfil"
             style={{
-              position: 'absolute', bottom: 0, right: 0,
+              position: 'absolute', bottom: -2, right: -2,
               background: 'var(--primary-medium)', borderRadius: '50%',
               width: 28, height: 28, display: 'flex', alignItems: 'center',
               justifyContent: 'center', color: '#fff', cursor: 'pointer',
+              border: '2px solid var(--white)',
             }}
           >
             <Camera size={14} />

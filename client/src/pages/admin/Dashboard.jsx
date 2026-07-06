@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Music, Clock, AlertTriangle, DollarSign, BarChart2, AlertCircle } from 'lucide-react'
 import Alert from '../../components/common/Alert'
 import Button from '../../components/common/Button'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../services/api'
 import { formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
 import '../../App.css'
@@ -10,16 +11,31 @@ function soles(n) {
   return `S/. ${Number(n || 0).toLocaleString('es-PE')}`
 }
 
+function fetchAdminDashboard() {
+  return api.cachedGet('/dashboard/admin')
+}
+
 export default function Dashboard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchAdminDashboard()
+      .then(res => { if (mounted) setData(res) })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudo cargar el dashboard.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = async () => {
     setLoading(true)
     setError('')
     try {
-      const res = await api.cachedGet('/dashboard/admin')
+      const res = await fetchAdminDashboard()
       setData(res)
     } catch (e) {
       setError(mensajeError(e, 'No se pudo cargar el dashboard.'))
@@ -28,9 +44,7 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => { cargar() }, [])
-
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
   if (!data) return (
     <div style={{ padding: '2rem' }}>
       <Alert type="danger">

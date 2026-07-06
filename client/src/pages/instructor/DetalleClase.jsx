@@ -5,8 +5,13 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
+
+function fetchParticipantes(id) {
+  return api.cachedGet(`/instructores/clases/${id}/participantes`)
+}
 
 export default function DetalleClase() {
   const { id } = useParams()
@@ -21,16 +26,25 @@ export default function DetalleClase() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
 
   useEffect(() => {
-    setLoading(true)
-    api.cachedGet(`/instructores/clases/${id}/participantes`).then(res => {
-      setClase(res.clase)
-      setParticipantes(res.participantes || [])
-      setError(null)
-    }).catch(() => {
-      setClase(null)
-      setParticipantes([])
-      setError('Tuvimos dificultades para obtener los detalles de esta clase. Por favor, inténtalo más tarde.')
-    }).finally(() => setLoading(false))
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    fetchParticipantes(id)
+      .then(res => {
+        if (mounted) {
+          setClase(res.clase)
+          setParticipantes(res.participantes || [])
+          setError(null)
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setClase(null)
+          setParticipantes([])
+          setError('Tuvimos dificultades para obtener los detalles de esta clase. Por favor, inténtalo más tarde.')
+        }
+      })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
   }, [id])
 
   const iniciarEdicion = () => {
@@ -45,13 +59,14 @@ export default function DetalleClase() {
       await api.patch(`/instructores/clases/${id}/tematica`, { tematica: val })
       setClase(prev => ({ ...prev, tematica: val }))
       setEditandoTematica(false)
+      setError(null)
       api.invalidateCache([
         '/instructores/mis-clases',
         '/instructores/dashboard',
         `/instructores/clases/${id}/participantes`
       ])
     } catch {
-      alert('Ocurrió un error al guardar la temática. Por favor, inténtalo de nuevo en unos momentos.')
+      setError('Ocurrió un error al guardar la temática. Por favor, inténtalo de nuevo.')
     } finally {
       setGuardandoTematica(false)
     }
@@ -61,7 +76,7 @@ export default function DetalleClase() {
     setEditandoTematica(false)
   }
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   if (!clase) {
     return (
@@ -119,6 +134,7 @@ export default function DetalleClase() {
                     type="text"
                     value={tematicaInput}
                     onChange={e => setTematicaInput(e.target.value)}
+                    maxLength={100}
                     style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid var(--gray-300)', fontSize: '0.9rem', width: '180px' }}
                     placeholder="LIBRE"
                     autoFocus
@@ -187,8 +203,11 @@ export default function DetalleClase() {
           <div className="modal-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
             <Button 
               onClick={async () => {
-                await guardarTematica()
-                setConfirmModalOpen(false)
+                try {
+                  await guardarTematica()
+                } finally {
+                  setConfirmModalOpen(false)
+                }
               }}
               disabled={guardandoTematica}
             >

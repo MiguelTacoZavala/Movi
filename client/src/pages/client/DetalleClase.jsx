@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User, Tag, Calendar, Clock } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import culqi from '../../services/culqi'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatFechaBonita, formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
@@ -374,26 +375,7 @@ export default function DetalleClase() {
       )}
 
       {loading && !clase ? (
-        <>
-          <div className="instructor-section">
-            <div className="skeleton" style={{ width: 48, height: 48, borderRadius: '50%' }} />
-            <div className="instructor-info" style={{ flex: 1 }}>
-              <div className="skeleton" style={{ width: '50%', height: 18, marginBottom: 8 }} />
-              <div className="skeleton" style={{ width: '30%', height: 14 }} />
-            </div>
-          </div>
-          <div className="skeleton" style={{ width: '40%', height: 40, marginBottom: '1rem' }} />
-          <div className="seat-map-section">
-            <div className="skeleton" style={{ width: '100%', height: 200, borderRadius: 12 }} />
-          </div>
-          <div className="pago-section">
-            <div className="skeleton" style={{ width: '60%', height: 20, marginBottom: '1rem' }} />
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <div className="skeleton" style={{ flex: 1, height: 80 }} />
-              <div className="skeleton" style={{ flex: 1, height: 80 }} />
-            </div>
-          </div>
-        </>
+        <LoadingScreen />
       ) : (
         <>
           <div className="instructor-section">

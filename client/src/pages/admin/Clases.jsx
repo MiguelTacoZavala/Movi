@@ -5,6 +5,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../services/api'
 import { useFlashMessage } from '../../hooks/useFlashMessage'
 import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
@@ -28,6 +29,13 @@ function esClasePasada(fecha) {
   return fecha < hoy
 }
 
+function fetchClasesData() {
+  return Promise.all([
+    api.cachedGet('/clases?limit=500'),
+    api.cachedGet('/instructores'),
+  ])
+}
+
 export default function Clases() {
   const [clases, setClases] = useState([])
   const [instructores, setInstructores] = useState([])
@@ -45,12 +53,25 @@ export default function Clases() {
   const [error, setError] = useState('')
   const [mensaje, setMensaje] = useFlashMessage()
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchClasesData()
+      .then(([cData, iData]) => {
+        if (mounted) {
+          setClases(cData.clases)
+          setInstructores(iData.instructores)
+        }
+      })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudieron cargar las clases.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = async () => {
     try {
-      const [cData, iData] = await Promise.all([
-        api.cachedGet('/clases?limit=500'),
-        api.cachedGet('/instructores'),
-      ])
+      const [cData, iData] = await fetchClasesData()
       setClases(cData.clases)
       setInstructores(iData.instructores)
     } catch (e) {
@@ -59,8 +80,6 @@ export default function Clases() {
       setLoading(false)
     }
   }
-
-  useEffect(() => { cargar() }, [])
 
   const filteredClases = useMemo(() => {
     // Orden por estado: Programadas/activas (0) arriba, Canceladas (1) en medio, Finalizadas (2) al fondo
@@ -87,7 +106,7 @@ export default function Clases() {
       })
   }, [clases, filtroEstado, filtroFecha, filtroInstructor])
 
-  useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor])
+  useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor]) // eslint-disable-line react-hooks/set-state-in-effect
 
   const totalPaginas = Math.max(1, Math.ceil(filteredClases.length / POR_PAGINA))
   const clasesPagina = filteredClases.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
@@ -198,7 +217,7 @@ export default function Clases() {
 
   const isOcupado = (pos) => Array.isArray(pos.reservas) && pos.reservas.length > 0
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>

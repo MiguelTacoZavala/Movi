@@ -3,6 +3,7 @@ import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTri
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
@@ -186,18 +187,7 @@ export default function MisClases() {
 
       <div>
         {loading ? (
-          [1, 2, 3].map(i => (
-            <div key={i} className="clase-card proxima" style={{ pointerEvents: 'none' }}>
-              <div className="clase-card-header">
-                <div className="skeleton" style={{ width: '35%', height: 20 }} />
-                <div className="skeleton" style={{ width: '25%', height: 20 }} />
-              </div>
-              <div style={{ padding: '0.75rem 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="skeleton" style={{ width: '60%', height: 14 }} />
-                <div className="skeleton" style={{ width: '45%', height: 14 }} />
-              </div>
-            </div>
-          ))
+          <LoadingScreen />
         ) : filtradas.length === 0 ? (
           <div className="empty-state">
             <Calendar size={48} className="icon-muted" />
