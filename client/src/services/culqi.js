@@ -34,7 +34,7 @@ const culqi = {
     return this.initPromise
   },
 
-  generarToken({ amount, email, description }) {
+  generarToken({ amount, email }) {
     return new Promise((resolve, reject) => {
       this.load()
         .then(() => {
@@ -109,7 +109,7 @@ const culqi = {
 
   close() {
     if (this._culqiInstance) {
-      try { this._culqiInstance.close() } catch {}
+      try { this._culqiInstance.close() } catch { /* Culqi ya cerrado */ }
     }
   },
 }

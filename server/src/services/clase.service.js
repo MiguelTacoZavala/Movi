@@ -47,7 +47,7 @@ const includeBase = {
       },
     },
   },
-  _count: { select: { reservas: true } },
+  _count: { select: { reservas: { where: { estado: { not: 'CANCELADA' } } } } },
 }
 
 const includeDetalle = {
@@ -72,7 +72,7 @@ const includeDetalle = {
       },
     },
   },
-  _count: { select: { reservas: true } },
+  _count: { select: { reservas: { where: { estado: { not: 'CANCELADA' } } } } },
 }
 
 function formatear(clase) {

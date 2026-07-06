@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Calendar, Clock, Users } from 'lucide-react'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatHoraAMPM, DIAS_SEMANA } from '../../utils/helpers'
 import '../../App.css'
 
@@ -25,7 +26,7 @@ export default function Horarios() {
     [horarios]
   )
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>

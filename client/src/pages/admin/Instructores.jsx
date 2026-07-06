@@ -4,6 +4,7 @@ import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import InstructorForm from './InstructorForm'
 import api from '../../services/api'
 import { useFlashMessage } from '../../hooks/useFlashMessage'
@@ -14,6 +15,10 @@ import '../../App.css'
 // crearlo/editarlo/cambiar su estado se invalidan también esos listados.
 const CACHE_KEYS = ['GET /instructores', 'GET /horarios', 'GET /clases', 'GET /dashboard']
 
+function fetchInstructoresData() {
+  return api.cachedGet('/instructores')
+}
+
 export default function Instructores() {
   const [instructores, setInstructores] = useState([])
   const [loading, setLoading] = useState(true)
@@ -23,9 +28,20 @@ export default function Instructores() {
   const [formError, setFormError] = useState('')
   const [mensaje, setMensaje] = useFlashMessage()
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchInstructoresData()
+      .then(res => { if (mounted) setInstructores(res.instructores) })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudieron cargar los instructores.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = async () => {
     try {
-      const data = await api.cachedGet('/instructores')
+      const data = await fetchInstructoresData()
       setInstructores(data.instructores)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los instructores.'))
@@ -33,8 +49,6 @@ export default function Instructores() {
       setLoading(false)
     }
   }
-
-  useEffect(() => { cargar() }, [])
 
   const columns = [
     { key: 'nombres', label: 'Instructor', render: (_, row) => (
@@ -132,7 +146,7 @@ export default function Instructores() {
     }
   }
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>

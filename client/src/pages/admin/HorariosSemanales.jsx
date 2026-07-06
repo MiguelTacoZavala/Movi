@@ -5,6 +5,7 @@ import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import HorarioSemanalForm from './HorarioSemanalForm'
 import api from '../../services/api'
 import { useFlashMessage } from '../../hooks/useFlashMessage'
@@ -30,6 +31,14 @@ const diaLabel = {
   JUEVES: 'Jueves', VIERNES: 'Viernes', SABADO: 'Sábado', DOMINGO: 'Domingo',
 }
 
+function fetchHorariosData() {
+  return Promise.all([
+    api.cachedGet('/horarios'),
+    api.cachedGet('/instructores'),
+    api.cachedGet('/categorias'),
+  ])
+}
+
 export default function HorariosSemanales() {
   const [horarios, setHorarios] = useState([])
   const [instructores, setInstructores] = useState([])
@@ -52,13 +61,26 @@ export default function HorariosSemanales() {
   const [extendError, setExtendError] = useState('')
   const [extending, setExtending] = useState(false)
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchHorariosData()
+      .then(([hData, iData, cData]) => {
+        if (mounted) {
+          setHorarios(hData.horarios)
+          setInstructores(iData.instructores)
+          setCategorias(cData.categorias)
+        }
+      })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudieron cargar los horarios.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = async () => {
     try {
-      const [hData, iData, cData] = await Promise.all([
-        api.cachedGet('/horarios'),
-        api.cachedGet('/instructores'),
-        api.cachedGet('/categorias'),
-      ])
+      const [hData, iData, cData] = await fetchHorariosData()
       setHorarios(hData.horarios)
       setInstructores(iData.instructores)
       setCategorias(cData.categorias)
@@ -68,8 +90,6 @@ export default function HorariosSemanales() {
       setLoading(false)
     }
   }
-
-  useEffect(() => { cargar() }, [])
 
   const filteredHorarios = useMemo(() =>
     horarios.filter(h => {
@@ -261,7 +281,7 @@ export default function HorariosSemanales() {
     }
   }
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>

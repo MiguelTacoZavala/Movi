@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
-import { useAuth } from '../../context/AuthContext'
-import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User, Tag } from 'lucide-react'
+import { useAuth } from '../../context/useAuth'
+import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User, Tag, Calendar, Clock } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import culqi from '../../services/culqi'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatFechaBonita, formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
@@ -47,6 +48,7 @@ export default function DetalleClase() {
   const [error, setError] = useState('')
   const [pagandoYape, setPagandoYape] = useState(false)
   const [procesandoPagoYape, setProcesandoPagoYape] = useState(false)
+  const [creditos, setCreditos] = useState(0)
 
   useEffect(() => {
     api.get(`/clases/${id}`).then(res => {
@@ -55,6 +57,13 @@ export default function DetalleClase() {
       setClase(null)
     }).finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    api.cachedGet('/creditos').then(res => {
+      const disponibles = (res.creditos || []).filter(c => !c.usado).length
+      setCreditos(disponibles)
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     return () => { culqi.close() }
@@ -275,9 +284,14 @@ export default function DetalleClase() {
           </div>
         </div>
 
-        <Button onClick={() => navigate('/cliente/mis-clases')} style={{ marginTop: '1.5rem' }}>
-          Ir a Mis Clases
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <Button onClick={() => navigate('/cliente/mis-clases')}>
+            Ir a Mis Clases
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/cliente/clases')}>
+            Reservar otra clase
+          </Button>
+        </div>
       </div>
     )
   }
@@ -302,6 +316,18 @@ export default function DetalleClase() {
 
       <div className="detalle-header">
         <h2>{clase?.categoria?.nombre || <span className="skeleton skeleton-inline" style={{ width: 120, height: 24 }} />}</h2>
+        {clase && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Calendar size={15} className="icon-muted" />
+              {formatFechaBonita(clase.fecha)}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Clock size={15} className="icon-muted" />
+              {formatHoraAMPM(clase.horaInicio)} — {formatHoraAMPM(clase.horaFin)}
+            </span>
+          </div>
+        )}
       </div>
 
       {holdActive && metodoPago === 'yape' && !inscripcionExitosa && (
@@ -349,26 +375,7 @@ export default function DetalleClase() {
       )}
 
       {loading && !clase ? (
-        <>
-          <div className="instructor-section">
-            <div className="skeleton" style={{ width: 48, height: 48, borderRadius: '50%' }} />
-            <div className="instructor-info" style={{ flex: 1 }}>
-              <div className="skeleton" style={{ width: '50%', height: 18, marginBottom: 8 }} />
-              <div className="skeleton" style={{ width: '30%', height: 14 }} />
-            </div>
-          </div>
-          <div className="skeleton" style={{ width: '40%', height: 40, marginBottom: '1rem' }} />
-          <div className="seat-map-section">
-            <div className="skeleton" style={{ width: '100%', height: 200, borderRadius: 12 }} />
-          </div>
-          <div className="pago-section">
-            <div className="skeleton" style={{ width: '60%', height: 20, marginBottom: '1rem' }} />
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <div className="skeleton" style={{ flex: 1, height: 80 }} />
-              <div className="skeleton" style={{ flex: 1, height: 80 }} />
-            </div>
-          </div>
-        </>
+        <LoadingScreen />
       ) : (
         <>
           <div className="instructor-section">
@@ -439,13 +446,13 @@ export default function DetalleClase() {
             <h3>¿Cómo deseas pagar?</h3>
             <div className="pago-options">
               <div
-                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape ? 'disabled' : ''}`}
-                onClick={() => !holdActive && !procesando && !procesandoPagoYape && handleSelectPago('creditos')}
-                title="Usar un crédito disponible como método de pago"
+                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape || creditos === 0 ? 'disabled' : ''}`}
+                onClick={() => !holdActive && !procesando && !procesandoPagoYape && creditos > 0 && handleSelectPago('creditos')}
+                title={creditos === 0 ? 'No tienes créditos disponibles' : 'Usar un crédito disponible como método de pago'}
               >
                 <CreditCard size={32} />
                 <span>Usar Créditos</span>
-                <small>disponibles</small>
+                <small>{creditos > 0 ? `${creditos} disponible${creditos > 1 ? 's' : ''}` : 'Sin créditos'}</small>
               </div>
               <div
                 className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape ? 'disabled' : ''}`}

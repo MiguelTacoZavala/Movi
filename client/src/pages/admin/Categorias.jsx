@@ -4,6 +4,7 @@ import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import CategoriaForm from './CategoriaForm'
 import api from '../../services/api'
 import { useFlashMessage } from '../../hooks/useFlashMessage'
@@ -13,6 +14,10 @@ import '../../App.css'
 // Al cambiar una categoría se invalidan también los listados que la muestran embebida
 // (su nombre aparece en horarios, clases y el dashboard).
 const CACHE_KEYS = ['GET /categorias', 'GET /horarios', 'GET /clases', 'GET /dashboard']
+
+function fetchCategoriasData() {
+  return api.cachedGet('/categorias')
+}
 
 export default function Categorias() {
   const [categorias, setCategorias] = useState([])
@@ -24,9 +29,20 @@ export default function Categorias() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [mensaje, setMensaje] = useFlashMessage()
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchCategoriasData()
+      .then(res => { if (mounted) setCategorias(res.categorias) })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudieron cargar las categorías.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = async () => {
     try {
-      const data = await api.cachedGet('/categorias')
+      const data = await fetchCategoriasData()
       setCategorias(data.categorias)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar las categorías.'))
@@ -34,8 +50,6 @@ export default function Categorias() {
       setLoading(false)
     }
   }
-
-  useEffect(() => { cargar() }, [])
 
   const columns = [
     { key: 'nombre', label: 'Categoría', render: (val) => (
@@ -118,7 +132,7 @@ export default function Categorias() {
     }
   }
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>
