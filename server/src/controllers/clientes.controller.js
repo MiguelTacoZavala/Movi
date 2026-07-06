@@ -1,4 +1,5 @@
 const clienteService = require('../services/cliente.service')
+const { safeId } = require('../lib/helpers')
 
 async function listar(req, res, next) {
   try {
@@ -12,7 +13,8 @@ async function listar(req, res, next) {
 
 async function obtener(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const cliente = await clienteService.obtener(id)
     if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' })
     res.json({ cliente })

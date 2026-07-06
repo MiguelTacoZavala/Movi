@@ -1,12 +1,6 @@
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
-
-function hhmm(d) {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-function yyyymmdd(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+const { hhmm, yyyymmdd, safeId } = require('../lib/helpers')
 
 function formatearInstructor(inst) {
   return {
@@ -79,11 +73,12 @@ async function crear(req, res, next) {
 
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const { nombres, apellidos, email, telefono, especialidad, estado, fotoUrl } = req.body
 
     const instructor = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
     if (!instructor) {
@@ -115,13 +110,13 @@ async function actualizar(req, res, next) {
 
     if (especialidad !== undefined) {
       await prisma.instructor.update({
-        where: { id: Number(id) },
+        where: { id },
         data: { especialidad },
       })
     }
 
     const actualizado = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
 
@@ -133,17 +128,18 @@ async function actualizar(req, res, next) {
 
 async function eliminar(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
 
     const instructor = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
     })
     if (!instructor) {
       return res.status(404).json({ error: 'Instructor no encontrado' })
     }
 
     const horarios = await prisma.horarioSemanal.count({
-      where: { instructorId: Number(id), activo: true },
+      where: { instructorId: id, activo: true },
     })
     if (horarios > 0) {
       return res.status(409).json({
@@ -160,10 +156,11 @@ async function eliminar(req, res, next) {
 
 async function toggleEstado(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
 
     const instructor = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
     if (!instructor) {
@@ -176,7 +173,7 @@ async function toggleEstado(req, res, next) {
     })
 
     const actualizado = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
 
@@ -312,7 +309,8 @@ async function obtenerParticipantes(req, res, next) {
     const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
     if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
 
-    const claseId = Number(req.params.id)
+    const claseId = safeId(req.params.id)
+    if (!claseId) return res.status(400).json({ error: 'ID inválido' })
 
     const clase = await prisma.clase.findUnique({
       where: { id: claseId },
@@ -369,7 +367,8 @@ async function actualizarTematica(req, res, next) {
     const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
     if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
 
-    const claseId = Number(req.params.id)
+    const claseId = safeId(req.params.id)
+    if (!claseId) return res.status(400).json({ error: 'ID inválido' })
     const { tematica } = req.body
 
     if (!tematica || !tematica.trim()) {

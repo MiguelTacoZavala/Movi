@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
 const claseService = require('./clase.service')
+const { parsearHora, DEFAULT_MIN_PARTICIPANTES } = require('../lib/helpers')
 
 const include = {
   categoria: { select: { id: true, nombre: true } },
@@ -29,13 +30,6 @@ function formatear(horario) {
     createdAt: horario.createdAt,
     updatedAt: horario.updatedAt,
   }
-}
-
-function parsearHora(horaStr) {
-  const [h, m] = horaStr.split(':').map(Number)
-  const d = new Date('1970-01-01T00:00:00.000Z')
-  d.setHours(h, m, 0, 0)
-  return d
 }
 
 async function verificarOverlap({ instructorId, diaSemana, horaInicio, horaFin, excluirId }) {
@@ -87,7 +81,7 @@ async function crear({ categoriaId, instructorId, diaSemana, horaInicio: hi, hor
       horaInicio,
       horaFin,
       capacidadMaxima,
-      minimoParticipantes: minimoParticipantes ?? 7,
+      minimoParticipantes: minimoParticipantes ?? DEFAULT_MIN_PARTICIPANTES,
       createdBy,
     },
     include,

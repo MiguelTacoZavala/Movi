@@ -1,4 +1,5 @@
 const notificacionService = require('../services/notificacion.service')
+const { safeId } = require('../lib/helpers')
 
 async function listarNotificaciones(req, res, next) {
   try {
@@ -11,7 +12,8 @@ async function listarNotificaciones(req, res, next) {
 
 async function marcarLeida(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const resultado = await notificacionService.marcarLeida(id, req.user.id)
     if (!resultado) return res.status(404).json({ error: 'Notificación no encontrada' })
     res.json(resultado)

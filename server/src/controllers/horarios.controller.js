@@ -1,4 +1,5 @@
 const horarioService = require('../services/horario.service')
+const { safeId } = require('../lib/helpers')
 
 async function listar(req, res, next) {
   try {
@@ -11,7 +12,8 @@ async function listar(req, res, next) {
 
 async function obtener(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const horario = await horarioService.obtener(id)
     if (!horario) return res.status(404).json({ error: 'Horario no encontrado' })
     res.json({ horario })
@@ -45,7 +47,8 @@ async function crear(req, res, next) {
 
 async function actualizar(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const horario = await horarioService.actualizar(id, req.body)
     if (!horario) return res.status(404).json({ error: 'Horario no encontrado' })
     res.json({ horario })
@@ -59,7 +62,8 @@ async function actualizar(req, res, next) {
 
 async function toggleActivo(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const cancelarFuturas = req.body?.cancelarFuturas === true
     const resultado = await horarioService.toggleActivo(id, { cancelarFuturas })
     if (!resultado) return res.status(404).json({ error: 'Horario no encontrado' })
@@ -71,7 +75,8 @@ async function toggleActivo(req, res, next) {
 
 async function extender(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const { hasta } = req.body
     const resultado = await horarioService.extender(id, hasta)
     if (!resultado) return res.status(404).json({ error: 'Horario no encontrado' })
@@ -86,7 +91,8 @@ async function extender(req, res, next) {
 
 async function eliminar(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const resultado = await horarioService.eliminar(id)
     res.json(resultado)
   } catch (error) {

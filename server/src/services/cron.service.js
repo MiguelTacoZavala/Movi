@@ -1,34 +1,9 @@
 const cron = require('node-cron')
-const prisma = require('../lib/prisma')
 const claseService = require('./clase.service')
 const { limpiarHoldsExpirados } = require('./reserva.service')
+const { CLASES_POR_HORARIO } = require('../lib/helpers')
 
-const CLASES_POR_HORARIO = 4
-
-// Finaliza clases pasadas (fecha anterior o horaFin vencida)
-async function finalizarClasesPasadas() {
-  const ahora = new Date()
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-
-  const { count } = await prisma.clase.updateMany({
-    where: {
-      estado: { in: ['PROGRAMADA', 'EN_CURSO'] },
-      OR: [
-        { fecha: { lt: hoy } },
-        { horaFin: { lt: ahora } },
-      ],
-    },
-    data: { estado: 'FINALIZADA', updatedAt: ahora },
-  })
-
-  if (count > 0) {
-    console.log(`[CRON] Clases finalizadas automáticamente: ${count}`)
-  }
-  return count
-}
-
-// Mantener rolling window de 4 clases por horario activo
+// Mantener rolling window de clases por horario activo
 async function mantenerRollingWindow() {
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
@@ -73,7 +48,7 @@ function iniciarCron() {
   cron.schedule('0 3 * * *', async () => {
     console.log('[CRON] Iniciando mantenimiento diario...')
     try {
-      await finalizarClasesPasadas()
+      await claseService.finalizarClasesPasadas()
       await limpiarHoldsExpirados()
       const generadas = await mantenerRollingWindow()
       console.log(`[CRON] Mantenimiento completado. ${generadas} clases generadas.`)
@@ -87,4 +62,4 @@ function iniciarCron() {
   console.log('[CRON] Tarea diaria programada a las 3:00 AM (America/Lima)')
 }
 
-module.exports = { iniciarCron, finalizarClasesPasadas, mantenerRollingWindow }
+module.exports = { iniciarCron, mantenerRollingWindow }

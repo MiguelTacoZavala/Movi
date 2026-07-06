@@ -1,12 +1,6 @@
 const prisma = require('../lib/prisma')
 const { limpiarHoldsExpirados } = require('./reserva.service')
-
-function hhmm(d) {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-function yyyymmdd(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+const { hhmm, yyyymmdd } = require('../lib/helpers')
 
 const includeClase = {
   horarioSemanal: {

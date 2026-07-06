@@ -195,7 +195,7 @@ export default function Clases() {
     setError('')
     setMensaje('')
     try {
-      const r = await api.patch(`/clases/${cancelTargetClase.id}/cancel`)
+      const r = await api.patch(`/clases/${cancelTargetClase.id}/cancelar`)
       api.invalidateCache(CACHE_KEYS)
       setClases(clases.map(c =>
         c.id === cancelTargetClase.id ? { ...c, estado: 'CANCELADA' } : c

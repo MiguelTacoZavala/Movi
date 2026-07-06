@@ -11,10 +11,10 @@ const generarSchema = z.object({
   semanas: z.number().int().min(1).max(52),
 })
 
-// /generate debe ir antes de /:id para que Express no lo confunda con un id
-router.post('/generate', auth, authorize('ADMIN'), validate(generarSchema), generar)
+// /generar debe ir antes de /:id para que Express no lo confunda con un id
+router.post('/generar', auth, authorize('ADMIN'), validate(generarSchema), generar)
 router.get('/', auth, listar)
 router.get('/:id', auth, obtener)
-router.patch('/:id/cancel', auth, authorize('ADMIN'), cancelar)
+router.patch('/:id/cancelar', auth, authorize('ADMIN'), cancelar)
 
 module.exports = router

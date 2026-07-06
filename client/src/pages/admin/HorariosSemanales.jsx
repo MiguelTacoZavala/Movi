@@ -186,7 +186,7 @@ export default function HorariosSemanales() {
     setError('')
     setMensaje('')
     try {
-      const result = await api.patch(`/horarios/${h.id}/status`, { cancelarFuturas })
+      const result = await api.patch(`/horarios/${h.id}/estado`, { cancelarFuturas })
       api.invalidateCache(CACHE_KEYS)
       setDeactivateTarget(null)
       if (result.cancelacion?.clasesCanceladas > 0) {

@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
 const { limpiarHoldsExpirados } = require('./reserva.service')
+const { hhmm, yyyymmdd, DEFAULT_CLASE_PRECIO } = require('../lib/helpers')
 
 const DIA_OFFSET = {
   LUNES: 0, MARTES: 1, MIERCOLES: 2, JUEVES: 3,
@@ -19,13 +20,6 @@ function getFechaClase(monday, diaSemana, weekOffset) {
   const fecha = new Date(monday)
   fecha.setDate(monday.getDate() + weekOffset * 7 + DIA_OFFSET[diaSemana])
   return fecha
-}
-
-function hhmm(d) {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-function yyyymmdd(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function combinarFechaHora(fecha, horaRef) {
@@ -88,7 +82,7 @@ function formatear(clase) {
     inscritos: clase._count?.reservas,
     diaSemana: clase.horarioSemanal?.diaSemana,
     categoria: clase.horarioSemanal?.categoria,
-    precio: clase.horarioSemanal?.categoria?.precio ? Number(clase.horarioSemanal.categoria.precio) : 15,
+    precio: clase.horarioSemanal?.categoria?.precio ? Number(clase.horarioSemanal.categoria.precio) : DEFAULT_CLASE_PRECIO,
     instructor: clase.horarioSemanal
       ? {
           id: clase.horarioSemanal.instructor.id,
