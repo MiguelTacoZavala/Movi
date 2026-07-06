@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="client/public/MOVI_LOGO.svg" alt="MOVI Logo" width="200" />
+</p>
+
 # Movi
 
 > Sistema de reserva y gestión de clases de baile para academias.
