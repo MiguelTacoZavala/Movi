@@ -12,8 +12,16 @@ async function generar(req, res, next) {
 
 async function listar(req, res, next) {
   try {
-    const { estado, fecha, categoriaId, instructorId, page, limit } = req.query
-    const resultado = await claseService.listar({ estado, fecha, categoriaId, instructorId, page, limit })
+    const { estado, fecha, categoriaId, instructorId, page, limit, soloActivas } = req.query
+    const resultado = await claseService.listar({
+      estado,
+      fecha,
+      categoriaId,
+      instructorId,
+      page,
+      limit,
+      soloActivas: soloActivas === 'true',
+    })
     res.json(resultado)
   } catch (error) {
     next(error)
@@ -23,7 +31,8 @@ async function listar(req, res, next) {
 async function obtener(req, res, next) {
   try {
     const id = Number(req.params.id)
-    const clase = await claseService.obtener(id)
+    const { soloActivas } = req.query
+    const clase = await claseService.obtener(id, { soloActivas: soloActivas === 'true' })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
     res.json({ clase })
   } catch (error) {

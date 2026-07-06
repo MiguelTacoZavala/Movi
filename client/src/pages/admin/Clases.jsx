@@ -50,6 +50,7 @@ export default function Clases() {
   const [participantsLoading, setParticipantsLoading] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [cancelTargetClase, setCancelTargetClase] = useState(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
   const [error, setError] = useState('')
   const [mensaje, setMensaje] = useFlashMessage()
 
@@ -190,6 +191,7 @@ export default function Clases() {
 
   const confirmCancel = async () => {
     if (!cancelTargetClase) return
+    setCancelLoading(true)
     setError('')
     setMensaje('')
     try {
@@ -204,6 +206,7 @@ export default function Clases() {
     } catch (e) {
       setError(mensajeError(e, 'No se pudo cancelar la clase.'))
     } finally {
+      setCancelLoading(false)
       setCancelConfirmOpen(false)
       setCancelTargetClase(null)
     }
@@ -361,7 +364,7 @@ export default function Clases() {
 
       <Modal
         isOpen={cancelConfirmOpen}
-        onClose={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }}
+        onClose={() => { if (!cancelLoading) { setCancelConfirmOpen(false); setCancelTargetClase(null) } }}
         title="Cancelar clase"
       >
         {cancelTargetClase && (
@@ -377,20 +380,22 @@ export default function Clases() {
             <AlertTriangle size={48} style={{ display: 'block', margin: '1rem auto', color: 'var(--warning)' }} />
 
             <p className="modal-subtitle" style={{ textAlign: 'center' }}>
-              {cancelTargetClase.inscritos > 0
-                ? `Hay ${cancelTargetClase.inscritos} participante(s) registrados. Se generarán créditos automáticamente.`
-                : 'No hay participantes registrados para esta clase.'}
+              {cancelLoading
+                ? 'Cancelando tu inscripción...'
+                : cancelTargetClase.inscritos > 0
+                  ? `Hay ${cancelTargetClase.inscritos} participante(s) registrados. Se generarán créditos automáticamente.`
+                  : 'No hay participantes registrados para esta clase.'}
             </p>
             <p className="modal-subtitle" style={{ textAlign: 'center', fontWeight: 500, color: 'var(--danger-text)' }}>
               Esta acción no se puede deshacer.
             </p>
 
             <div className="modal-actions">
-              <Button variant="secondary" onClick={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }}>
+              <Button variant="secondary" onClick={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }} disabled={cancelLoading}>
                 No, mantener
               </Button>
-              <Button variant="danger" onClick={confirmCancel}>
-                Sí, cancelar clase
+              <Button variant="danger" onClick={confirmCancel} disabled={cancelLoading}>
+                {cancelLoading ? 'Cancelando...' : 'Sí, cancelar clase'}
               </Button>
             </div>
           </>

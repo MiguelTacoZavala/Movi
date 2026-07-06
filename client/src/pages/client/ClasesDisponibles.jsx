@@ -98,7 +98,7 @@ function agruparPorFranja(clases) {
 function fetchClasesData() {
   return Promise.all([
     api.cachedGet('/categorias'),
-    api.cachedGet('/clases?limit=500'),
+    api.cachedGet('/clases?limit=500&soloActivas=true'),
   ]).then(([catData, clsData]) => ({
     categorias: catData.categorias || [],
     clases: clsData.clases || [],

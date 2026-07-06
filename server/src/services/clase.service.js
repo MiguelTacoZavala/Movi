@@ -313,7 +313,7 @@ async function finalizarClasesPasadas() {
   }
 }
 
-async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limit = 10 }) {
+async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limit = 10, soloActivas = false }) {
   await finalizarClasesPasadas()
 
   const where = {}
@@ -328,10 +328,11 @@ async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limi
     where.fecha = { gte: d, lt: siguiente }
   }
 
-  if (categoriaId || instructorId) {
+  if (categoriaId || instructorId || soloActivas) {
     where.horarioSemanal = {}
     if (categoriaId) where.horarioSemanal.categoriaId = Number(categoriaId)
     if (instructorId) where.horarioSemanal.instructorId = Number(instructorId)
+    if (soloActivas) where.horarioSemanal.activo = true
   }
 
   const skip = (Number(page) - 1) * Number(limit)
@@ -358,11 +359,22 @@ async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limi
   }
 }
 
-async function obtener(id) {
+async function obtener(id, { soloActivas = false } = {}) {
   await limpiarHoldsExpirados()
 
-  const clase = await prisma.clase.findUnique({ where: { id }, include: includeDetalle })
-  return clase ? formatear(clase) : null
+  const clase = await prisma.clase.findUnique({
+    where: { id },
+    include: includeDetalle,
+  })
+
+  if (!clase) return null
+
+  // Si solo se quieren clases activas y el horario está inactivo, no mostrar
+  if (soloActivas && clase.horarioSemanal && !clase.horarioSemanal.activo) {
+    return null
+  }
+
+  return formatear(clase)
 }
 
 async function cancelar(id) {

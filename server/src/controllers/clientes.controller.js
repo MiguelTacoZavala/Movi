@@ -2,9 +2,9 @@ const clienteService = require('../services/cliente.service')
 
 async function listar(req, res, next) {
   try {
-    const { search } = req.query
-    const clientes = await clienteService.listar({ search })
-    res.json({ clientes })
+    const { search, page, limit } = req.query
+    const resultado = await clienteService.listar({ search, page, limit })
+    res.json(resultado)
   } catch (error) {
     next(error)
   }

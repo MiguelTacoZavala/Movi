@@ -53,7 +53,7 @@ export default function DetalleClase() {
   const [creditosError, setCreditosError] = useState(false)
 
   useEffect(() => {
-    api.get(`/clases/${id}`).then(res => {
+    api.get(`/clases/${id}?soloActivas=true`).then(res => {
       setClase(res.clase)
     }).catch(() => {
       setClase(null)

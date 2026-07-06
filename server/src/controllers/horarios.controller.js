@@ -87,10 +87,11 @@ async function extender(req, res, next) {
 async function eliminar(req, res, next) {
   try {
     const id = Number(req.params.id)
-    await horarioService.eliminar(id)
-    res.json({ message: 'Horario eliminado correctamente' })
+    const resultado = await horarioService.eliminar(id)
+    res.json(resultado)
   } catch (error) {
     if (error.code === 'P2025') return res.status(404).json({ error: 'Horario no encontrado' })
+    if (error.clasesFuturas) return res.status(409).json({ error: error.message, clasesFuturas: error.clasesFuturas })
     next(error)
   }
 }

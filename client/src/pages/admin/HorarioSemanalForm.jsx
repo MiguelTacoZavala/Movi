@@ -175,11 +175,18 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, inst
             required
           />
           <p className="form-hint">
-            Al guardar, se crearán automáticamente las clases de este horario, semana a semana,
-            hasta la fecha elegida. Después podrás extenderlas cuando quieras.
+            Al guardar, se crearán automáticamente 4 clases de este horario, semana a semana.
+            Después podrás extenderlas cuando quieras.
           </p>
           {errors.generarHasta && <p className="form-error">{errors.generarHasta}</p>}
         </>
+      )}
+
+      {initialData && (
+        <div style={{ padding: '0.75rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '0.8rem', color: '#92400e', marginBottom: '1rem' }}>
+          <strong>Nota:</strong> Al cambiar el instructor, horario o capacidad, las clases ya generadas no se modificarán.
+          Solo los nuevos días de clase usarán los valores actualizados.
+        </div>
       )}
 
       <div className="form-actions">
