@@ -48,6 +48,7 @@ export default function Login() {
             api.preloadClientData()
             navigate('/cliente/dashboard')
           } else if (result.rol === 'instructor') {
+            api.preloadInstructorData()
             navigate('/instructor/dashboard')
           }
         }, 1500)

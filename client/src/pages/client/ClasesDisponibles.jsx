@@ -311,7 +311,7 @@ export default function ClasesDisponibles() {
                 </div>
                 <div className="time-section-content">
                   {clases.map(clase => {
-                    const cupos = clase.capacidadMaxima - clase.inscritos
+                    const cupos = clase.capacidadMaxima - (clase.inscritos || 0)
                     const idx = animIdx++
                     return (
                       <div
@@ -340,7 +340,7 @@ export default function ClasesDisponibles() {
                           </div>
                           <div className="clase-card-slim-participants">
                             <Users size={13} />
-                            <span>{clase.inscritos}/{clase.capacidadMaxima}</span>
+                            <span>{clase.inscritos || 0}/{clase.capacidadMaxima}</span>
                           </div>
                           <div className={`clase-card-slim-cupos-text${cupos === 0 ? ' agotado' : ''}${cupos > 0 && cupos <= 3 ? ' pocos' : ''}`}>
                             {cupos === 0 ? 'Completa' : `quedan ${cupos}`}

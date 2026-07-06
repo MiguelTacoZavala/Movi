@@ -28,12 +28,19 @@ export default function MiPerfil() {
   const fileInputRef = useRef(null)
 
   useEffect(() => {
+    let mounted = true
     api.cachedGet('/creditos').then(res => {
-      const disponibles = (res.creditos || []).filter(c => !c.usado).length
-      setCreditos(disponibles)
+      if (mounted) {
+        const disponibles = (res.creditos || []).filter(c => !c.usado).length
+        setCreditos(disponibles)
+        setCreditosError(false)
+      }
     }).catch(() => {
-      setCreditosError('No pudimos cargar tus créditos.')
+      if (mounted) {
+        setCreditosError('No pudimos cargar tus créditos.')
+      }
     })
+    return () => { mounted = false }
   }, [])
 
   const openEditModal = () => {

@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../context/useAuth'
-import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User, Tag, Calendar, Clock } from 'lucide-react'
+import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, AlertCircle, CheckCircle, Timer, User, Tag, Calendar, Clock } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
@@ -46,15 +46,18 @@ export default function DetalleClase() {
   const [inscripcionData, setInscripcionData] = useState(null)
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState('')
+  const [claseError, setClaseError] = useState(null)
   const [pagandoYape, setPagandoYape] = useState(false)
   const [procesandoPagoYape, setProcesandoPagoYape] = useState(false)
   const [creditos, setCreditos] = useState(0)
+  const [creditosError, setCreditosError] = useState(false)
 
   useEffect(() => {
     api.get(`/clases/${id}`).then(res => {
       setClase(res.clase)
     }).catch(() => {
       setClase(null)
+      setClaseError('No pudimos cargar los detalles de esta clase. Verifica tu conexión e intenta de nuevo.')
     }).finally(() => setLoading(false))
   }, [id])
 
@@ -62,7 +65,10 @@ export default function DetalleClase() {
     api.cachedGet('/creditos').then(res => {
       const disponibles = (res.creditos || []).filter(c => !c.usado).length
       setCreditos(disponibles)
-    }).catch(() => {})
+      setCreditosError(false)
+    }).catch(() => {
+      setCreditosError(true)
+    })
   }, [])
 
   useEffect(() => {
@@ -235,8 +241,9 @@ export default function DetalleClase() {
   if (!clase && !loading) {
     return (
       <div className="empty-state">
-        <h3>Clase no encontrada</h3>
-        <p>La clase solicitada no existe</p>
+        <AlertCircle size={48} className="icon-muted" />
+        <h3>{claseError ? 'Error al cargar la clase' : 'Clase no encontrada'}</h3>
+        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: '0.5rem 0' }}>{claseError || 'La clase solicitada no existe'}</p>
         <Button onClick={() => navigate('/cliente/clases')} style={{ marginTop: '1rem' }}>
           Volver a Clases
         </Button>
@@ -452,7 +459,7 @@ export default function DetalleClase() {
               >
                 <CreditCard size={32} />
                 <span>Usar Créditos</span>
-                <small>{creditos > 0 ? `${creditos} disponible${creditos > 1 ? 's' : ''}` : 'Sin créditos'}</small>
+                <small>{creditosError ? 'Error al cargar' : creditos > 0 ? `${creditos} disponible${creditos > 1 ? 's' : ''}` : 'Sin créditos'}</small>
               </div>
               <div
                 className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape ? 'disabled' : ''}`}
