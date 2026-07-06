@@ -186,7 +186,7 @@ export default function HorariosSemanales() {
     setError('')
     setMensaje('')
     try {
-      const result = await api.patch(`/horarios/${h.id}/status`, { cancelarFuturas })
+      const result = await api.patch(`/horarios/${h.id}/estado`, { cancelarFuturas })
       api.invalidateCache(CACHE_KEYS)
       setDeactivateTarget(null)
       if (result.cancelacion?.clasesCanceladas > 0) {
@@ -246,11 +246,21 @@ export default function HorariosSemanales() {
     if (!deleteTarget) return
     setError('')
     try {
-      await api.del(`/horarios/${deleteTarget.id}`)
+      const result = await api.del(`/horarios/${deleteTarget.id}`)
       api.invalidateCache(CACHE_KEYS)
-      setHorarios(horarios.filter(x => x.id !== deleteTarget.id))
+      if (result.eliminado) {
+        setHorarios(horarios.filter(x => x.id !== deleteTarget.id))
+        setMensaje(result.message || 'Horario eliminado correctamente.')
+      } else if (result.desactivado) {
+        setHorarios(horarios.map(x => x.id === deleteTarget.id ? { ...x, activo: false } : x))
+        setMensaje(result.message || 'Horario desactivado. Tiene clases pasadas que se conservan como historial.')
+      }
     } catch (e) {
-      setError(mensajeError(e, 'No se pudo eliminar el horario.'))
+      if (e.data?.clasesFuturas) {
+        setError(`No se puede eliminar: tiene ${e.data.clasesFuturas} clase(s) futura(s) programadas. Cancela las clases primero.`)
+      } else {
+        setError(mensajeError(e, 'No se pudo eliminar el horario.'))
+      }
     } finally {
       setDeleteTarget(null)
     }

@@ -39,23 +39,6 @@ export function AuthProvider({ children }) {
     return { success: true }
   }
 
-  const registerAdmin = (data) => {
-    const clientes = JSON.parse(localStorage.getItem('adminsRegistrados')) || []
-    const existe = clientes.find(a => a.email === data.email)
-    if (existe) return { success: false, message: 'Ya existe un administrador con ese email' }
-    const nuevo = {
-      id: Date.now(),
-      email: data.email,
-      nombres: data.nombres,
-      apellidos: data.apellidos || '',
-      password: data.password,
-      rol: 'admin',
-    }
-    clientes.push(nuevo)
-    localStorage.setItem('adminsRegistrados', JSON.stringify(clientes))
-    return { success: true }
-  }
-
   const updateUser = (data) => {
     const updated = { ...user, ...data }
     setUser(updated)
@@ -73,7 +56,7 @@ export function AuthProvider({ children }) {
   const isInstructor = user?.rol === 'instructor'
 
   return (
-    <AuthContext.Provider value={{ user, login, registerClient, registerAdmin, updateUser, logout, isAuthenticated, isAdmin, isCliente, isInstructor, loading }}>
+    <AuthContext.Provider value={{ user, login, registerClient, updateUser, logout, isAuthenticated, isAdmin, isCliente, isInstructor, loading }}>
       {children}
     </AuthContext.Provider>
   )

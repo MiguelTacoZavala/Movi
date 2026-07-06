@@ -13,7 +13,17 @@ async function auth(req, res, next) {
 
     const usuario = await prisma.usuario.findUnique({
       where: { id: decoded.sub },
-      include: { role: true },
+      select: {
+        id: true,
+        nombres: true,
+        apellidos: true,
+        email: true,
+        dni: true,
+        telefono: true,
+        fotoUrl: true,
+        estado: true,
+        role: true,
+      },
     })
 
     if (!usuario || !usuario.estado) {

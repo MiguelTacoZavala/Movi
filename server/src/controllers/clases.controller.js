@@ -1,4 +1,5 @@
 const claseService = require('../services/clase.service')
+const { safeId } = require('../lib/helpers')
 
 async function generar(req, res, next) {
   try {
@@ -12,8 +13,16 @@ async function generar(req, res, next) {
 
 async function listar(req, res, next) {
   try {
-    const { estado, fecha, categoriaId, instructorId, page, limit } = req.query
-    const resultado = await claseService.listar({ estado, fecha, categoriaId, instructorId, page, limit })
+    const { estado, fecha, categoriaId, instructorId, page, limit, soloActivas } = req.query
+    const resultado = await claseService.listar({
+      estado,
+      fecha,
+      categoriaId,
+      instructorId,
+      page,
+      limit,
+      soloActivas: soloActivas === 'true',
+    })
     res.json(resultado)
   } catch (error) {
     next(error)
@@ -22,8 +31,10 @@ async function listar(req, res, next) {
 
 async function obtener(req, res, next) {
   try {
-    const id = Number(req.params.id)
-    const clase = await claseService.obtener(id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
+    const { soloActivas } = req.query
+    const clase = await claseService.obtener(id, { soloActivas: soloActivas === 'true' })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
     res.json({ clase })
   } catch (error) {
@@ -33,7 +44,8 @@ async function obtener(req, res, next) {
 
 async function cancelar(req, res, next) {
   try {
-    const id = Number(req.params.id)
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const resultado = await claseService.cancelar(id)
     if (!resultado) return res.status(404).json({ error: 'Clase no encontrada' })
     res.json({ message: 'Clase cancelada correctamente', ...resultado })

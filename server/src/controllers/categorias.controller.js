@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { safeId } = require('../lib/helpers')
 
 async function listar(req, res, next) {
   try {
@@ -32,23 +33,24 @@ async function crear(req, res, next) {
 
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const { nombre, descripcion, precio } = req.body
 
-    const existe = await prisma.categoriaBaile.findUnique({ where: { id: Number(id) } })
+    const existe = await prisma.categoriaBaile.findUnique({ where: { id } })
     if (!existe) {
       return res.status(404).json({ error: 'Categoría no encontrada' })
     }
 
     const duplicado = await prisma.categoriaBaile.findFirst({
-      where: { nombre, NOT: { id: Number(id) } },
+      where: { nombre, NOT: { id } },
     })
     if (duplicado) {
       return res.status(409).json({ error: 'Ya existe otra categoría con ese nombre. Elige un nombre distinto.' })
     }
 
     const categoria = await prisma.categoriaBaile.update({
-      where: { id: Number(id) },
+      where: { id },
       data: { nombre, descripcion: descripcion || null, precio },
     })
 
@@ -60,15 +62,16 @@ async function actualizar(req, res, next) {
 
 async function eliminar(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
 
-    const existe = await prisma.categoriaBaile.findUnique({ where: { id: Number(id) } })
+    const existe = await prisma.categoriaBaile.findUnique({ where: { id } })
     if (!existe) {
       return res.status(404).json({ error: 'Categoría no encontrada' })
     }
 
     const horarios = await prisma.horarioSemanal.count({
-      where: { categoriaId: Number(id) },
+      where: { categoriaId: id },
     })
     if (horarios > 0) {
       return res.status(409).json({
@@ -76,7 +79,7 @@ async function eliminar(req, res, next) {
       })
     }
 
-    await prisma.categoriaBaile.delete({ where: { id: Number(id) } })
+    await prisma.categoriaBaile.delete({ where: { id } })
     res.json({ message: 'Categoría eliminada correctamente' })
   } catch (error) {
     next(error)

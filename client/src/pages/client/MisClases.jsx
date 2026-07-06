@@ -29,16 +29,19 @@ export default function MisClases() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let mounted = true
     api.cachedGet('/reservas/mis-reservas').then(data => {
-      setReservas(data.reservas)
+      if (mounted) setReservas(data.reservas || [])
     }).catch(() => {
-      setError('No pudimos cargar tus reservas. Revisa tu conexión.')
-    }).finally(() => setLoading(false))
+      if (mounted) setError('No pudimos cargar tus reservas. Revisa tu conexión.')
+    }).finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
   }, [])
 
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
   const filtradas = reservas.filter(r => {
+    if (!r.clase) return false
     const st = estado(r)
     const f = toDate(r.clase.fecha)
     if (filtro === 'proximas') return f >= hoy && st !== 'CANCELADA' && st !== 'EXPIRADA' && st !== 'FINALIZADA'

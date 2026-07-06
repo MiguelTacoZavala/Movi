@@ -1,14 +1,5 @@
 const prisma = require('../lib/prisma')
-
-function hhmm(d) {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-function yyyymmdd(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function hhmmss(d) {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
-}
+const { hhmm, hhmmss, yyyymmdd, haPasado } = require('../lib/helpers')
 
 const includeClase = {
   clase: {
@@ -33,15 +24,6 @@ const includeClase = {
   },
   posicionClase: { select: { id: true, numero: true } },
   pago: { select: { monto: true, metodoPago: true } },
-}
-
-function haPasado(clase) {
-  const ahora = new Date()
-  const hoyStr = yyyymmdd(ahora)
-  const ahoraTimeStr = hhmmss(ahora)
-  const fechaStr = yyyymmdd(clase.fecha)
-  const horaFinStr = hhmmss(clase.horaFin)
-  return fechaStr < hoyStr || (fechaStr === hoyStr && horaFinStr < ahoraTimeStr)
 }
 
 function formatear(reserva) {
@@ -103,11 +85,15 @@ async function listarPorUsuario(usuarioId) {
 async function cancelar(reservaId, usuarioId) {
   const reserva = await prisma.reserva.findUnique({
     where: { id: reservaId },
+    include: {
+      clase: { select: { fecha: true, horaFin: true, estado: true } },
+    },
   })
   if (!reserva) return null
   if (reserva.usuarioId !== usuarioId) return null
   if (reserva.estado === 'CANCELADA') throw { yaCancelada: true }
   if (reserva.estado === 'EXPIRADA') throw { yaExpirada: true }
+  if (haPasado(reserva.clase)) throw { claseYaPasada: true }
 
   await prisma.$transaction(async (tx) => {
     await tx.reserva.update({

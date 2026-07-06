@@ -70,31 +70,6 @@ async function register(req, res, next) {
   }
 }
 
-async function registerAdmin(req, res, next) {
-  try {
-    const { email, nombres, apellidos, password } = req.body
-
-    const existe = await prisma.usuario.findUnique({ where: { email } })
-    if (existe) {
-      return res.status(409).json({ error: 'El email ya está registrado' })
-    }
-
-    const rolAdmin = await prisma.role.findUnique({ where: { nombre: 'ADMIN' } })
-
-    await authService.crearUsuario({
-      nombres,
-      apellidos,
-      email,
-      password,
-      rolId: rolAdmin.id,
-    })
-
-    res.status(201).json({ message: 'Administrador registrado correctamente' })
-  } catch (error) {
-    next(error)
-  }
-}
-
 async function me(req, res, next) {
   try {
     const usuario = await prisma.usuario.findUnique({
@@ -131,4 +106,4 @@ async function updateProfile(req, res, next) {
   }
 }
 
-module.exports = { login, register, registerAdmin, me, updateProfile }
+module.exports = { login, register, me, updateProfile }

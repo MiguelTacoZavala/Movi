@@ -114,7 +114,7 @@ export default function Instructores() {
   const handleToggleStatus = async (instructor) => {
     setError('')
     try {
-      const data = await api.patch(`/instructores/${instructor.id}/status`)
+      const data = await api.patch(`/instructores/${instructor.id}/estado`)
       api.invalidateCache(CACHE_KEYS)
       setInstructores(instructores.map(inst =>
         inst.id === instructor.id ? data.instructor : inst

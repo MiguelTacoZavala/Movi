@@ -52,7 +52,7 @@ router.get('/', auth, listar)
 router.get('/:id', auth, obtener)
 router.post('/', auth, authorize('ADMIN'), validate(crearSchema), crear)
 router.put('/:id', auth, authorize('ADMIN'), validate(actualizarSchema), actualizar)
-router.patch('/:id/status', auth, authorize('ADMIN'), toggleActivo)
+router.patch('/:id/estado', auth, authorize('ADMIN'), toggleActivo)
 router.post('/:id/generar', auth, authorize('ADMIN'), validate(generarHastaSchema), extender)
 router.delete('/:id', auth, authorize('ADMIN'), eliminar)
 

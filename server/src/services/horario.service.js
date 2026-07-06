@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
 const claseService = require('./clase.service')
+const { parsearHora, DEFAULT_MIN_PARTICIPANTES } = require('../lib/helpers')
 
 const include = {
   categoria: { select: { id: true, nombre: true } },
@@ -31,17 +32,11 @@ function formatear(horario) {
   }
 }
 
-function parsearHora(horaStr) {
-  const [h, m] = horaStr.split(':').map(Number)
-  const d = new Date('1970-01-01T00:00:00.000Z')
-  d.setHours(h, m, 0, 0)
-  return d
-}
-
 async function verificarOverlap({ instructorId, diaSemana, horaInicio, horaFin, excluirId }) {
   const where = {
     instructorId,
     diaSemana,
+    activo: true,
     horaInicio: { lt: horaFin },
     horaFin: { gt: horaInicio },
   }
@@ -86,16 +81,25 @@ async function crear({ categoriaId, instructorId, diaSemana, horaInicio: hi, hor
       horaInicio,
       horaFin,
       capacidadMaxima,
-      minimoParticipantes: minimoParticipantes ?? 7,
+      minimoParticipantes: minimoParticipantes ?? DEFAULT_MIN_PARTICIPANTES,
       createdBy,
     },
     include,
   })
 
-  // Automatización: al crear el horario ya quedan generadas sus clases hasta la fecha elegida
+  // Automatización: al crear el horario, generar 4 clases por defecto (rolling window)
+  // Si el admin especifica generarHasta, se usa esa fecha en su lugar
   let generacion = null
   if (generarHasta) {
     generacion = await claseService.generarDesdeHorario(horario.id, generarHasta)
+  } else {
+    // Generar 4 semanas hacia adelante (rolling window)
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    const cuatroSemanas = new Date(hoy)
+    cuatroSemanas.setDate(hoy.getDate() + 4 * 7)
+    const fechaHasta = `${cuatroSemanas.getFullYear()}-${String(cuatroSemanas.getMonth() + 1).padStart(2, '0')}-${String(cuatroSemanas.getDate()).padStart(2, '0')}`
+    generacion = await claseService.generarDesdeHorario(horario.id, fechaHasta)
   }
 
   return { horario: { ...formatear(horario), proximasClases: generacion?.creadas ?? 0 }, generacion }
@@ -160,22 +164,40 @@ async function toggleActivo(id, { cancelarFuturas = false } = {}) {
 }
 
 async function eliminar(id) {
-  return prisma.$transaction(async (tx) => {
-    const horario = await tx.horarioSemanal.findUnique({ where: { id }, select: { id: true } })
-    if (!horario) throw { code: 'P2025' }
+  const horario = await prisma.horarioSemanal.findUnique({ where: { id }, select: { id: true } })
+  if (!horario) throw { code: 'P2025' }
 
-    // Las clases se borran en cascada (horario → clases → posiciones), pero las
-    // reservas referencian clases y posiciones con FK restrictiva. Cancelar una
-    // clase no borra sus reservas, así que hay que eliminarlas antes.
-    // Al borrar la reserva: sus pagos caen en cascada y sus créditos quedan en NULL.
-    const clases = await tx.clase.findMany({ where: { horarioSemanalId: id }, select: { id: true } })
-    const claseIds = clases.map((c) => c.id)
-    if (claseIds.length) {
-      await tx.reserva.deleteMany({ where: { claseId: { in: claseIds } } })
-    }
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
 
-    return tx.horarioSemanal.delete({ where: { id } })
+  // Verificar si hay clases futuras
+  const clasesFuturas = await prisma.clase.count({
+    where: { horarioSemanalId: id, fecha: { gte: hoy } },
   })
+
+  if (clasesFuturas > 0) {
+    throw { clasesFuturas, message: 'No se puede eliminar un horario con clases futuras programadas. Cancela las clases primero.' }
+  }
+
+  // Solo se pueden eliminar horarios sin clases (pasadas se conservan como historial)
+  // Primero desactivar el horario para que el cron no genere nuevas clases
+  await prisma.horarioSemanal.update({
+    where: { id },
+    data: { activo: false, updatedAt: new Date() },
+  })
+
+  // Contar clases totales (pasadas) — si tiene historial, solo se desactiva
+  const clasesTotales = await prisma.clase.count({
+    where: { horarioSemanalId: id },
+  })
+
+  if (clasesTotales > 0) {
+    return { eliminado: false, desactivado: true, message: 'Horario desactivado. Tiene clases pasadas que se conservan como historial.' }
+  }
+
+  // Si no tiene ninguna clase (ni pasada ni futura), se puede borrar el horario
+  await prisma.horarioSemanal.delete({ where: { id } })
+  return { eliminado: true, message: 'Horario eliminado correctamente.' }
 }
 
 module.exports = { listar, obtener, crear, actualizar, toggleActivo, eliminar, extender }

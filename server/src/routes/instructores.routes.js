@@ -32,7 +32,7 @@ router.get('/', auth, authorize('ADMIN'), listar)
 router.post('/', auth, authorize('ADMIN'), validate(crearSchema), crear)
 router.put('/:id', auth, authorize('ADMIN'), validate(actualizarSchema), actualizar)
 router.delete('/:id', auth, authorize('ADMIN'), eliminar)
-router.patch('/:id/status', auth, authorize('ADMIN'), toggleEstado)
+router.patch('/:id/estado', auth, authorize('ADMIN'), toggleEstado)
 
 // Instructor panel
 router.get('/dashboard', auth, authorize('INSTRUCTOR'), dashboard)
