@@ -1,0 +1,11 @@
+Administrador:
+admin@dance.com
+admin123
+
+CLIENTE
+12345678
+cliente123
+
+INSTRUCTOR:
+maria@dance.com
+instructor123

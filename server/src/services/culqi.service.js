@@ -1,9 +1,7 @@
 const { env } = require('../config/env')
 
-const CULQI_API = 'https://api.culqi.com/v2'
-
 async function crearCargo({ tokenId, monto, email, descripcion }) {
-  const response = await fetch(`${CULQI_API}/charges`, {
+  const response = await fetch(`${env.CULQI_API_URL}/charges`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

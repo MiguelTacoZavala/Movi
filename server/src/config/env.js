@@ -9,6 +9,10 @@ const envSchema = z.object({
   CLOUDINARY_URL: z.string().min(1, 'CLOUDINARY_URL es requerida'),
   CULQI_PUBLIC_KEY: z.string().min(1, 'CULQI_PUBLIC_KEY es requerida'),
   CULQI_SECRET_KEY: z.string().min(1, 'CULQI_SECRET_KEY es requerida'),
+  CULQI_API_URL: z.string().default('https://api.culqi.com/v2'),
+  DEFAULT_CLASE_PRECIO: z.coerce.number().default(15),
+  DEFAULT_MIN_PARTICIPANTES: z.coerce.number().default(7),
+  CLASES_POR_HORARIO: z.coerce.number().default(4),
 })
 
 const parsed = envSchema.safeParse(process.env)

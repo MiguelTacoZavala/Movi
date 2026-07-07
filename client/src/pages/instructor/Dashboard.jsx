@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Calendar, Clock, Users, Music } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
-import { formatHoraAMPM } from '../../utils/helpers'
+import LoadingScreen from '../../components/common/LoadingScreen'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Dashboard() {
@@ -13,7 +14,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/instructores/dashboard').then(res => {
+    api.cachedGet('/instructores/dashboard').then(res => {
       setData(res)
       setError(null)
     }).catch(() => {
@@ -22,7 +23,7 @@ export default function Dashboard() {
     }).finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   const proximaClase = data?.proximaClase
   const clasesHoy = data?.clasesHoy || []
@@ -52,7 +53,7 @@ export default function Dashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.95rem', color: 'var(--gray-600)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Calendar size={18} className="icon-muted" aria-hidden="true" />
-                {proximaClase.fecha}
+                {formatFechaBonita(proximaClase.fecha)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Clock size={18} className="icon-muted" aria-hidden="true" />

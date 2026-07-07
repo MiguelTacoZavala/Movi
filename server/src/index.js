@@ -5,6 +5,7 @@ const express = require('express')
 const cors = require('cors')
 const { env } = require('./config/env')
 const { errorHandler } = require('./middleware/errorHandler')
+const { iniciarCron } = require('./services/cron.service')
 const authRoutes = require('./routes/auth.routes')
 const uploadRoutes = require('./routes/upload.routes')
 const pagosRoutes = require('./routes/pagos.routes')
@@ -55,4 +56,5 @@ app.use(errorHandler)
 
 app.listen(env.PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${env.PORT}`)
+  iniciarCron()
 })

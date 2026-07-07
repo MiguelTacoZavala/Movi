@@ -5,6 +5,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../services/api'
 import { useFlashMessage } from '../../hooks/useFlashMessage'
 import { ESTADOS_CLASE, formatHoraAMPM, formatFechaBonita, mensajeError } from '../../utils/helpers'
@@ -23,8 +24,16 @@ const estadoConfig = {
 
 // Una clase con fecha anterior a hoy ya no se puede cancelar
 function esClasePasada(fecha) {
-  const hoy = new Date().toISOString().substring(0, 10)
+  const now = new Date()
+  const hoy = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   return fecha < hoy
+}
+
+function fetchClasesData() {
+  return Promise.all([
+    api.cachedGet('/clases?limit=500'),
+    api.cachedGet('/instructores'),
+  ])
 }
 
 export default function Clases() {
@@ -38,17 +47,32 @@ export default function Clases() {
   const POR_PAGINA = 10
   const [selectedClase, setSelectedClase] = useState(null)
   const [participantsOpen, setParticipantsOpen] = useState(false)
+  const [participantsLoading, setParticipantsLoading] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const [cancelTargetClase, setCancelTargetClase] = useState(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
   const [error, setError] = useState('')
   const [mensaje, setMensaje] = useFlashMessage()
 
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchClasesData()
+      .then(([cData, iData]) => {
+        if (mounted) {
+          setClases(cData.clases)
+          setInstructores(iData.instructores)
+        }
+      })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudieron cargar las clases.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
   const cargar = async () => {
     try {
-      const [cData, iData] = await Promise.all([
-        api.cachedGet('/clases?limit=500'),
-        api.cachedGet('/instructores'),
-      ])
+      const [cData, iData] = await fetchClasesData()
       setClases(cData.clases)
       setInstructores(iData.instructores)
     } catch (e) {
@@ -57,8 +81,6 @@ export default function Clases() {
       setLoading(false)
     }
   }
-
-  useEffect(() => { cargar() }, [])
 
   const filteredClases = useMemo(() => {
     // Orden por estado: Programadas/activas (0) arriba, Canceladas (1) en medio, Finalizadas (2) al fondo
@@ -85,7 +107,7 @@ export default function Clases() {
       })
   }, [clases, filtroEstado, filtroFecha, filtroInstructor])
 
-  useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor])
+  useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor]) // eslint-disable-line react-hooks/set-state-in-effect
 
   const totalPaginas = Math.max(1, Math.ceil(filteredClases.length / POR_PAGINA))
   const clasesPagina = filteredClases.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
@@ -148,12 +170,17 @@ export default function Clases() {
 
   const handleViewParticipants = async (clase) => {
     setError('')
+    setSelectedClase(null)
+    setParticipantsOpen(true)
+    setParticipantsLoading(true)
     try {
       const data = await api.get(`/clases/${clase.id}`)
       setSelectedClase(data.clase)
-      setParticipantsOpen(true)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los participantes.'))
+      setParticipantsOpen(false)
+    } finally {
+      setParticipantsLoading(false)
     }
   }
 
@@ -164,10 +191,11 @@ export default function Clases() {
 
   const confirmCancel = async () => {
     if (!cancelTargetClase) return
+    setCancelLoading(true)
     setError('')
     setMensaje('')
     try {
-      const r = await api.patch(`/clases/${cancelTargetClase.id}/cancel`)
+      const r = await api.patch(`/clases/${cancelTargetClase.id}/cancelar`)
       api.invalidateCache(CACHE_KEYS)
       setClases(clases.map(c =>
         c.id === cancelTargetClase.id ? { ...c, estado: 'CANCELADA' } : c
@@ -178,6 +206,7 @@ export default function Clases() {
     } catch (e) {
       setError(mensajeError(e, 'No se pudo cancelar la clase.'))
     } finally {
+      setCancelLoading(false)
       setCancelConfirmOpen(false)
       setCancelTargetClase(null)
     }
@@ -191,7 +220,7 @@ export default function Clases() {
 
   const isOcupado = (pos) => Array.isArray(pos.reservas) && pos.reservas.length > 0
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>
@@ -289,10 +318,15 @@ export default function Clases() {
       <Modal
         isOpen={participantsOpen}
         onClose={() => setParticipantsOpen(false)}
-        title={`Participantes: ${selectedClase?.categoria?.nombre || ''}`}
+        title={participantsLoading && !selectedClase ? 'Cargando participantes...' : `Participantes: ${selectedClase?.categoria?.nombre || ''}`}
         size="large"
       >
-        {selectedClase && (
+        {participantsLoading && !selectedClase ? (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div className="processing-spinner" style={{ margin: '0 auto 1rem' }} />
+            <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>Cargando participantes...</p>
+          </div>
+        ) : selectedClase && (
           <div>
             <div className="clase-info-summary">
               <p><strong>Instructor:</strong> {selectedClase.instructor ? `${selectedClase.instructor.nombres} ${selectedClase.instructor.apellidos}` : '—'}</p>
@@ -330,7 +364,7 @@ export default function Clases() {
 
       <Modal
         isOpen={cancelConfirmOpen}
-        onClose={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }}
+        onClose={() => { if (!cancelLoading) { setCancelConfirmOpen(false); setCancelTargetClase(null) } }}
         title="Cancelar clase"
       >
         {cancelTargetClase && (
@@ -346,20 +380,22 @@ export default function Clases() {
             <AlertTriangle size={48} style={{ display: 'block', margin: '1rem auto', color: 'var(--warning)' }} />
 
             <p className="modal-subtitle" style={{ textAlign: 'center' }}>
-              {cancelTargetClase.inscritos > 0
-                ? `Hay ${cancelTargetClase.inscritos} participante(s) registrados. Se generarán créditos automáticamente.`
-                : 'No hay participantes registrados para esta clase.'}
+              {cancelLoading
+                ? 'Cancelando tu inscripción...'
+                : cancelTargetClase.inscritos > 0
+                  ? `Hay ${cancelTargetClase.inscritos} participante(s) registrados. Se generarán créditos automáticamente.`
+                  : 'No hay participantes registrados para esta clase.'}
             </p>
             <p className="modal-subtitle" style={{ textAlign: 'center', fontWeight: 500, color: 'var(--danger-text)' }}>
               Esta acción no se puede deshacer.
             </p>
 
             <div className="modal-actions">
-              <Button variant="secondary" onClick={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }}>
+              <Button variant="secondary" onClick={() => { setCancelConfirmOpen(false); setCancelTargetClase(null) }} disabled={cancelLoading}>
                 No, mantener
               </Button>
-              <Button variant="danger" onClick={confirmCancel}>
-                Sí, cancelar clase
+              <Button variant="danger" onClick={confirmCancel} disabled={cancelLoading}>
+                {cancelLoading ? 'Cancelando...' : 'Sí, cancelar clase'}
               </Button>
             </div>
           </>

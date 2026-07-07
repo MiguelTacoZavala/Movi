@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Music, Calendar, Clock, Users, ChevronRight } from 'lucide-react'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
-import { formatHoraAMPM } from '../../utils/helpers'
+import LoadingScreen from '../../components/common/LoadingScreen'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Clases() {
@@ -13,7 +14,7 @@ export default function Clases() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/instructores/mis-clases').then(res => {
+    api.cachedGet('/instructores/mis-clases').then(res => {
       setClases(res.clases || [])
       setError(null)
     }).catch(() => {
@@ -28,10 +29,10 @@ export default function Clases() {
       EN_CURSO: { label: 'En Curso', className: 'status-active' },
     }
     const cfg = map[estado] || { label: estado, className: '' }
-    return <span className={`status-badge ${cfg.className}`}>{cfg.label}</span>
+    return <span className={`status-badge ${cfg.className}`} aria-label={`Estado: ${cfg.label}`}>{cfg.label}</span>
   }
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>
@@ -73,7 +74,7 @@ export default function Clases() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Calendar size={16} className="icon-muted" aria-hidden="true" />
-                  {clase.fecha}
+                  {formatFechaBonita(clase.fecha)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={16} className="icon-muted" aria-hidden="true" />

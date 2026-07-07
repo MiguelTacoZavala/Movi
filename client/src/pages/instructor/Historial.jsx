@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { Clock, Calendar, Users } from 'lucide-react'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
-import { formatHoraAMPM } from '../../utils/helpers'
+import LoadingScreen from '../../components/common/LoadingScreen'
+import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Historial() {
@@ -11,7 +12,7 @@ export default function Historial() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/instructores/historial').then(res => {
+    api.cachedGet('/instructores/historial').then(res => {
       setClases(res.clases || [])
       setError(null)
     }).catch(() => {
@@ -20,7 +21,7 @@ export default function Historial() {
     }).finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
 
   return (
     <div>
@@ -37,7 +38,12 @@ export default function Historial() {
         </div>
       ) : (
         clases.map((clase, idx) => (
-          <div key={clase.id} className="client-card" style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}>
+          <div
+            key={clase.id}
+            className="client-card"
+            style={{ marginBottom: '0.75rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}
+            aria-label={`Clase de ${clase.categoria?.nombre || ''} el ${formatFechaBonita(clase.fecha)} de ${formatHoraAMPM(clase.horaInicio)} a ${formatHoraAMPM(clase.horaFin)}. Estado: ${clase.estado === 'FINALIZADA' ? 'finalizada' : 'cancelada'}. Con ${clase.inscritos || 0} participantes.`}
+          >
             <div className="client-card-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--gray-900)' }}>
@@ -50,7 +56,7 @@ export default function Historial() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Calendar size={16} className="icon-muted" aria-hidden="true" />
-                  {clase.fecha}
+                  {formatFechaBonita(clase.fecha)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={16} className="icon-muted" aria-hidden="true" />

@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
-import { useAuth } from '../../context/AuthContext'
-import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, CheckCircle, Timer, User, Tag } from 'lucide-react'
+import { useAuth } from '../../context/useAuth'
+import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, AlertCircle, CheckCircle, Timer, User, Tag, Calendar, Clock } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import culqi from '../../services/culqi'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatFechaBonita, formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
 
@@ -45,15 +46,34 @@ export default function DetalleClase() {
   const [inscripcionData, setInscripcionData] = useState(null)
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState('')
+  const [claseError, setClaseError] = useState(null)
   const [pagandoYape, setPagandoYape] = useState(false)
+  const [procesandoPagoYape, setProcesandoPagoYape] = useState(false)
+  const [creditos, setCreditos] = useState(0)
+  const [creditosError, setCreditosError] = useState(false)
 
   useEffect(() => {
-    api.get(`/clases/${id}`).then(res => {
+    api.get(`/clases/${id}?soloActivas=true`).then(res => {
       setClase(res.clase)
     }).catch(() => {
       setClase(null)
+      setClaseError('No pudimos cargar los detalles de esta clase. Verifica tu conexión e intenta de nuevo.')
     }).finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    api.cachedGet('/creditos').then(res => {
+      const disponibles = (res.creditos || []).filter(c => !c.usado).length
+      setCreditos(disponibles)
+      setCreditosError(false)
+    }).catch(() => {
+      setCreditosError(true)
+    })
+  }, [])
+
+  useEffect(() => {
+    return () => { culqi.close() }
+  }, [])
 
   useEffect(() => {
     if (!holdActive) return
@@ -110,6 +130,54 @@ export default function DetalleClase() {
     setShowResumenModal(true)
   }
 
+  const openCulqiYape = async (holdIdState, precioState) => {
+    setPagandoYape(true)
+    setError('')
+    try {
+      const tokenId = await culqi.generarToken({
+        amount: precioState,
+        email: user?.email || 'cliente@movi.com',
+        description: `${clase.categoria?.nombre} - ${clase.fecha}`,
+      })
+
+      setPagandoYape(false)
+      setProcesandoPagoYape(true)
+
+      const result = await api.confirmarPago({
+        holdId: holdIdState,
+        tokenId,
+      })
+
+      api.invalidateCache()
+      setInscripcionData({
+        categoria: clase.categoria?.nombre,
+        instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
+        fecha: clase.fecha,
+        hora_inicio: clase.horaInicio,
+        asiento: selectedSeat.numero,
+        metodoPago: 'yape',
+        tematica: clase.tematica || 'LIBRE',
+        codigoPago: result.codigoPago,
+        monto: result.monto,
+      })
+      setHoldActive(false)
+      setInscripcionExitosa(true)
+    } catch (e) {
+      setError(e.data?.error || e.message || 'No pudimos completar el pago con Yape. Intenta de nuevo.')
+      if (e.status === 410 || e.status === 409 || e.status === 402) {
+        setHoldActive(false)
+        setHoldId(null)
+        setHoldCodigoPago(null)
+        setSelectedSeat(null)
+        setMetodoPago(null)
+        setHoldExpired(true)
+      }
+    } finally {
+      setPagandoYape(false)
+      setProcesandoPagoYape(false)
+    }
+  }
+
   const handleConfirmarInscripcion = async () => {
     setShowResumenModal(false)
     setError('')
@@ -155,55 +223,14 @@ export default function DetalleClase() {
         setHoldActive(true)
         setHoldSeconds(HOLD_DURATION)
         setProcesando(false)
+
+        openCulqiYape(result.holdId, precio)
       } catch (e) {
         setError(e.data?.error || e.message || 'No pudimos reservar el asiento. Intenta de nuevo.')
         setSelectedSeat(null)
         setMetodoPago(null)
         setProcesando(false)
       }
-    }
-  }
-
-  const handlePagarConYape = async () => {
-    setPagandoYape(true)
-    setError('')
-    try {
-      const tokenId = await culqi.generarToken({
-        amount: precio,
-        description: `${clase.categoria?.nombre} - ${clase.fecha}`,
-      })
-
-      const result = await api.confirmarPago({
-        holdId,
-        tokenId,
-      })
-
-      api.invalidateCache()
-      setInscripcionData({
-        categoria: clase.categoria?.nombre,
-        instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
-        fecha: clase.fecha,
-        hora_inicio: clase.horaInicio,
-        asiento: selectedSeat.numero,
-        metodoPago: 'yape',
-        tematica: clase.tematica || 'LIBRE',
-        codigoPago: result.codigoPago,
-        monto: result.monto,
-      })
-      setHoldActive(false)
-      setInscripcionExitosa(true)
-    } catch (e) {
-      setError(e.data?.error || e.message || 'No pudimos completar el pago con Yape. Intenta de nuevo.')
-      if (e.status === 410 || e.status === 409) {
-        setHoldActive(false)
-        setHoldId(null)
-        setHoldCodigoPago(null)
-        setSelectedSeat(null)
-        setMetodoPago(null)
-        setHoldExpired(true)
-      }
-    } finally {
-      setPagandoYape(false)
     }
   }
 
@@ -214,8 +241,9 @@ export default function DetalleClase() {
   if (!clase && !loading) {
     return (
       <div className="empty-state">
-        <h3>Clase no encontrada</h3>
-        <p>La clase solicitada no existe</p>
+        <AlertCircle size={48} className="icon-muted" />
+        <h3>{claseError ? 'Error al cargar la clase' : 'Clase no encontrada'}</h3>
+        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: '0.5rem 0' }}>{claseError || 'La clase solicitada no existe'}</p>
         <Button onClick={() => navigate('/cliente/clases')} style={{ marginTop: '1rem' }}>
           Volver a Clases
         </Button>
@@ -263,9 +291,14 @@ export default function DetalleClase() {
           </div>
         </div>
 
-        <Button onClick={() => navigate('/cliente/mis-clases')} style={{ marginTop: '1.5rem' }}>
-          Ir a Mis Clases
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <Button onClick={() => navigate('/cliente/mis-clases')}>
+            Ir a Mis Clases
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/cliente/clases')}>
+            Reservar otra clase
+          </Button>
+        </div>
       </div>
     )
   }
@@ -290,7 +323,33 @@ export default function DetalleClase() {
 
       <div className="detalle-header">
         <h2>{clase?.categoria?.nombre || <span className="skeleton skeleton-inline" style={{ width: 120, height: 24 }} />}</h2>
+        {clase && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Calendar size={15} className="icon-muted" />
+              {formatFechaBonita(clase.fecha)}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Clock size={15} className="icon-muted" />
+              {formatHoraAMPM(clase.horaInicio)} — {formatHoraAMPM(clase.horaFin)}
+            </span>
+          </div>
+        )}
       </div>
+
+      {holdActive && metodoPago === 'yape' && !inscripcionExitosa && (
+        <div className="hold-timer" style={{ marginTop: '0.75rem' }}>
+          <Timer size={18} />
+          <span>
+            Tiempo restante: <strong>{formatTime(holdSeconds)}</strong>
+          </span>
+          {holdCodigoPago && (
+            <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginLeft: '0.5rem' }}>
+              Reserva: <strong style={{ fontFamily: 'monospace', color: 'var(--primary-medium)' }}>{holdCodigoPago}</strong>
+            </span>
+          )}
+        </div>
+      )}
 
       {holdExpired && (
         <div className="inscripcion-closed-banner cancelled">
@@ -306,27 +365,24 @@ export default function DetalleClase() {
         </div>
       )}
 
+      {procesandoPagoYape && (
+        <div className="processing-overlay">
+          <div className="processing-card">
+            <div className="processing-spinner" />
+            <h3>Procesando tu pago</h3>
+            <p>Estamos confirmando tu pago con Yape. Por favor espera...</p>
+            {holdActive && (
+              <div className="processing-timer">
+                <Timer size={16} />
+                <span>Tiempo restante: <strong>{formatTime(holdSeconds)}</strong></span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {loading && !clase ? (
-        <>
-          <div className="instructor-section">
-            <div className="skeleton" style={{ width: 48, height: 48, borderRadius: '50%' }} />
-            <div className="instructor-info" style={{ flex: 1 }}>
-              <div className="skeleton" style={{ width: '50%', height: 18, marginBottom: 8 }} />
-              <div className="skeleton" style={{ width: '30%', height: 14 }} />
-            </div>
-          </div>
-          <div className="skeleton" style={{ width: '40%', height: 40, marginBottom: '1rem' }} />
-          <div className="seat-map-section">
-            <div className="skeleton" style={{ width: '100%', height: 200, borderRadius: 12 }} />
-          </div>
-          <div className="pago-section">
-            <div className="skeleton" style={{ width: '60%', height: 20, marginBottom: '1rem' }} />
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <div className="skeleton" style={{ flex: 1, height: 80 }} />
-              <div className="skeleton" style={{ flex: 1, height: 80 }} />
-            </div>
-          </div>
-        </>
+        <LoadingScreen />
       ) : (
         <>
           <div className="instructor-section">
@@ -380,7 +436,7 @@ export default function DetalleClase() {
                     <button
                       key={asiento.id}
                       className={`seat ${isOcupado ? 'ocupado' : 'disponible'} ${isSelected ? 'selected' : ''}`}
-                      disabled={isOcupado || holdActive || procesando}
+                      disabled={isOcupado || holdActive || procesando || procesandoPagoYape}
                       onClick={() => !isOcupado && handleSelectSeat(asiento)}
                       aria-label={`Asiento ${asiento.numero}, ${isOcupado ? 'ocupado' : 'disponible'}`}
                       style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
@@ -397,18 +453,18 @@ export default function DetalleClase() {
             <h3>¿Cómo deseas pagar?</h3>
             <div className="pago-options">
               <div
-                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
-                onClick={() => !holdActive && !procesando && handleSelectPago('creditos')}
-                title="Usar un crédito disponible como método de pago"
+                className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape || creditos === 0 ? 'disabled' : ''}`}
+                onClick={() => !holdActive && !procesando && !procesandoPagoYape && creditos > 0 && handleSelectPago('creditos')}
+                title={creditos === 0 ? 'No tienes créditos disponibles' : 'Usar un crédito disponible como método de pago'}
               >
                 <CreditCard size={32} />
                 <span>Usar Créditos</span>
-                <small>disponibles</small>
+                <small>{creditosError ? 'Error al cargar' : creditos > 0 ? `${creditos} disponible${creditos > 1 ? 's' : ''}` : 'Sin créditos'}</small>
               </div>
               <div
-                className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando ? 'disabled' : ''}`}
-                onClick={() => !holdActive && !procesando && handleSelectPago('yape')}
-                title="Pagar con Yape (tarjeta online)"
+                className={`pago-option ${metodoPago === 'yape' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape ? 'disabled' : ''}`}
+                onClick={() => !holdActive && !procesando && !procesandoPagoYape && handleSelectPago('yape')}
+                title="Pagar con Yape"
               >
                 <Smartphone size={32} />
                 <span>Yape</span>
@@ -419,35 +475,14 @@ export default function DetalleClase() {
         </>
       )}
 
-      {holdActive && metodoPago === 'yape' && (
-        <>
-          <div className="hold-timer">
-            <Timer size={18} />
-            <span>
-              Tiempo restante: <strong>{formatTime(holdSeconds)}</strong>
-            </span>
-          </div>
-
-          <div style={{
-            background: 'var(--primary-soft)', borderRadius: 12, padding: '1.25rem',
-            marginBottom: '1rem', textAlign: 'center', border: '1px solid var(--gray-200)',
-          }}>
-            <Smartphone size={32} style={{ color: 'var(--primary-medium)', marginBottom: '0.5rem' }} />
-            <p style={{ fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.25rem' }}>
-              Paga con Yape
-            </p>
-            <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '1rem' }}>
-              Código de reserva: <strong style={{ fontFamily: 'monospace', color: 'var(--primary-medium)' }}>{holdCodigoPago}</strong>
-            </p>
-            <Button
-              onClick={handlePagarConYape}
-              disabled={pagandoYape}
-              title="Abrir Culqi para pagar con Yape"
-            >
-              {pagandoYape ? 'Procesando...' : 'Pagar con Yape'}
-            </Button>
-          </div>
-        </>
+      {holdActive && metodoPago === 'yape' && error && (
+        <Button
+          onClick={() => { setError(''); openCulqiYape(holdId, precio) }}
+          disabled={pagandoYape}
+          style={{ marginTop: '0.5rem' }}
+        >
+          {pagandoYape ? 'Abriendo Culqi...' : 'Reintentar pago Yape'}
+        </Button>
       )}
 
       {!loading && !holdActive && (
@@ -463,10 +498,10 @@ export default function DetalleClase() {
         <Button
           className="btn-inscribir"
           onClick={handlePagar}
-          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando}
+          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando || pagandoYape || procesandoPagoYape}
           title={holdActive ? 'Completa el pago para continuar' : 'Confirmar asiento y procesar el pago'}
         >
-          {procesando ? 'Procesando...' : holdActive ? 'Reserva en curso...' : 'Pagar e inscribirme'}
+          {procesando ? 'Procesando...' : pagandoYape ? 'Abriendo Culqi...' : procesandoPagoYape ? 'Confirmando pago...' : holdActive ? 'Reserva en curso...' : 'Pagar e inscribirme'}
         </Button>
       )}
 

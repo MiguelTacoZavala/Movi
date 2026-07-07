@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { useNavigate, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Music, Users, BookOpen, Calendar, UserCircle, LogOut } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { LayoutDashboard, Music, Users, BookOpen, Calendar, UserCircle, LogOut, AlertTriangle } from 'lucide-react'
+import { useAuth } from '../../context/useAuth'
+import Modal from '../common/Modal'
+import Button from '../common/Button'
+import Alert from '../common/Alert'
 
 const menuItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'g d' },
@@ -14,8 +18,14 @@ const menuItems = [
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const handleLogout = () => {
+    setConfirmOpen(true)
+  }
+
+  const confirmLogout = () => {
+    setConfirmOpen(false)
     onClose()
     logout()
     navigate('/login')
@@ -81,6 +91,17 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
           Cerrar Sesión
         </button>
       </div>
+
+      <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} title="Cerrar Sesión">
+        <Alert type="warning">
+          <AlertTriangle size={18} />
+          <span>¿Estás seguro que deseas cerrar sesión?</span>
+        </Alert>
+        <div className="modal-actions" style={{ marginTop: '1rem' }}>
+          <Button onClick={confirmLogout}>Sí, cerrar</Button>
+          <Button variant="secondary" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+        </div>
+      </Modal>
     </div>
   )
 }

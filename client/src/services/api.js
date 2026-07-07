@@ -53,6 +53,11 @@ const api = {
     const data = await res.json()
 
     if (!res.ok) {
+      if (res.status === 401) {
+        api.removeToken()
+        api.removeUser()
+        window.location.href = '/login'
+      }
       const err = new Error(data.error || 'Error de conexión')
       err.status = res.status
       err.data = data
@@ -109,6 +114,16 @@ const api = {
       '/categorias',
       '/horarios',
       '/clientes',
+    ]
+    Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
+  },
+
+  preloadInstructorData() {
+    const endpoints = [
+      '/instructores/dashboard',
+      '/instructores/mis-clases',
+      '/instructores/mis-horarios',
+      '/instructores/historial',
     ]
     Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
   },

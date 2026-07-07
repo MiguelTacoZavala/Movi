@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma')
 const culqiService = require('../services/culqi.service')
-const { usarCredito } = require('../services/credito.service')
+const { yyyymmdd, hhmmss, haPasado } = require('../lib/helpers')
 
 function generarCodigoPago() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -11,21 +11,8 @@ function generarCodigoPago() {
   return codigo
 }
 
-async function verificarDisponibilidad(claseId, posicionClaseId) {
-  const posicion = await prisma.posicionClase.findUnique({
-    where: { id: posicionClaseId },
-    include: { reservas: true },
-  })
-  if (!posicion || posicion.claseId !== claseId) {
-    return { error: 'Posición no válida', status: 400 }
-  }
-  const ocupada = posicion.reservas.some(
-    (r) => r.estado !== 'CANCELADA' && r.estado !== 'EXPIRADA'
-  )
-  if (ocupada) {
-    return { error: 'El asiento ya está ocupado', status: 409 }
-  }
-  return { ok: true }
+function claseHaPasado(clase) {
+  return haPasado(clase)
 }
 
 async function iniciarHold(req, res, next) {
@@ -38,23 +25,44 @@ async function iniciarHold(req, res, next) {
       include: { horarioSemanal: { include: { categoria: true } } },
     })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
-
-    const disp = await verificarDisponibilidad(claseId, posicionClaseId)
-    if (!disp.ok) return res.status(disp.status).json({ error: disp.error })
+    if (claseHaPasado(clase)) return res.status(409).json({ error: 'La clase ya pasó' })
 
     const codigoPago = generarCodigoPago()
     const expiracion = new Date(Date.now() + 5 * 60 * 1000)
 
-    const reserva = await prisma.reserva.create({
-      data: {
-        usuarioId,
-        claseId,
-        posicionClaseId,
-        codigoPago,
-        estado: 'PENDIENTE',
-        expiracionReserva: expiracion,
-        usoCredito: false,
-      },
+    const reserva = await prisma.$transaction(async (tx) => {
+      // Expirar holds vencidos de esta posición
+      await tx.reserva.updateMany({
+        where: { posicionClaseId, estado: 'PENDIENTE', expiracionReserva: { lt: new Date() } },
+        data: { estado: 'EXPIRADA', updatedAt: new Date() },
+      })
+
+      // Verificar que la posición no esté ocupada (con lock implícito de transacción)
+      const ocupada = await tx.reserva.findFirst({
+        where: {
+          posicionClaseId,
+          estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
+        },
+      })
+      if (ocupada) throw Object.assign(new Error('El asiento ya está ocupado'), { statusCode: 409 })
+
+      // Verificar pertenencia a la clase
+      const posicion = await tx.posicionClase.findUnique({ where: { id: posicionClaseId } })
+      if (!posicion || posicion.claseId !== claseId) {
+        throw Object.assign(new Error('Posición no válida'), { statusCode: 400 })
+      }
+
+      return tx.reserva.create({
+        data: {
+          usuarioId,
+          claseId,
+          posicionClaseId,
+          codigoPago,
+          estado: 'PENDIENTE',
+          expiracionReserva: expiracion,
+          usoCredito: false,
+        },
+      })
     })
 
     res.status(201).json({
@@ -76,7 +84,6 @@ async function confirmarPago(req, res, next) {
       where: { id: holdId },
       include: {
         clase: { include: { horarioSemanal: { include: { categoria: true } } } },
-        posicionClase: { include: { reservas: true } },
       },
     })
 
@@ -86,6 +93,13 @@ async function confirmarPago(req, res, next) {
     if (reserva.estado !== 'PENDIENTE') {
       return res.status(400).json({ error: 'La reserva ya fue procesada o cancelada' })
     }
+    if (claseHaPasado(reserva.clase)) {
+      await prisma.reserva.update({
+        where: { id: holdId },
+        data: { estado: 'EXPIRADA', updatedAt: new Date() },
+      })
+      return res.status(409).json({ error: 'La clase ya pasó' })
+    }
     if (reserva.expiracionReserva && new Date() > new Date(reserva.expiracionReserva)) {
       await prisma.reserva.update({
         where: { id: holdId },
@@ -94,10 +108,18 @@ async function confirmarPago(req, res, next) {
       return res.status(410).json({ error: 'El tiempo de reserva expiró' })
     }
 
-    const ocupada = reserva.posicionClase.reservas.some(
-      (r) => r.id !== holdId && r.estado !== 'CANCELADA' && r.estado !== 'EXPIRADA'
-    )
-    if (ocupada) {
+    // Re-verificar disponibilidad dentro de una transacción antes de procesar pago
+    const seatTaken = await prisma.$transaction(async (tx) => {
+      const ocupada = await tx.reserva.findFirst({
+        where: {
+          posicionClaseId: reserva.posicionClaseId,
+          id: { not: holdId },
+          estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
+        },
+      })
+      return !!ocupada
+    })
+    if (seatTaken) {
       await prisma.reserva.update({
         where: { id: holdId },
         data: { estado: 'EXPIRADA', updatedAt: new Date() },
@@ -114,35 +136,33 @@ async function confirmarPago(req, res, next) {
         tokenId,
         monto: precio,
         email: usuario.email || 'cliente@movi.com',
-        descripcion: `${reserva.clase.horarioSemanal.categoria.nombre} - ${reserva.clase.fecha.toISOString().split('T')[0]}`,
+        descripcion: `${reserva.clase.horarioSemanal.categoria.nombre} - ${yyyymmdd(reserva.clase.fecha)}`,
       })
       chargeId = cargo.chargeId
-    } catch (culqiError) {
+    } catch {
       await prisma.reserva.update({
         where: { id: holdId },
         data: { estado: 'EXPIRADA', updatedAt: new Date() },
       })
-      return res.status(402).json({
-        error: 'Error al procesar el pago',
-        detalle: culqiError.message,
-      })
+      return res.status(402).json({ error: 'Error al procesar el pago con Culqi' })
     }
 
-    await prisma.pago.create({
-      data: {
-        reservaId: holdId,
-        metodoPago: 'yape',
-        monto: precio,
-        estado: 'PAGADO',
-        fechaPago: new Date(),
-        culqiChargeId: chargeId,
-      },
-    })
-
-    await prisma.reserva.update({
-      where: { id: holdId },
-      data: { estado: 'CONFIRMADA', fechaConfirmacion: new Date(), updatedAt: new Date() },
-    })
+    await prisma.$transaction([
+      prisma.pago.create({
+        data: {
+          reservaId: holdId,
+          metodoPago: 'yape',
+          monto: precio,
+          estado: 'PAGADO',
+          fechaPago: new Date(),
+          culqiChargeId: chargeId,
+        },
+      }),
+      prisma.reserva.update({
+        where: { id: holdId },
+        data: { estado: 'CONFIRMADA', fechaConfirmacion: new Date(), updatedAt: new Date() },
+      }),
+    ])
 
     res.status(200).json({
       success: true,
@@ -166,54 +186,81 @@ async function procesarPago(req, res, next) {
       include: { horarioSemanal: { include: { categoria: true } } },
     })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
-
-    const disp = await verificarDisponibilidad(claseId, posicionClaseId)
-    if (!disp.ok) return res.status(disp.status).json({ error: disp.error })
+    if (claseHaPasado(clase)) return res.status(409).json({ error: 'La clase ya pasó' })
 
     const precio = Number(clase.horarioSemanal.categoria.precio)
-    const creditoUsado = await usarCredito(usuarioId, claseId, null)
-
-    if (!creditoUsado) {
-      return res.status(402).json({ error: 'No tienes créditos disponibles' })
-    }
-
     const codigoPago = generarCodigoPago()
-    const reserva = await prisma.reserva.create({
-      data: {
-        usuarioId,
-        claseId,
-        posicionClaseId,
-        codigoPago,
-        estado: 'CONFIRMADA',
-        fechaConfirmacion: new Date(),
-        usoCredito: true,
-      },
-    })
 
-    await prisma.credito.update({
-      where: { id: creditoUsado.id },
-      data: { reservaId: reserva.id },
-    })
+    const result = await prisma.$transaction(async (tx) => {
+      // Verificar disponibilidad dentro de la transacción
+      const posicion = await tx.posicionClase.findUnique({ where: { id: posicionClaseId } })
+      if (!posicion || posicion.claseId !== claseId) {
+        throw Object.assign(new Error('Posición no válida'), { statusCode: 400 })
+      }
 
-    await prisma.pago.create({
-      data: {
-        reservaId: reserva.id,
-        metodoPago: 'creditos',
-        monto: precio,
-        estado: 'PAGADO',
-        fechaPago: new Date(),
-      },
+      const ocupada = await tx.reserva.findFirst({
+        where: {
+          posicionClaseId,
+          estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
+        },
+      })
+      if (ocupada) {
+        throw Object.assign(new Error('El asiento ya está ocupado'), { statusCode: 409 })
+      }
+
+      const credito = await tx.credito.findFirst({
+        where: { usuarioId, usado: false },
+        orderBy: { fechaCreacion: 'asc' },
+      })
+      if (!credito) {
+        throw Object.assign(new Error('No tienes créditos disponibles'), { statusCode: 402 })
+      }
+
+      await tx.credito.update({
+        where: { id: credito.id },
+        data: { usado: true, fechaUso: new Date(), claseId },
+      })
+
+      const reserva = await tx.reserva.create({
+        data: {
+          usuarioId,
+          claseId,
+          posicionClaseId,
+          codigoPago,
+          estado: 'CONFIRMADA',
+          fechaConfirmacion: new Date(),
+          usoCredito: true,
+        },
+      })
+
+      await tx.credito.update({
+        where: { id: credito.id },
+        data: { reservaId: reserva.id },
+      })
+
+      await tx.pago.create({
+        data: {
+          reservaId: reserva.id,
+          metodoPago: 'creditos',
+          monto: precio,
+          estado: 'PAGADO',
+          fechaPago: new Date(),
+        },
+      })
+
+      return { codigoPago, reservaId: reserva.id, monto: precio }
     })
 
     res.status(201).json({
       success: true,
-      codigoPago,
-      reservaId: reserva.id,
-      monto: precio,
+      ...result,
       metodoPago: 'creditos',
       creditoUsado: true,
     })
   } catch (error) {
+    if (error.statusCode === 402) {
+      return res.status(402).json({ error: error.message })
+    }
     next(error)
   }
 }

@@ -1,27 +1,60 @@
 import { useState, useEffect } from 'react'
-import { Eye, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX, AlertCircle } from 'lucide-react'
+import { Eye, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX, AlertCircle, CheckCircle, Clock, Timer, X } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Input from '../../components/common/Input'
 import Alert from '../../components/common/Alert'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../services/api'
-import { mensajeError } from '../../utils/helpers'
+import { mensajeError, formatFechaBonita, formatHoraAMPM } from '../../utils/helpers'
 import '../../App.css'
+
+function fetchClientesData({ search = '', page = 1, limit = 20 } = {}) {
+  const params = new URLSearchParams()
+  if (search) params.set('search', search)
+  params.set('page', page)
+  params.set('limit', limit)
+  return api.cachedGet(`/clientes?${params.toString()}`)
+}
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const [paginacion, setPaginacion] = useState(null)
   const [selectedCliente, setSelectedCliente] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [error, setError] = useState('')
   const [detailError, setDetailError] = useState('')
+  const POR_PAGINA = 20
 
-  const cargar = async () => {
+  useEffect(() => {
+    let mounted = true
+    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
+    setError('')
+    fetchClientesData({ page: 1, limit: POR_PAGINA })
+      .then(data => {
+        if (mounted) {
+          setClientes(data.clientes || [])
+          setPaginacion(data.paginacion || null)
+          setPagina(1)
+        }
+      })
+      .catch(e => { if (mounted) setError(mensajeError(e, 'No se pudieron cargar los clientes.')) })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
+  const cargar = async (page = 1, searchTerm = '') => {
+    setLoading(true)
+    setError('')
     try {
-      const data = await api.cachedGet('/clientes')
-      setClientes(data.clientes)
+      const data = await fetchClientesData({ search: searchTerm, page, limit: POR_PAGINA })
+      setClientes(data.clientes || [])
+      setPaginacion(data.paginacion || null)
+      setPagina(page)
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los clientes.'))
     } finally {
@@ -29,16 +62,12 @@ export default function Clientes() {
     }
   }
 
-  useEffect(() => { cargar() }, [])
-
-  const filteredClientes = clientes.filter(c => {
-    const q = search.toLowerCase()
-    return (
-      `${c.nombres} ${c.apellidos}`.toLowerCase().includes(q) ||
-      (c.email || '').toLowerCase().includes(q) ||
-      (c.dni || '').includes(search)
-    )
-  })
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      cargar(1, search)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [search])
 
   const handleVerDetalle = async (cliente) => {
     setSelectedCliente({ ...cliente, stats: null })
@@ -91,7 +120,9 @@ export default function Clientes() {
     )},
   ]
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-500)' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
+
+  const totalPaginas = paginacion?.totalPaginas || 1
 
   return (
     <div>
@@ -115,11 +146,27 @@ export default function Clientes() {
         <Alert type="danger">
           <AlertCircle size={18} />
           <span style={{ flex: 1 }}>{error}</span>
-          <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+          <Button size="small" variant="secondary" onClick={() => cargar(pagina, search)}>Reintentar</Button>
         </Alert>
       )}
 
-      <Table columns={columns} data={filteredClientes} emptyMessage="No hay clientes registrados" />
+      <Table columns={columns} data={clientes} emptyMessage="No hay clientes registrados" />
+
+      {paginacion && paginacion.total > POR_PAGINA && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', padding: '0.75rem 1rem', background: 'var(--white)', borderRadius: '10px', boxShadow: 'var(--shadow-sm)' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>
+            {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, paginacion.total)} de {paginacion.total} clientes
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button variant="secondary" size="small" onClick={() => cargar(pagina - 1, search)} disabled={pagina === 1}>
+              ← Anterior
+            </Button>
+            <Button variant="secondary" size="small" onClick={() => cargar(pagina + 1, search)} disabled={pagina >= totalPaginas}>
+              Siguiente →
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Modal
         isOpen={detailOpen}
@@ -149,22 +196,58 @@ export default function Clientes() {
                 <div className="stat-card">
                   <h3><CreditCard size={14} /> Créditos</h3>
                   <p>{selectedCliente.stats.creditosDisponibles}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>{selectedCliente.stats.creditosUsados} usados</p>
                 </div>
                 <div className="stat-card">
                   <h3><Calendar size={14} /> Reservas</h3>
                   <p>{selectedCliente.stats.totalReservas}</p>
                 </div>
                 <div className="stat-card">
-                  <h3>Confirmadas</h3>
+                  <h3><CheckCircle size={14} /> Confirmadas</h3>
                   <p style={{ color: 'var(--success, #27AE60)' }}>{selectedCliente.stats.confirmadas}</p>
                 </div>
                 <div className="stat-card">
-                  <h3>Canceladas</h3>
-                  <p style={{ color: 'var(--gray-500)' }}>{selectedCliente.stats.canceladas}</p>
+                  <h3><Clock size={14} /> Pendientes</h3>
+                  <p style={{ color: 'var(--warning, #f59e0b)' }}>{selectedCliente.stats.pendientes}</p>
+                </div>
+                <div className="stat-card">
+                  <h3><Timer size={14} /> Expiradas</h3>
+                  <p style={{ color: 'var(--gray-500)' }}>{selectedCliente.stats.expiradas}</p>
+                </div>
+                <div className="stat-card">
+                  <h3><X size={14} /> Canceladas</h3>
+                  <p style={{ color: 'var(--danger, #dc2626)' }}>{selectedCliente.stats.canceladas}</p>
                 </div>
               </div>
             ) : (
               <p style={{ color: 'var(--gray-500)', marginTop: '1rem' }}>Cargando estadísticas...</p>
+            )}
+
+            {selectedCliente.proximasReservas && selectedCliente.proximasReservas.length > 0 && (
+              <div style={{ marginTop: '1rem' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--gray-700)', marginBottom: '0.5rem' }}>Próximas reservas</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {selectedCliente.proximasReservas.map(r => (
+                    <div key={r.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 600 }}>{r.clase.categoria?.nombre}</span>
+                        <span className={`status-badge ${r.estado === 'CONFIRMADA' ? 'status-active' : 'status-warning'}`}>
+                          {r.estado === 'CONFIRMADA' ? 'Confirmada' : 'Pendiente'}
+                        </span>
+                      </div>
+                      <div style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>
+                        {formatFechaBonita(r.clase.fecha)} · {formatHoraAMPM(r.clase.horaInicio)}
+                      </div>
+                      {r.clase.instructor && (
+                        <div style={{ color: 'var(--gray-500)', marginTop: '0.15rem' }}>
+                          {r.clase.instructor.nombres} {r.clase.instructor.apellidos}
+                          {r.asiento && ` · Asiento #${r.asiento}`}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}

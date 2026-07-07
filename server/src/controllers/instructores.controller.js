@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
+const { hhmm, yyyymmdd, safeId } = require('../lib/helpers')
 
 function formatearInstructor(inst) {
   return {
@@ -72,11 +73,12 @@ async function crear(req, res, next) {
 
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
     const { nombres, apellidos, email, telefono, especialidad, estado, fotoUrl } = req.body
 
     const instructor = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
     if (!instructor) {
@@ -108,13 +110,13 @@ async function actualizar(req, res, next) {
 
     if (especialidad !== undefined) {
       await prisma.instructor.update({
-        where: { id: Number(id) },
+        where: { id },
         data: { especialidad },
       })
     }
 
     const actualizado = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
 
@@ -126,10 +128,11 @@ async function actualizar(req, res, next) {
 
 async function eliminar(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
 
     const instructor = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
     })
     if (!instructor) {
       return res.status(404).json({ error: 'Instructor no encontrado' })
@@ -139,7 +142,7 @@ async function eliminar(req, res, next) {
     // pagos de clientes colgando de él; eliminarlo perdería historial legítimo. En ese
     // caso solo se debe desactivar. Solo se puede borrar de verdad si no tiene historial.
     const horarios = await prisma.horarioSemanal.count({
-      where: { instructorId: Number(id) },
+      where: { instructorId: id },
     })
     if (horarios > 0) {
       return res.status(409).json({
@@ -156,10 +159,11 @@ async function eliminar(req, res, next) {
 
 async function toggleEstado(req, res, next) {
   try {
-    const { id } = req.params
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
 
     const instructor = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
     if (!instructor) {
@@ -172,7 +176,7 @@ async function toggleEstado(req, res, next) {
     })
 
     const actualizado = await prisma.instructor.findUnique({
-      where: { id: Number(id) },
+      where: { id },
       include: { usuario: true },
     })
 
@@ -195,9 +199,9 @@ const includeClaseBase = {
 function formatearClase(c) {
   return {
     id: c.id,
-    fecha: c.fecha.toISOString().substring(0, 10),
-    horaInicio: c.horaInicio.toISOString().substring(11, 16),
-    horaFin: c.horaFin.toISOString().substring(11, 16),
+    fecha: yyyymmdd(c.fecha),
+    horaInicio: hhmm(c.horaInicio),
+    horaFin: hhmm(c.horaFin),
     estado: c.estado,
     tematica: c.tematica,
     capacidadMaxima: c.capacidadMaxima,
@@ -215,9 +219,9 @@ async function dashboard(req, res, next) {
 
     const ahora = new Date()
     const hoy = new Date(ahora)
-    hoy.setUTCHours(0, 0, 0, 0)
+    hoy.setHours(0, 0, 0, 0)
     const mañana = new Date(hoy)
-    mañana.setUTCDate(hoy.getUTCDate() + 1)
+    mañana.setDate(hoy.getDate() + 1)
 
     const [proximaClase, clasesHoy] = await Promise.all([
       prisma.clase.findFirst({
@@ -285,7 +289,7 @@ async function misClases(req, res, next) {
 
     const ahora = new Date()
     const hoy = new Date(ahora)
-    hoy.setUTCHours(0, 0, 0, 0)
+    hoy.setHours(0, 0, 0, 0)
 
     const clases = await prisma.clase.findMany({
       where: {
@@ -308,7 +312,8 @@ async function obtenerParticipantes(req, res, next) {
     const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
     if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
 
-    const claseId = Number(req.params.id)
+    const claseId = safeId(req.params.id)
+    if (!claseId) return res.status(400).json({ error: 'ID inválido' })
 
     const clase = await prisma.clase.findUnique({
       where: { id: claseId },
@@ -345,11 +350,12 @@ async function obtenerParticipantes(req, res, next) {
     res.json({
       clase: {
         id: clase.id,
-        fecha: clase.fecha.toISOString().substring(0, 10),
-        horaInicio: clase.horaInicio.toISOString().substring(11, 16),
-        horaFin: clase.horaFin.toISOString().substring(11, 16),
+        fecha: yyyymmdd(clase.fecha),
+        horaInicio: hhmm(clase.horaInicio),
+        horaFin: hhmm(clase.horaFin),
         capacidadMaxima: clase.capacidadMaxima,
         tematica: clase.tematica,
+        estado: clase.estado,
         categoria: clase.horarioSemanal?.categoria?.nombre || null,
       },
       participantes,
@@ -364,7 +370,8 @@ async function actualizarTematica(req, res, next) {
     const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
     if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
 
-    const claseId = Number(req.params.id)
+    const claseId = safeId(req.params.id)
+    if (!claseId) return res.status(400).json({ error: 'ID inválido' })
     const { tematica } = req.body
 
     if (!tematica || !tematica.trim()) {

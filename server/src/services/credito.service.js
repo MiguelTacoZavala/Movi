@@ -1,5 +1,9 @@
 const prisma = require('../lib/prisma')
 
+function yyyymmdd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 async function listarPorUsuario(usuarioId) {
   const creditos = await prisma.credito.findMany({
     where: { usuarioId },
@@ -22,7 +26,7 @@ async function listarPorUsuario(usuarioId) {
     fechaCreacion: c.fechaCreacion,
     fechaUso: c.fechaUso,
     categoria: c.clase?.horarioSemanal?.categoria?.nombre || null,
-    claseFecha: c.clase?.fecha?.toISOString().substring(0, 10) || null,
+    claseFecha: c.clase?.fecha ? yyyymmdd(c.clase.fecha) : null,
   }))
 }
 

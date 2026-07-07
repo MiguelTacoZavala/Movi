@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import api from '../../services/api'
 import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
@@ -48,6 +48,7 @@ export default function Login() {
             api.preloadClientData()
             navigate('/cliente/dashboard')
           } else if (result.rol === 'instructor') {
+            api.preloadInstructorData()
             navigate('/instructor/dashboard')
           }
         }, 1500)

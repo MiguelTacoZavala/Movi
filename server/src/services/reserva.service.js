@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { hhmm, hhmmss, yyyymmdd, haPasado } = require('../lib/helpers')
 
 const includeClase = {
   clase: {
@@ -25,15 +26,6 @@ const includeClase = {
   pago: { select: { monto: true, metodoPago: true } },
 }
 
-function haPasado(clase) {
-  const ahora = new Date().toISOString()
-  const hoyStr = ahora.substring(0, 10)
-  const ahoraTimeStr = ahora.substring(11, 19)
-  const fechaStr = clase.fecha.toISOString().substring(0, 10)
-  const horaFinStr = clase.horaFin.toISOString().substring(11, 19)
-  return fechaStr < hoyStr || (fechaStr === hoyStr && horaFinStr < ahoraTimeStr)
-}
-
 function formatear(reserva) {
   const base = {
     id: reserva.id,
@@ -51,9 +43,9 @@ function formatear(reserva) {
     asiento: reserva.posicionClase?.numero,
     clase: {
       id: reserva.clase.id,
-      fecha: reserva.clase.fecha.toISOString().substring(0, 10),
-      horaInicio: reserva.clase.horaInicio.toISOString().substring(11, 16),
-      horaFin: reserva.clase.horaFin.toISOString().substring(11, 16),
+      fecha: yyyymmdd(reserva.clase.fecha),
+      horaInicio: hhmm(reserva.clase.horaInicio),
+      horaFin: hhmm(reserva.clase.horaFin),
       estado: reserva.clase.estado,
       capacidadMaxima: reserva.clase.capacidadMaxima,
       tematica: reserva.clase.tematica,
@@ -70,7 +62,18 @@ function formatear(reserva) {
   return base
 }
 
+async function limpiarHoldsExpirados() {
+  const ahora = new Date()
+  const { count } = await prisma.reserva.updateMany({
+    where: { estado: 'PENDIENTE', expiracionReserva: { lt: ahora } },
+    data: { estado: 'EXPIRADA', updatedAt: ahora },
+  })
+  return count
+}
+
 async function listarPorUsuario(usuarioId) {
+  await limpiarHoldsExpirados()
+
   const reservas = await prisma.reserva.findMany({
     where: { usuarioId },
     include: includeClase,
@@ -82,18 +85,44 @@ async function listarPorUsuario(usuarioId) {
 async function cancelar(reservaId, usuarioId) {
   const reserva = await prisma.reserva.findUnique({
     where: { id: reservaId },
+    include: {
+      clase: { select: { fecha: true, horaFin: true, estado: true } },
+    },
   })
   if (!reserva) return null
   if (reserva.usuarioId !== usuarioId) return null
   if (reserva.estado === 'CANCELADA') throw { yaCancelada: true }
+  if (reserva.estado === 'EXPIRADA') throw { yaExpirada: true }
+  if (haPasado(reserva.clase)) throw { claseYaPasada: true }
 
-  const updated = await prisma.reserva.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.reserva.update({
+      where: { id: reservaId },
+      data: {
+        estado: 'CANCELADA',
+        fechaCancelacion: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+
+    if (reserva.usoCredito) {
+      await tx.credito.updateMany({
+        where: { reservaId, usado: true },
+        data: { usado: false, fechaUso: null, reservaId: null, claseId: null },
+      })
+    } else {
+      await tx.credito.create({
+        data: {
+          usuarioId: reserva.usuarioId,
+          claseId: reserva.claseId,
+          reservaId: reserva.id,
+        },
+      })
+    }
+  })
+
+  const updated = await prisma.reserva.findUnique({
     where: { id: reservaId },
-    data: {
-      estado: 'CANCELADA',
-      fechaCancelacion: new Date(),
-      updatedAt: new Date(),
-    },
     include: includeClase,
   })
   return formatear(updated)
@@ -121,4 +150,4 @@ async function obtenerParticipantes(claseId) {
   }))
 }
 
-module.exports = { listarPorUsuario, cancelar, obtenerParticipantes }
+module.exports = { listarPorUsuario, cancelar, obtenerParticipantes, limpiarHoldsExpirados }

@@ -15,15 +15,15 @@ const FAQ_CLIENTE = [
   },
   {
     q: '¿Qué métodos de pago tengo?',
-    a: 'Puedes pagar con Yape (pago online con tarjeta a través de Culqi) o usando tus Créditos disponibles. Si eliges Yape, el pago se procesa al instante. Si usas créditos, el cargo se descuenta automáticamente de tu saldo.',
+    a: 'Puedes pagar con Yape (pago móvil a través de Culqi) o usando tus Créditos disponibles. Si eliges Yape, el pago se procesa al instante. Si usas créditos, el cargo se descuenta automáticamente de tu saldo.',
   },
   {
     q: '¿Cómo cancelo una reserva?',
-    a: 'Ingresa a Mis Clases, busca la clase que deseas cancelar y presiona el botón rojo "Cancelar inscripción". Confirma la acción en la ventana emergente. La cancelación es definitiva.',
+    a: 'Ingresa a Mis Clases, busca la clase que deseas cancelar y presiona el botón rojo "Cancelar inscripción". Confirma en la ventana emergente. Si pagaste con Yape, se generará un crédito de devolución para uso futuro. Si usaste un crédito, se restaurará a tu saldo.',
   },
   {
     q: '¿Cómo obtengo y uso créditos?',
-    a: 'Los créditos se generan automáticamente cuando una clase que reservaste es cancelada por el administrador. Puedes usarlos como método de pago al reservar una nueva clase.',
+    a: 'Los créditos se generan cuando una clase es cancelada por el administrador, o cuando tú cancelas una reserva pagada con Yape. Puedes usarlos como método de pago al reservar una nueva clase.',
   },
   {
     q: '¿Cómo cambio mi foto de perfil?',
@@ -33,16 +33,28 @@ const FAQ_CLIENTE = [
     q: '¿Cómo activo el tema oscuro?',
     a: 'En tu Perfil, busca la sección Preferencias y activa el interruptor "Tema oscuro". El cambio es instantáneo y solo afecta a tu sesión actual.',
   },
+  {
+    q: '¿Qué es el temporizador de reserva?',
+    a: 'Al elegir un asiento y pagar con Yape, tienes 5 minutos para completar el pago. El asiento se mantiene temporalmente reservado. Si el tiempo expira, deberás seleccionar el asiento nuevamente.',
+  },
+  {
+    q: '¿Cómo configuro la accesibilidad?',
+    a: 'En tu Perfil, busca la sección Accesibilidad. Puedes ajustar el tamaño del texto, el espaciado de líneas y activar una fuente amigable para dislexia.',
+  },
 ]
 
 const FAQ_INSTRUCTOR = [
   {
+    q: '¿Qué veo en el Inicio?',
+    a: 'En Inicio ves un resumen con tu próxima clase y las clases del día. Presiona una clase para ver más detalles.',
+  },
+  {
     q: '¿Dónde veo mi horario semanal?',
-    a: 'En la pestaña Horarios del menú inferior. Allí aparecen todas tus clases recurrentes con día, hora y capacidad.',
+    a: 'En la pestaña Horarios del menú inferior. Allí aparecen todas tus clases recurrentes con día, hora, capacidad y mínimo de participantes.',
   },
   {
     q: '¿Cómo veo mis clases programadas?',
-    a: 'Ve a la pestaña Clases. Verás todas tus clases próximas ordenadas por fecha. Presiona sobre una clase para ver los participantes.',
+    a: 'Ve a la pestaña Clases. Verás tus clases programadas y en curso ordenadas por fecha. Presiona sobre una clase para ver los participantes.',
   },
   {
     q: '¿Cómo veo quién se inscribió?',
@@ -50,7 +62,23 @@ const FAQ_INSTRUCTOR = [
   },
   {
     q: '¿Cómo cambio la temática de una clase?',
-    a: 'Presiona sobre la clase en la pestaña Clases, luego haz clic en "Editar" junto a la temática actual. Escribe el nuevo valor y confirma con el botón ✓.',
+    a: 'Presiona sobre la clase en la pestaña Clases, luego haz clic en "Editar" junto a la temática actual. Escribe el nuevo valor, confirma con el botón ✓ y luego presiona "Confirmar" en la ventana emergente.',
+  },
+  {
+    q: '¿Qué muestra el Historial?',
+    a: 'En la pestaña Historial ves tus clases finalizadas o canceladas. Puedes consultar el registro de tus clases anteriores.',
+  },
+  {
+    q: '¿Cómo cambio mi foto de perfil?',
+    a: 'En tu Perfil, presiona sobre el círculo del avatar. Selecciona una imagen desde tu dispositivo y se subirá automáticamente.',
+  },
+  {
+    q: '¿Cómo activo el tema oscuro?',
+    a: 'En tu Perfil, busca la sección Preferencias y activa el interruptor "Tema oscuro". El cambio es instantáneo.',
+  },
+  {
+    q: '¿Cómo configuro la accesibilidad?',
+    a: 'En tu Perfil, busca la sección Accesibilidad. Puedes ajustar el tamaño del texto, el espaciado de líneas y activar una fuente amigable para dislexia.',
   },
   {
     q: '¿Cómo edito mis datos personales?',
