@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle } from 'lucide-react'
+import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle, Printer } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
@@ -27,6 +27,14 @@ export default function MisClases() {
   const [comprobante, setComprobante] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState('')
+
+  const [cambioModalOpen, setCambioModalOpen] = useState(false)
+  const [cambioClase, setCambioClase] = useState(null)
+  const [cambioMiReserva, setCambioMiReserva] = useState(null)
+  const [cambioLoading, setCambioLoading] = useState(false)
+  const [cambioSelectedSeat, setCambioSelectedSeat] = useState(null)
+  const [cambioSubmitting, setCambioSubmitting] = useState(false)
+  const [cambioError, setCambioError] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -65,6 +73,103 @@ export default function MisClases() {
     } finally {
       setCancelandoLoading(false)
     }
+  }
+
+  const openCambioAsiento = async (reserva) => {
+    const claseId = reserva.claseId || reserva.clase?.id
+    if (!claseId) return
+    setComprobante(null)
+    setCambioModalOpen(true)
+    setCambioLoading(true)
+    setCambioError('')
+    try {
+      const res = await api.get(`/clases/${claseId}?soloActivas=true`)
+      setCambioClase(res.clase)
+      setCambioMiReserva(res.miReserva || reserva)
+    } catch {
+      setCambioError('No pudimos cargar la clase. Intenta de nuevo.')
+    } finally {
+      setCambioLoading(false)
+    }
+  }
+
+  const closeCambioAsiento = () => {
+    setCambioModalOpen(false)
+    setCambioClase(null)
+    setCambioMiReserva(null)
+    setCambioSelectedSeat(null)
+    setCambioError('')
+    setCambioSubmitting(false)
+  }
+
+  const handleSubmitCambio = async () => {
+    if (!cambioSelectedSeat || !cambioMiReserva) return
+    setCambioSubmitting(true)
+    setCambioError('')
+    try {
+      await api.patch(`/reservas/${cambioMiReserva.id}/cambiar-asiento`, {
+        nuevaPosicionClaseId: cambioSelectedSeat.id,
+      })
+      api.invalidateCache()
+      setMensaje(`Asiento cambiado a #${cambioSelectedSeat.numero}`)
+      setTimeout(() => setMensaje(''), 4000)
+      closeCambioAsiento()
+      api.cachedGet('/reservas/mis-reservas', true).then(data => {
+        setReservas(data.reservas || [])
+      })
+    } catch (e) {
+      setCambioError(e.data?.error || e.message || 'No pudimos cambiar tu asiento.')
+    } finally {
+      setCambioSubmitting(false)
+    }
+  }
+
+  function posicionToAsiento(p, columnas, miReserva) {
+    let estado = p.reservas && p.reservas.length > 0 ? 'ocupado' : 'disponible'
+    if (miReserva && p.numero === miReserva.asiento) estado = 'actual'
+    return {
+      id: p.id,
+      numero: p.numero,
+      fila: Math.ceil(p.numero / columnas),
+      columna: ((p.numero - 1) % columnas) + 1,
+      estado,
+    }
+  }
+
+  const handleGuardarComprobante = () => {
+    if (!comprobante) return
+    const r = comprobante
+    const instrName = r.clase.instructor ? `${r.clase.instructor.nombres} ${r.clase.instructor.apellidos}` : ''
+    const w = window.open('', '_blank')
+    w.document.write(`<!DOCTYPE html><html><head><title>Comprobante MOVI</title><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; max-width: 400px; margin: 0 auto; color: #1a1414; }
+      h2 { text-align: center; font-size: 1.25rem; margin-bottom: 0.25rem; }
+      .sub { text-align: center; color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }
+      .card { background: #f9fafb; border-radius: 12px; padding: 1rem; }
+      .row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
+      .row:last-child { border-bottom: none; }
+      .label { color: #6b7280; }
+      .value { font-weight: 600; }
+      .code { font-family: monospace; font-weight: 700; color: #8B4513; font-size: 0.95rem; }
+      .footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
+    </style></head><body>
+      <h2>Comprobante de inscripción</h2>
+      <p class="sub">${estadoLabel[estado(r)] || estado(r)}${r.codigoPago ? ` · <span class="code">${r.codigoPago}</span>` : ''}</p>
+      <div class="card">
+        <div class="row"><span class="label">Categoría</span><span class="value">${r.clase.categoria?.nombre || ''}</span></div>
+        ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${instrName}</span></div>` : ''}
+        <div class="row"><span class="label">Fecha</span><span class="value">${formatFechaBonita(r.clase.fecha)}</span></div>
+        <div class="row"><span class="label">Hora</span><span class="value">${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}</span></div>
+        ${r.asiento ? `<div class="row"><span class="label">Asiento</span><span class="value">#${r.asiento}</span></div>` : ''}
+        <div class="row"><span class="label">Monto</span><span class="value">S/ ${Number(r.monto || 15).toFixed(2)}</span></div>
+        <div class="row"><span class="label">Método de pago</span><span class="value">${r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'}</span></div>
+        <div class="row"><span class="label">Temática</span><span class="value">${r.clase.tematica || 'LIBRE'}</span></div>
+      </div>
+      <p class="footer">MOVI — Academia de Baile</p>
+      <script>window.onload = function() { window.print(); window.close(); }</script>
+    </body></html>`)
+    w.document.close()
   }
 
   return (
@@ -160,6 +265,133 @@ export default function MisClases() {
                 <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Temática</span>
                 <span style={{ fontWeight: 600 }}>{comprobante.clase.tematica || 'LIBRE'}</span>
               </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+              {estado(comprobante) === 'CONFIRMADA' && (
+                <Button onClick={() => openCambioAsiento(comprobante)} size="small">
+                  Cambiar asiento
+                </Button>
+              )}
+              <Button variant="secondary" onClick={handleGuardarComprobante} size="small">
+                <Printer size={16} />
+                Guardar comprobante
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={cambioModalOpen} onClose={closeCambioAsiento} title="Cambiar asiento">
+        {cambioLoading ? (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div className="loading-spinner" />
+            <p style={{ marginTop: '0.75rem', color: 'var(--gray-500)', fontSize: '0.9rem' }}>Cargando clase...</p>
+          </div>
+        ) : cambioClase && (
+          <div>
+            <div style={{ marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--gray-600)', textAlign: 'center' }}>
+              <strong>{cambioClase.categoria?.nombre}</strong> · {formatFechaBonita(cambioClase.fecha)} · {formatHoraAMPM(cambioClase.horaInicio)}
+            </div>
+
+            <div className="seat-map-section" style={{ marginTop: '1rem' }}>
+              <div className="seat-stage" style={{ marginBottom: '0.5rem' }}>
+                <User size={14} />
+                <span>Instructor</span>
+              </div>
+
+              <div className="seat-legend" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', justifyItems: 'center' }}>
+                <div className="seat-legend-item">
+                  <div className="seat-legend-dot disponible" />
+                  <span>Disponible</span>
+                </div>
+                {cambioMiReserva && (
+                  <div className="seat-legend-item">
+                    <div className="seat-legend-dot actual" />
+                    <span>Tu asiento</span>
+                  </div>
+                )}
+                <div className="seat-legend-item">
+                  <div className="seat-legend-dot ocupado" />
+                  <span>Ocupado</span>
+                </div>
+                {cambioSelectedSeat && (
+                  <div className="seat-legend-item">
+                    <div className="seat-legend-dot seleccionado" />
+                    <span>Tu selección</span>
+                  </div>
+                )}
+              </div>
+
+              {(() => {
+                const columnas = cambioClase.capacidadMaxima <= 10 ? 4 : cambioClase.capacidadMaxima <= 20 ? 5 : 6
+                const asientos = (cambioClase.posiciones || []).map(p => posicionToAsiento(p, columnas, cambioMiReserva))
+                const filas = {}
+                asientos.forEach(a => {
+                  if (!filas[a.fila]) filas[a.fila] = []
+                  filas[a.fila].push(a)
+                })
+                const asientosAgrupados = Object.values(filas).map(f => f.sort((a, b) => a.columna - b.columna))
+
+                return (
+                  <div className="seat-grid" style={{ '--columnas': columnas }}>
+                    {asientosAgrupados.map((fila, fi) =>
+                      fila.map(asiento => {
+                        const isSelected = cambioSelectedSeat?.id === asiento.id
+                        const isActual = asiento.estado === 'actual'
+                        const isOcupado = asiento.estado === 'ocupado'
+                        let seatClass = 'seat '
+                        if (isActual) {
+                          seatClass += 'actual'
+                        } else if (isOcupado) {
+                          seatClass += 'ocupado'
+                        } else {
+                          seatClass += 'disponible'
+                        }
+                        if (isSelected) seatClass += ' selected'
+                        return (
+                          <button
+                            key={asiento.id}
+                            className={seatClass}
+                            disabled={isOcupado || isActual || cambioSubmitting}
+                            onClick={() => {
+                              if (cambioSubmitting) return
+                              if (cambioSelectedSeat?.id === asiento.id) {
+                                setCambioSelectedSeat(null)
+                              } else if (!isOcupado && !isActual) {
+                                setCambioSelectedSeat(asiento)
+                              }
+                            }}
+                            aria-label={`Asiento ${asiento.numero}, ${isOcupado ? 'ocupado' : isActual ? 'tu asiento' : 'disponible'}`}
+                            style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
+                          >
+                            {isActual ? (
+                              <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>TÚ</span>
+                            ) : (
+                              <User size={20} />
+                            )}
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+
+            {cambioError && (
+              <div className="alert alert-danger" style={{ marginTop: '0.75rem' }}>
+                <AlertCircle size={16} />
+                <span>{cambioError}</span>
+              </div>
+            )}
+
+            <div className="modal-actions" style={{ marginTop: '0.75rem' }}>
+              <Button variant="secondary" onClick={closeCambioAsiento} disabled={cambioSubmitting}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSubmitCambio} disabled={!cambioSelectedSeat || cambioSubmitting}>
+                {cambioSubmitting ? 'Cambiando...' : 'Cambiar a este asiento'}
+              </Button>
             </div>
           </div>
         )}

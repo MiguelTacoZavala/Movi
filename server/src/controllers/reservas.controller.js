@@ -25,4 +25,23 @@ async function cancelarReserva(req, res, next) {
   }
 }
 
-module.exports = { listarMisReservas, cancelarReserva }
+async function cambiarAsiento(req, res, next) {
+  try {
+    const id = safeId(req.params.id)
+    if (!id) return res.status(400).json({ error: 'ID inválido' })
+    const { nuevaPosicionClaseId } = req.body
+    if (!nuevaPosicionClaseId) return res.status(400).json({ error: 'nuevaPosicionClaseId es requerido' })
+    const reserva = await reservaService.cambiarAsiento(id, req.user.id, nuevaPosicionClaseId)
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' })
+    res.json({ reserva })
+  } catch (error) {
+    if (error.estadoInvalido) return res.status(400).json({ error: 'Solo puedes cambiar asiento de reservas confirmadas' })
+    if (error.inscripcionBloqueada) return res.status(409).json({ error: 'No puedes cambiar asiento 2 horas antes de la clase' })
+    if (error.posicionInvalida) return res.status(400).json({ error: 'La posición no pertenece a esta clase' })
+    if (error.asientoOcupado) return res.status(409).json({ error: 'El asiento seleccionado ya está ocupado' })
+    if (error.mismoAsiento) return res.status(400).json({ error: 'El asiento seleccionado es el mismo que el actual' })
+    next(error)
+  }
+}
+
+module.exports = { listarMisReservas, cancelarReserva, cambiarAsiento }
