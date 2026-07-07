@@ -1,4 +1,5 @@
 const cron = require('node-cron')
+const prisma = require('../lib/prisma')
 const claseService = require('./clase.service')
 const { limpiarHoldsExpirados } = require('./reserva.service')
 const { CLASES_POR_HORARIO } = require('../lib/helpers')
