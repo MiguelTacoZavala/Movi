@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Calendar, Music, Clock, User, LogOut } from 'lucide-react'
+import { LayoutDashboard, Music, Clock, User, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { useTheme } from '../../context/useTheme'
 import { useHotkeys } from '../../hooks/useHotkeys'
@@ -54,7 +54,6 @@ export default function InstructorLayout() {
 
   const INSTRUCTOR_SHORTCUTS = [
     { keys: 'g i', handler: useCallback(() => navigate('/instructor/dashboard'), [navigate]), description: 'Ir a Inicio' },
-    { keys: 'g h', handler: useCallback(() => navigate('/instructor/horarios'), [navigate]), description: 'Ir a Horarios' },
     { keys: 'g c', handler: useCallback(() => navigate('/instructor/clases'), [navigate]), description: 'Ir a Clases' },
     { keys: 'g t', handler: useCallback(() => navigate('/instructor/historial'), [navigate]), description: 'Ir a Historial' },
     { keys: 'g p', handler: useCallback(() => navigate('/instructor/perfil'), [navigate]), description: 'Ir a Perfil' },
@@ -105,10 +104,6 @@ export default function InstructorLayout() {
         <NavLink to="/instructor/dashboard" aria-keyshortcuts="g i" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <LayoutDashboard size={20} aria-hidden="true" />
           <span>Inicio</span>
-        </NavLink>
-        <NavLink to="/instructor/horarios" aria-keyshortcuts="g h" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
-          <Calendar size={20} aria-hidden="true" />
-          <span>Horarios</span>
         </NavLink>
         <NavLink to="/instructor/clases" aria-keyshortcuts="g c" className={({ isActive }) => `client-nav-item ${isActive ? 'active' : ''}`}>
           <Music size={20} aria-hidden="true" />

@@ -12,8 +12,7 @@ const TIPS = {
   },
   instructor: {
     '/instructor/dashboard': 'Bienvenido. Aquí ves tu próxima clase y las clases de hoy. Presiona una clase para más detalles.',
-    '/instructor/horarios': 'Tu horario semanal con las categorías que enseñas, horarios y capacidad de cada clase.',
-    '/instructor/clases': 'Tus clases programadas. Presiona una para ver los participantes y editar la temática.',
+    '/instructor/clases': 'Tus clases programadas y tu horario semanal. Presiona una clase para ver los participantes y editar la temática.',
     '/instructor/clases/:id': 'Lista de participantes inscritos. Puedes editar la temática de la clase desde el botón Editar.',
     '/instructor/historial': 'Clases finalizadas o canceladas. Consulta el historial de tus clases anteriores.',
     '/instructor/perfil': 'Edita tus datos personales, cambia tu foto y consulta las preguntas frecuentes.',
