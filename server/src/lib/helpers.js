@@ -30,6 +30,22 @@ function haPasado(clase) {
   return fechaStr < hoyStr || (fechaStr === hoyStr && horaFinStr < ahoraTimeStr)
 }
 
+// ── Verificación de inscripción bloqueada (<2 horas para iniciar) ──
+const HORAS_INSCRIPCION = 2
+function inscripcionBloqueada(clase) {
+  if (haPasado(clase)) return true
+  const ahora = new Date()
+  const fechaStr = yyyymmdd(clase.fecha)
+  const hoyStr = yyyymmdd(ahora)
+  if (fechaStr !== hoyStr) return false
+  const [hInicio, mInicio] = clase.horaInicio.split(':').map(Number)
+  const inicioClase = new Date(ahora)
+  inicioClase.setHours(hInicio, mInicio, 0, 0)
+  const diffMs = inicioClase - ahora
+  const diffHoras = diffMs / (1000 * 60 * 60)
+  return diffHoras < HORAS_INSCRIPCION
+}
+
 // ── Formateo de hora "HH:MM" → Date ──────────────────────────
 function parsearHora(horaStr) {
   const [h, m] = horaStr.split(':').map(Number)
@@ -49,6 +65,7 @@ module.exports = {
   hhmmss,
   yyyymmdd,
   haPasado,
+  inscripcionBloqueada,
   parsearHora,
   DEFAULT_CLASE_PRECIO,
   DEFAULT_MIN_PARTICIPANTES,

@@ -20,18 +20,20 @@ function fetchCategoriasData() {
 }
 
 export default function Categorias() {
-  const [categorias, setCategorias] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedData = api.getCached('/categorias')
+  const [categorias, setCategorias] = useState(() => cachedData?.categorias || [])
+  const [loading, setLoading] = useState(!cachedData)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [mensaje, setMensaje] = useFlashMessage()
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchCategoriasData()
       .then(res => { if (mounted) setCategorias(res.categorias) })
@@ -98,8 +100,9 @@ export default function Categorias() {
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || deleting) return
     setError('')
+    setDeleting(true)
     const nombre = deleteTarget.nombre
     try {
       await api.del(`/categorias/${deleteTarget.id}`)
@@ -109,12 +112,14 @@ export default function Categorias() {
     } catch (e) {
       setError(mensajeError(e, 'No se pudo eliminar la categoría.'))
     } finally {
+      setDeleting(false)
       setDeleteTarget(null)
     }
   }
 
   const handleSave = async (formData) => {
     setFormError('')
+    setSaving(true)
     try {
       if (editing) {
         const data = await api.put(`/categorias/${editing.id}`, formData)
@@ -129,10 +134,12 @@ export default function Categorias() {
       closeModal()
     } catch (e) {
       setFormError(mensajeError(e, 'No se pudo guardar la categoría.'))
+    } finally {
+      setSaving(false)
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (loading && !categorias.length) return <LoadingScreen />
 
   return (
     <div>
@@ -193,8 +200,8 @@ export default function Categorias() {
           ¿Seguro que deseas eliminar la categoría <strong>{deleteTarget?.nombre}</strong>? Esta acción no se puede deshacer.
         </p>
         <div className="form-actions">
-          <Button variant="danger" onClick={confirmDelete}>Sí, eliminar</Button>
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+          <Button variant="danger" onClick={confirmDelete} disabled={deleting}>{deleting ? 'Eliminando...' : 'Sí, eliminar'}</Button>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
         </div>
       </Modal>
     </div>

@@ -18,6 +18,7 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
     password: '',
   })
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -31,7 +32,7 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
     setFormData({ ...formData, [name]: value })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.nombres.trim() || !formData.apellidos.trim() || !formData.especialidad) {
       setError('Nombres, apellidos y especialidad son requeridos.')
@@ -45,7 +46,12 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
       setError('La contraseña es requerida para crear un nuevo instructor.')
       return
     }
-    onSave(formData)
+    setSaving(true)
+    try {
+      await onSave(formData)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -115,8 +121,8 @@ export default function InstructorForm({ initialData, onSave, onCancel }) {
       )}
 
       <div className="form-actions">
-        <Button type="submit">{initialData ? 'Actualizar' : 'Crear Instructor'}</Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
+        <Button type="submit" disabled={saving}>{saving ? 'Guardando...' : initialData ? 'Actualizar' : 'Crear Instructor'}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>Cancelar</Button>
       </div>
     </form>
   )

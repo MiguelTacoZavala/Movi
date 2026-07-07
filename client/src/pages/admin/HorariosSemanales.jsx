@@ -40,10 +40,13 @@ function fetchHorariosData() {
 }
 
 export default function HorariosSemanales() {
-  const [horarios, setHorarios] = useState([])
-  const [instructores, setInstructores] = useState([])
-  const [categorias, setCategorias] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedHorarios = api.getCached('/horarios')
+  const cachedInstructores = api.getCached('/instructores')
+  const cachedCategorias = api.getCached('/categorias')
+  const [horarios, setHorarios] = useState(() => cachedHorarios?.horarios || [])
+  const [instructores, setInstructores] = useState(() => cachedInstructores?.instructores || [])
+  const [categorias, setCategorias] = useState(() => cachedCategorias?.categorias || [])
+  const [loading, setLoading] = useState(!cachedHorarios || !cachedInstructores || !cachedCategorias)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [filtroInstructor, setFiltroInstructor] = useState('')
@@ -53,8 +56,10 @@ export default function HorariosSemanales() {
   const [mensaje, setMensaje] = useFlashMessage()
   const [formError, setFormError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   // Desactivar un horario: preguntar si cancelar también sus clases futuras
   const [deactivateTarget, setDeactivateTarget] = useState(null)
+  const [toggling, setToggling] = useState(null)
   // Extender: generar más clases de un horario hasta una nueva fecha
   const [extendTarget, setExtendTarget] = useState(null)
   const [extendHasta, setExtendHasta] = useState('')
@@ -63,7 +68,6 @@ export default function HorariosSemanales() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchHorariosData()
       .then(([hData, iData, cData]) => {
@@ -183,8 +187,10 @@ export default function HorariosSemanales() {
   }
 
   const doToggle = async (h, cancelarFuturas) => {
+    if (toggling) return
     setError('')
     setMensaje('')
+    setToggling(h.id)
     try {
       const result = await api.patch(`/horarios/${h.id}/estado`, { cancelarFuturas })
       api.invalidateCache(CACHE_KEYS)
@@ -203,6 +209,8 @@ export default function HorariosSemanales() {
     } catch (e) {
       setDeactivateTarget(null)
       setError(mensajeError(e, 'No se pudo cambiar el estado del horario.'))
+    } finally {
+      setToggling(null)
     }
   }
 
@@ -243,8 +251,9 @@ export default function HorariosSemanales() {
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || deleting) return
     setError('')
+    setDeleting(true)
     try {
       const result = await api.del(`/horarios/${deleteTarget.id}`)
       api.invalidateCache(CACHE_KEYS)
@@ -262,6 +271,7 @@ export default function HorariosSemanales() {
         setError(mensajeError(e, 'No se pudo eliminar el horario.'))
       }
     } finally {
+      setDeleting(false)
       setDeleteTarget(null)
     }
   }
@@ -291,7 +301,7 @@ export default function HorariosSemanales() {
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (loading && !horarios.length) return <LoadingScreen />
 
   return (
     <div>
@@ -404,8 +414,8 @@ export default function HorariosSemanales() {
           {deleteTarget ? ` (${diaLabel[deleteTarget.diaSemana]})` : ''}? Esta acción no se puede deshacer.
         </p>
         <div className="form-actions">
-          <Button variant="danger" onClick={confirmDelete}>Sí, eliminar</Button>
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+          <Button variant="danger" onClick={confirmDelete} disabled={deleting}>{deleting ? 'Eliminando...' : 'Sí, eliminar'}</Button>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
         </div>
       </Modal>
 

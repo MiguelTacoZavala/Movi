@@ -19,11 +19,13 @@ function fetchClientesData({ search = '', page = 1, limit = 20 } = {}) {
 }
 
 export default function Clientes() {
-  const [clientes, setClientes] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedData = api.getCached('/clientes?page=1&limit=20')
+  const [clientes, setClientes] = useState(() => cachedData?.clientes || [])
+  const [loading, setLoading] = useState(!cachedData)
+  const [searching, setSearching] = useState(false)
   const [search, setSearch] = useState('')
   const [pagina, setPagina] = useState(1)
-  const [paginacion, setPaginacion] = useState(null)
+  const [paginacion, setPaginacion] = useState(() => cachedData?.paginacion || null)
   const [selectedCliente, setSelectedCliente] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [error, setError] = useState('')
@@ -32,7 +34,6 @@ export default function Clientes() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchClientesData({ page: 1, limit: POR_PAGINA })
       .then(data => {
@@ -48,7 +49,7 @@ export default function Clientes() {
   }, [])
 
   const cargar = async (page = 1, searchTerm = '') => {
-    setLoading(true)
+    setSearching(true)
     setError('')
     try {
       const data = await fetchClientesData({ search: searchTerm, page, limit: POR_PAGINA })
@@ -58,7 +59,7 @@ export default function Clientes() {
     } catch (e) {
       setError(mensajeError(e, 'No se pudieron cargar los clientes.'))
     } finally {
-      setLoading(false)
+      setSearching(false)
     }
   }
 
@@ -120,7 +121,7 @@ export default function Clientes() {
     )},
   ]
 
-  if (loading) return <LoadingScreen />
+  if (loading && !clientes.length) return <LoadingScreen />
 
   const totalPaginas = paginacion?.totalPaginas || 1
 

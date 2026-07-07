@@ -36,7 +36,6 @@ async function mantenerRollingWindow() {
       const resultado = await claseService.generarDesdeHorario(horario.id, fechaHasta)
       if (resultado && resultado.creadas > 0) {
         clasesGeneradas += resultado.creadas
-        console.log(`[CRON] Horario ${horario.id}: ${resultado.creadas} clases generadas (total futuras: ${clasesFuturas + resultado.creadas})`)
       }
     }
   }
@@ -47,20 +46,16 @@ async function mantenerRollingWindow() {
 // Tarea principal del cron: ejecuta todos los días a las 3:00 AM (America/Lima)
 function iniciarCron() {
   cron.schedule('0 3 * * *', async () => {
-    console.log('[CRON] Iniciando mantenimiento diario...')
     try {
       await claseService.cerrarClasesVencidas()
       await limpiarHoldsExpirados()
-      const generadas = await mantenerRollingWindow()
-      console.log(`[CRON] Mantenimiento completado. ${generadas} clases generadas.`)
+      await mantenerRollingWindow()
     } catch (error) {
       console.error('[CRON] Error en mantenimiento:', error)
     }
   }, {
     timezone: 'America/Lima',
   })
-
-  console.log('[CRON] Tarea diaria programada a las 3:00 AM (America/Lima)')
 }
 
 module.exports = { iniciarCron, mantenerRollingWindow }

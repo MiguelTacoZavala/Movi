@@ -34,9 +34,10 @@ async function obtener(req, res, next) {
     const id = safeId(req.params.id)
     if (!id) return res.status(400).json({ error: 'ID inválido' })
     const { soloActivas } = req.query
-    const clase = await claseService.obtener(id, { soloActivas: soloActivas === 'true' })
+    const usuarioId = req.user?.id || null
+    const clase = await claseService.obtener(id, { soloActivas: soloActivas === 'true', usuarioId })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
-    res.json({ clase })
+    res.json(clase)
   } catch (error) {
     next(error)
   }
@@ -61,6 +62,10 @@ async function cancelar(req, res, next) {
     if (error.yaFinalizada) {
       console.warn(`Cancelacion rechazada: la clase ${req.params.id} ya finalizo`)
       return res.status(409).json({ error: 'No se puede cancelar una clase finalizada' })
+    }
+    if (error.enCurso) {
+      console.warn(`Cancelacion rechazada: la clase ${req.params.id} esta en curso`)
+      return res.status(409).json({ error: 'No se puede cancelar una clase que está en curso' })
     }
     next(error)
   }

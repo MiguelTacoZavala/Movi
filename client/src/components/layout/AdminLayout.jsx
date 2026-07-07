@@ -4,16 +4,20 @@ import { useAuth } from '../../hooks/useAuth'
 import { useHotkeys } from '../../hooks/useHotkeys'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import LoadingScreen from '../common/LoadingScreen'
 import KeyboardShortcutsHelp from '../common/KeyboardShortcutsHelp'
+import api from '../../services/api'
 
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [preloadReady, setPreloadReady] = useState(false)
 
   useEffect(() => {
     document.documentElement.dataset.theme = 'light'
+    api.preloadAdminData().then(() => setPreloadReady(true))
   }, [])
 
   const ADMIN_SHORTCUTS = [
@@ -30,6 +34,7 @@ export default function AdminLayout() {
 
   return (
     <div className="admin-layout">
+      {!preloadReady && <LoadingScreen />}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {sidebarOpen && (
         <div

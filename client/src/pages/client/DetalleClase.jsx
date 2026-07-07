@@ -7,7 +7,7 @@ import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import culqi from '../../services/culqi'
 import LoadingScreen from '../../components/common/LoadingScreen'
-import { formatFechaBonita, formatHoraAMPM } from '../../utils/helpers'
+import { formatFechaBonita, formatHoraAMPM, inscripcionBloqueada } from '../../utils/helpers'
 import '../../App.css'
 
 const HOLD_DURATION = 300
@@ -51,10 +51,14 @@ export default function DetalleClase() {
   const [procesandoPagoYape, setProcesandoPagoYape] = useState(false)
   const [creditos, setCreditos] = useState(0)
   const [creditosError, setCreditosError] = useState(false)
+  const [miReserva, setMiReserva] = useState(null)
 
   useEffect(() => {
     api.get(`/clases/${id}?soloActivas=true`).then(res => {
       setClase(res.clase)
+      if (res.miReserva) {
+        setMiReserva(res.miReserva)
+      }
     }).catch(() => {
       setClase(null)
       setClaseError('No pudimos cargar los detalles de esta clase. Verifica tu conexión e intenta de nuevo.')
@@ -365,6 +369,20 @@ export default function DetalleClase() {
         </div>
       )}
 
+      {clase && inscripcionBloqueada(clase) && !holdActive && (
+        <div className="inscripcion-closed-banner cancelled" style={{ marginTop: '0.5rem' }}>
+          <AlertTriangle size={16} />
+          <span>Las inscripciones se cierran 2 horas antes de que inicie la clase.</span>
+        </div>
+      )}
+
+      {miReserva && (
+        <div className="inscripcion-closed-banner" style={{ marginTop: '0.5rem', background: '#dbeafe', color: '#1e40af' }}>
+          <AlertCircle size={16} />
+          <span>Ya tienes una reserva en esta clase (Asiento #{miReserva.asiento}).</span>
+        </div>
+      )}
+
       {procesandoPagoYape && (
         <div className="processing-overlay">
           <div className="processing-card">
@@ -436,7 +454,7 @@ export default function DetalleClase() {
                     <button
                       key={asiento.id}
                       className={`seat ${isOcupado ? 'ocupado' : 'disponible'} ${isSelected ? 'selected' : ''}`}
-                      disabled={isOcupado || holdActive || procesando || procesandoPagoYape}
+                      disabled={isOcupado || holdActive || procesando || procesandoPagoYape || inscripcionBloqueada(clase) || !!miReserva}
                       onClick={() => !isOcupado && handleSelectSeat(asiento)}
                       aria-label={`Asiento ${asiento.numero}, ${isOcupado ? 'ocupado' : 'disponible'}`}
                       style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
@@ -498,10 +516,10 @@ export default function DetalleClase() {
         <Button
           className="btn-inscribir"
           onClick={handlePagar}
-          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando || pagandoYape || procesandoPagoYape}
-          title={holdActive ? 'Completa el pago para continuar' : 'Confirmar asiento y procesar el pago'}
+          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando || pagandoYape || procesandoPagoYape || inscripcionBloqueada(clase) || !!miReserva}
+          title={holdActive ? 'Completa el pago para continuar' : inscripcionBloqueada(clase) ? 'Las inscripciones se cierran 2 horas antes de la clase' : miReserva ? 'Ya tienes una reserva en esta clase' : 'Confirmar asiento y procesar el pago'}
         >
-          {procesando ? 'Procesando...' : pagandoYape ? 'Abriendo Culqi...' : procesandoPagoYape ? 'Confirmando pago...' : holdActive ? 'Reserva en curso...' : 'Pagar e inscribirme'}
+          {procesando ? 'Procesando...' : pagandoYape ? 'Abriendo Culqi...' : procesandoPagoYape ? 'Confirmando pago...' : holdActive ? 'Reserva en curso...' : inscripcionBloqueada(clase) ? 'Inscripciones cerradas' : miReserva ? 'Ya tienes una reserva' : 'Pagar e inscribirme'}
         </Button>
       )}
 

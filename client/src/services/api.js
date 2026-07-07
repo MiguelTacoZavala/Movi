@@ -4,7 +4,7 @@ const USER_KEY = 'movi_user'
 const _cache = new Map()
 // TTL del caché en memoria: las revisitas rápidas salen de caché (instantáneas);
 // pasado este tiempo se vuelve a pedir al servidor para no mostrar datos viejos.
-const CACHE_TTL = 60_000 // 1 minuto
+const CACHE_TTL = 300_000 // 5 minutos
 const BASE_URL = import.meta.env.VITE_API_URL || ''
 
 const api = {
@@ -50,7 +50,20 @@ const api = {
     }
 
     const res = await fetch(`${BASE_URL}/api${path}`, options)
-    const data = await res.json()
+
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      if (res.status === 401) {
+        api.removeToken()
+        api.removeUser()
+        window.location.href = '/login'
+      }
+      const err = new Error(res.ok ? 'Respuesta inválida del servidor' : `Error del servidor (${res.status})`)
+      err.status = res.status
+      throw err
+    }
 
     if (!res.ok) {
       if (res.status === 401) {
@@ -83,6 +96,17 @@ const api = {
     })
   },
 
+  // Versión síncrona de cachedGet: retorna los datos si están en caché, null si no.
+  // Permite inicializar useState de forma síncrona y eliminar el flash de loading.
+  getCached(path) {
+    const key = `GET ${path}`
+    const cached = _cache.get(key)
+    if (cached && Date.now() - cached.at < CACHE_TTL) {
+      return cached.data
+    }
+    return null
+  },
+
   // Borra del caché las entradas cuya clave empieza por alguno de los patrones dados.
   // Acepta un string, un array de strings, o nada (limpia todo el caché).
   invalidateCache(patterns) {
@@ -101,7 +125,7 @@ const api = {
       '/reservas/mis-reservas',
       '/creditos',
     ]
-    Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
+    return Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
   },
 
   // Gemelo de preloadClientData para el admin: al iniciar sesión se precargan en
@@ -113,9 +137,9 @@ const api = {
       '/instructores',
       '/categorias',
       '/horarios',
-      '/clientes',
+      '/clientes?page=1&limit=20',
     ]
-    Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
+    return Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
   },
 
   preloadInstructorData() {
@@ -125,7 +149,7 @@ const api = {
       '/instructores/mis-horarios',
       '/instructores/historial',
     ]
-    Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
+    return Promise.all(endpoints.map(p => api.cachedGet(p).catch(() => {})))
   },
 
   post(path, body) {
@@ -160,7 +184,15 @@ const api = {
       body: formData,
     })
 
-    const data = await res.json()
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      const err = new Error(res.ok ? 'Respuesta inválida del servidor' : `Error del servidor (${res.status})`)
+      err.status = res.status
+      throw err
+    }
+
     if (!res.ok) {
       const err = new Error(data.error || 'Error al subir archivo')
       err.status = res.status
