@@ -20,8 +20,9 @@ function fetchCategoriasData() {
 }
 
 export default function Categorias() {
-  const [categorias, setCategorias] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedData = api.getCached('/categorias')
+  const [categorias, setCategorias] = useState(() => cachedData?.categorias || [])
+  const [loading, setLoading] = useState(!cachedData)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [error, setError] = useState('')
@@ -33,7 +34,6 @@ export default function Categorias() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchCategoriasData()
       .then(res => { if (mounted) setCategorias(res.categorias) })
@@ -139,7 +139,7 @@ export default function Categorias() {
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (loading && !categorias.length) return <LoadingScreen />
 
   return (
     <div>

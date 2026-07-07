@@ -40,10 +40,13 @@ function fetchHorariosData() {
 }
 
 export default function HorariosSemanales() {
-  const [horarios, setHorarios] = useState([])
-  const [instructores, setInstructores] = useState([])
-  const [categorias, setCategorias] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedHorarios = api.getCached('/horarios')
+  const cachedInstructores = api.getCached('/instructores')
+  const cachedCategorias = api.getCached('/categorias')
+  const [horarios, setHorarios] = useState(() => cachedHorarios?.horarios || [])
+  const [instructores, setInstructores] = useState(() => cachedInstructores?.instructores || [])
+  const [categorias, setCategorias] = useState(() => cachedCategorias?.categorias || [])
+  const [loading, setLoading] = useState(!cachedHorarios || !cachedInstructores || !cachedCategorias)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [filtroInstructor, setFiltroInstructor] = useState('')
@@ -65,7 +68,6 @@ export default function HorariosSemanales() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchHorariosData()
       .then(([hData, iData, cData]) => {
@@ -299,7 +301,7 @@ export default function HorariosSemanales() {
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (loading && !horarios.length) return <LoadingScreen />
 
   return (
     <div>

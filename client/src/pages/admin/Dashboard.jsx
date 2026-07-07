@@ -16,13 +16,12 @@ function fetchAdminDashboard() {
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(() => api.getCached('/dashboard/admin'))
+  const [loading, setLoading] = useState(data === null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchAdminDashboard()
       .then(res => { if (mounted) setData(res) })
@@ -44,7 +43,7 @@ export default function Dashboard() {
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (loading && !data) return <LoadingScreen />
   if (!data) return (
     <div style={{ padding: '2rem' }}>
       <Alert type="danger">

@@ -37,9 +37,11 @@ function fetchClasesData() {
 }
 
 export default function Clases() {
-  const [clases, setClases] = useState([])
-  const [instructores, setInstructores] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedClases = api.getCached('/clases?limit=500')
+  const cachedInstructores = api.getCached('/instructores')
+  const [clases, setClases] = useState(() => cachedClases?.clases || [])
+  const [instructores, setInstructores] = useState(() => cachedInstructores?.instructores || [])
+  const [loading, setLoading] = useState(!cachedClases || !cachedInstructores)
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroInstructor, setFiltroInstructor] = useState('')
@@ -56,7 +58,6 @@ export default function Clases() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchClasesData()
       .then(([cData, iData]) => {
@@ -220,7 +221,7 @@ export default function Clases() {
 
   const isOcupado = (pos) => Array.isArray(pos.reservas) && pos.reservas.length > 0
 
-  if (loading) return <LoadingScreen />
+  if (loading && !clases.length) return <LoadingScreen />
 
   return (
     <div>

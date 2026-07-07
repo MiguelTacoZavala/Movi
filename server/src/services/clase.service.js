@@ -306,7 +306,7 @@ async function cerrarClasesVencidas() {
   hoy.setHours(0, 0, 0, 0)
 
   const abiertas = await prisma.clase.findMany({
-    where: { estado: { in: ['PROGRAMADA', 'EN_CURSO'] }, fecha: { lte: hoy } },
+    where: { estado: 'PROGRAMADA', fecha: { lte: hoy } },
     include: {
       _count: { select: { reservas: { where: RESERVA_OCUPADA } } },
       reservas: { where: RESERVA_OCUPADA, select: { id: true, usuarioId: true } },
@@ -354,12 +354,6 @@ async function cerrarClasesVencidas() {
         data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
       })
     })
-  }
-
-  if (aFinalizar.length || aCancelar.length) {
-    console.log(
-      `Clases cerradas automaticamente: ${aFinalizar.length} finalizadas, ${aCancelar.length} canceladas por no alcanzar el minimo`
-    )
   }
 }
 

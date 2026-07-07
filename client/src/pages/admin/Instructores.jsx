@@ -20,8 +20,9 @@ function fetchInstructoresData() {
 }
 
 export default function Instructores() {
-  const [instructores, setInstructores] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedData = api.getCached('/instructores')
+  const [instructores, setInstructores] = useState(() => cachedData?.instructores || [])
+  const [loading, setLoading] = useState(!cachedData)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingInstructor, setEditingInstructor] = useState(null)
   const [error, setError] = useState('')
@@ -33,7 +34,6 @@ export default function Instructores() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchInstructoresData()
       .then(res => { if (mounted) setInstructores(res.instructores) })
@@ -178,7 +178,7 @@ export default function Instructores() {
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (loading && !instructores.length) return <LoadingScreen />
 
   return (
     <div>
