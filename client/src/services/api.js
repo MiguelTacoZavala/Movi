@@ -50,7 +50,20 @@ const api = {
     }
 
     const res = await fetch(`${BASE_URL}/api${path}`, options)
-    const data = await res.json()
+
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      if (res.status === 401) {
+        api.removeToken()
+        api.removeUser()
+        window.location.href = '/login'
+      }
+      const err = new Error(res.ok ? 'Respuesta inválida del servidor' : `Error del servidor (${res.status})`)
+      err.status = res.status
+      throw err
+    }
 
     if (!res.ok) {
       if (res.status === 401) {
@@ -160,7 +173,15 @@ const api = {
       body: formData,
     })
 
-    const data = await res.json()
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      const err = new Error(res.ok ? 'Respuesta inválida del servidor' : `Error del servidor (${res.status})`)
+      err.status = res.status
+      throw err
+    }
+
     if (!res.ok) {
       const err = new Error(data.error || 'Error al subir archivo')
       err.status = res.status

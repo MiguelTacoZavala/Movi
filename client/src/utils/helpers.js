@@ -1,13 +1,17 @@
 export function formatHoraAMPM(hora) {
+  if (!hora || typeof hora !== 'string') return '--'
   const [h, m] = hora.split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return '--'
   const ampm = h >= 12 ? 'PM' : 'AM'
   const h12 = h % 12 || 12
   return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`
 }
 
 export function formatFechaBonita(fechaStr) {
+  if (!fechaStr || typeof fechaStr !== 'string') return '--'
   const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
   const [, m, d] = fechaStr.split('-').map(Number)
+  if (isNaN(m) || isNaN(d) || !meses[m - 1]) return '--'
   return `${d} de ${meses[m - 1]}`
 }
 
