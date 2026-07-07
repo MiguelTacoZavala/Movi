@@ -1,5 +1,5 @@
 const prisma = require('../lib/prisma')
-const { hhmm, hhmmss, yyyymmdd, haPasado } = require('../lib/helpers')
+const { hhmm, hhmmss, yyyymmdd, haPasado, inscripcionBloqueada } = require('../lib/helpers')
 
 const includeClase = {
   clase: {
@@ -150,4 +150,41 @@ async function obtenerParticipantes(claseId) {
   }))
 }
 
-module.exports = { listarPorUsuario, cancelar, obtenerParticipantes, limpiarHoldsExpirados }
+async function cambiarAsiento(reservaId, usuarioId, nuevaPosicionClaseId) {
+  const reserva = await prisma.reserva.findUnique({
+    where: { id: reservaId },
+    include: {
+      clase: { select: { id: true, fecha: true, horaInicio: true, horaFin: true, estado: true } },
+      posicionClase: { select: { id: true, numero: true, claseId: true } },
+    },
+  })
+  if (!reserva) return null
+  if (reserva.usuarioId !== usuarioId) return null
+  if (reserva.estado !== 'CONFIRMADA') throw { estadoInvalido: true }
+  if (inscripcionBloqueada(reserva.clase)) throw { inscripcionBloqueada: true }
+  if (reserva.posicionClaseId === nuevaPosicionClaseId) throw { mismoAsiento: true }
+
+  return await prisma.$transaction(async (tx) => {
+    const nuevaPos = await tx.posicionClase.findUnique({
+      where: { id: nuevaPosicionClaseId },
+    })
+    if (!nuevaPos || nuevaPos.claseId !== reserva.claseId) throw { posicionInvalida: true }
+
+    const ocupada = await tx.reserva.findFirst({
+      where: {
+        posicionClaseId: nuevaPosicionClaseId,
+        id: { not: reservaId },
+        estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
+        claseId: reserva.claseId,
+      },
+    })
+    if (ocupada) throw { asientoOcupado: true }
+
+    return tx.reserva.update({
+      where: { id: reservaId },
+      data: { posicionClaseId: nuevaPosicionClaseId, updatedAt: new Date() },
+    })
+  })
+}
+
+module.exports = { listarPorUsuario, cancelar, obtenerParticipantes, limpiarHoldsExpirados, cambiarAsiento }

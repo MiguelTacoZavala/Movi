@@ -18,13 +18,15 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function posicionToAsiento(p, columnas) {
+function posicionToAsiento(p, columnas, miReserva) {
+  let estado = p.reservas && p.reservas.length > 0 ? 'ocupado' : 'disponible'
+  if (miReserva && p.numero === miReserva.asiento) estado = 'actual'
   return {
     id: p.id,
     numero: p.numero,
     fila: Math.ceil(p.numero / columnas),
     columna: ((p.numero - 1) % columnas) + 1,
-    estado: p.reservas && p.reservas.length > 0 ? 'ocupado' : 'disponible',
+    estado,
   }
 }
 
@@ -52,6 +54,8 @@ export default function DetalleClase() {
   const [creditos, setCreditos] = useState(0)
   const [creditosError, setCreditosError] = useState(false)
   const [miReserva, setMiReserva] = useState(null)
+  const [cambiandoAsientoLoading, setCambiandoAsientoLoading] = useState(false)
+  const [cambioExitoso, setCambioExitoso] = useState(null)
 
   useEffect(() => {
     api.get(`/clases/${id}?soloActivas=true`).then(res => {
@@ -102,8 +106,8 @@ export default function DetalleClase() {
 
   const asientos = useMemo(() => {
     if (!clase?.posiciones) return []
-    return clase.posiciones.map(p => posicionToAsiento(p, columnas))
-  }, [clase, columnas])
+    return clase.posiciones.map(p => posicionToAsiento(p, columnas, miReserva))
+  }, [clase, columnas, miReserva])
 
   const asientosAgrupados = useMemo(() => {
     const filas = {}
@@ -117,7 +121,12 @@ export default function DetalleClase() {
   const precio = clase?.precio || 15
 
   const handleSelectSeat = (seat) => {
-    if (seat.estado !== 'disponible' || holdActive) return
+    if (holdActive || cambiandoAsientoLoading) return
+    if (miReserva) {
+      if (seat.estado === 'ocupado' || seat.estado === 'actual') return
+    } else {
+      if (seat.estado !== 'disponible') return
+    }
     setSelectedSeat(seat)
     setHoldExpired(false)
     setError('')
@@ -132,6 +141,28 @@ export default function DetalleClase() {
 
   const handlePagar = () => {
     setShowResumenModal(true)
+  }
+
+  const handleCambiarAsiento = async () => {
+    if (!selectedSeat || !miReserva) return
+    setCambiandoAsientoLoading(true)
+    setError('')
+    setCambioExitoso(null)
+    try {
+      await api.patch(`/reservas/${miReserva.id}/cambiar-asiento`, {
+        nuevaPosicionClaseId: selectedSeat.id,
+      })
+      api.invalidateCache()
+      const nuevoNumero = selectedSeat.numero
+      setMiReserva(prev => ({ ...prev, asiento: nuevoNumero }))
+      setSelectedSeat(null)
+      setCambioExitoso(nuevoNumero)
+      setTimeout(() => setCambioExitoso(null), 3000)
+    } catch (e) {
+      setError(e.data?.error || e.message || 'No pudimos cambiar tu asiento. Intenta de nuevo.')
+    } finally {
+      setCambiandoAsientoLoading(false)
+    }
   }
 
   const openCulqiYape = async (holdIdState, precioState) => {
@@ -256,13 +287,14 @@ export default function DetalleClase() {
   }
 
   if (inscripcionExitosa && inscripcionData) {
+    const esCambio = inscripcionData.tipo === 'cambio'
     return (
       <div className="empty-state" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
         <div style={{ background: '#d1fae5', borderRadius: '50%', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
           <CheckCircle size={40} color="#059669" />
         </div>
-        <h3>Inscripción confirmada</h3>
-        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Tu inscripción fue confirmada correctamente</p>
+        <h3>{esCambio ? 'Asiento cambiado exitosamente' : 'Inscripción confirmada'}</h3>
+        <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>{esCambio ? 'Tu asiento fue actualizado correctamente' : 'Tu inscripción fue confirmada correctamente'}</p>
 
         <div style={{ marginTop: '1.5rem', textAlign: 'left', background: 'var(--gray-50)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -281,18 +313,39 @@ export default function DetalleClase() {
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Hora</span>
             <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{formatHoraAMPM(inscripcionData.hora_inicio)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento</span>
-            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{inscripcionData.asiento}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Monto</span>
-            <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>S/ {inscripcionData.monto?.toFixed(2) || '15.00'}</span>
-          </div>
-          <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Código de pago</span>
-            <span style={{ fontWeight: 700, color: 'var(--primary-medium)', fontFamily: 'monospace', fontSize: '0.95rem' }}>{inscripcionData.codigoPago}</span>
-          </div>
+          {esCambio ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento anterior</span>
+                <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{inscripcionData.asientoAnterior}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento nuevo</span>
+                <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{inscripcionData.asientoNuevo}</span>
+              </div>
+              {inscripcionData.codigoPago && (
+                <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Código de cambio</span>
+                  <span style={{ fontWeight: 700, color: 'var(--primary-medium)', fontFamily: 'monospace', fontSize: '0.95rem' }}>{inscripcionData.codigoPago}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento</span>
+                <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>#{inscripcionData.asiento}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Monto</span>
+                <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>S/ {inscripcionData.monto?.toFixed(2) || '15.00'}</span>
+              </div>
+              <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Código de pago</span>
+                <span style={{ fontWeight: 700, color: 'var(--primary-medium)', fontFamily: 'monospace', fontSize: '0.95rem' }}>{inscripcionData.codigoPago}</span>
+              </div>
+            </>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
@@ -300,7 +353,7 @@ export default function DetalleClase() {
             Ir a Mis Clases
           </Button>
           <Button variant="secondary" onClick={() => navigate('/cliente/clases')}>
-            Reservar otra clase
+            {esCambio ? 'Ver otras clases' : 'Reservar otra clase'}
           </Button>
         </div>
       </div>
@@ -310,6 +363,10 @@ export default function DetalleClase() {
   const instrName = clase?.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : ''
 
   const volverAClases = () => {
+    if (miReserva) {
+      navigate('/cliente/mis-clases')
+      return
+    }
     if (clase?.categoria?.nombre && clase?.fecha) {
       const params = new URLSearchParams({ cat: clase.categoria.nombre, fecha: clase.fecha })
       navigate(`/cliente/clases?${params.toString()}`)
@@ -369,17 +426,17 @@ export default function DetalleClase() {
         </div>
       )}
 
+      {cambioExitoso && (
+        <div className="alert alert-success" style={{ marginTop: '0.5rem', animation: 'fadeIn 0.3s ease' }}>
+          <CheckCircle size={18} />
+          <span>Asiento cambiado a <strong>#{cambioExitoso}</strong></span>
+        </div>
+      )}
+
       {clase && inscripcionBloqueada(clase) && !holdActive && (
         <div className="inscripcion-closed-banner cancelled" style={{ marginTop: '0.5rem' }}>
           <AlertTriangle size={16} />
           <span>Las inscripciones se cierran 2 horas antes de que inicie la clase.</span>
-        </div>
-      )}
-
-      {miReserva && (
-        <div className="inscripcion-closed-banner" style={{ marginTop: '0.5rem', background: '#dbeafe', color: '#1e40af' }}>
-          <AlertCircle size={16} />
-          <span>Ya tienes una reserva en esta clase (Asiento #{miReserva.asiento}).</span>
         </div>
       )}
 
@@ -403,26 +460,30 @@ export default function DetalleClase() {
         <LoadingScreen />
       ) : (
         <>
-          <div className="instructor-section">
-            <div className="instructor-photo">
-              {clase?.instructor?.fotoUrl ? (
-                <img src={clase.instructor.fotoUrl} alt={instrName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span>{instrName.charAt(0) || '?'}</span>
-              )}
-            </div>
-            <div className="instructor-info">
-              <h3>{instrName}</h3>
-              <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
-                <span style={{ fontWeight: 500 }}>Temática:</span> {clase?.tematica || 'LIBRE'}
+          {!miReserva && (
+            <div className="instructor-section">
+              <div className="instructor-photo">
+                {clase?.instructor?.fotoUrl ? (
+                  <img src={clase.instructor.fotoUrl} alt={instrName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span>{instrName.charAt(0) || '?'}</span>
+                )}
+              </div>
+              <div className="instructor-info">
+                <h3>{instrName}</h3>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                  <span style={{ fontWeight: 500 }}>Temática:</span> {clase?.tematica || 'LIBRE'}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="price-card">
-            <Tag size={22} className="price-card-icon" />
-            <span className="price-card-value">S/ {precio.toFixed(2)}</span>
-          </div>
+          {!miReserva && (
+            <div className="price-card">
+              <Tag size={22} className="price-card-icon" />
+              <span className="price-card-value">S/ {precio.toFixed(2)}</span>
+            </div>
+          )}
 
           <div className="seat-map-section">
             <div className="seat-stage">
@@ -435,6 +496,12 @@ export default function DetalleClase() {
                 <div className="seat-legend-dot disponible" />
                 <span>Disponible</span>
               </div>
+              {miReserva && (
+                <div className="seat-legend-item">
+                  <div className="seat-legend-dot actual" />
+                  <span>Tu asiento</span>
+                </div>
+              )}
               <div className="seat-legend-item">
                 <div className="seat-legend-dot ocupado" />
                 <span>Ocupado</span>
@@ -449,17 +516,31 @@ export default function DetalleClase() {
               {asientosAgrupados.map((fila, fi) =>
                 fila.map(asiento => {
                   const isSelected = selectedSeat?.id === asiento.id
+                  const isActual = asiento.estado === 'actual'
                   const isOcupado = asiento.estado === 'ocupado'
+                  let seatClass = 'seat '
+                  if (isActual) {
+                    seatClass += 'actual'
+                  } else if (isOcupado) {
+                    seatClass += 'ocupado'
+                  } else {
+                    seatClass += 'disponible'
+                  }
+                  if (isSelected) seatClass += ' selected'
                   return (
                     <button
                       key={asiento.id}
-                      className={`seat ${isOcupado ? 'ocupado' : 'disponible'} ${isSelected ? 'selected' : ''}`}
-                      disabled={isOcupado || holdActive || procesando || procesandoPagoYape || inscripcionBloqueada(clase) || !!miReserva}
-                      onClick={() => !isOcupado && handleSelectSeat(asiento)}
-                      aria-label={`Asiento ${asiento.numero}, ${isOcupado ? 'ocupado' : 'disponible'}`}
+                      className={seatClass}
+                      disabled={isOcupado || isActual || holdActive || procesando || procesandoPagoYape || inscripcionBloqueada(clase) || cambiandoAsientoLoading}
+                      onClick={() => handleSelectSeat(asiento)}
+                      aria-label={`Asiento ${asiento.numero}, ${isOcupado ? 'ocupado' : isActual ? 'tu asiento' : 'disponible'}`}
                       style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
                     >
-                      <User size={22} />
+                      {isActual ? (
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>TÚ</span>
+                      ) : (
+                        <User size={22} />
+                      )}
                     </button>
                   )
                 })
@@ -467,9 +548,10 @@ export default function DetalleClase() {
             </div>
           </div>
 
-          <div className="pago-section">
-            <h3>¿Cómo deseas pagar?</h3>
-            <div className="pago-options">
+          {!miReserva && (
+            <div className="pago-section">
+              <h3>¿Cómo deseas pagar?</h3>
+              <div className="pago-options">
               <div
                 className={`pago-option ${metodoPago === 'creditos' ? 'selected' : ''} ${holdActive || procesando || procesandoPagoYape || creditos === 0 ? 'disabled' : ''}`}
                 onClick={() => !holdActive && !procesando && !procesandoPagoYape && creditos > 0 && handleSelectPago('creditos')}
@@ -490,6 +572,7 @@ export default function DetalleClase() {
               </div>
             </div>
           </div>
+          )}
         </>
       )}
 
@@ -503,7 +586,7 @@ export default function DetalleClase() {
         </Button>
       )}
 
-      {!loading && !holdActive && (
+      {!loading && !holdActive && !miReserva && (
         <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem', marginTop: '0.5rem' }}>
           {metodoPago === 'yape'
             ? 'Tu asiento será reservado temporalmente por 5 minutos mientras completas el pago.'
@@ -512,14 +595,23 @@ export default function DetalleClase() {
         </p>
       )}
 
-      {!loading && (
+      {!loading && miReserva ? (
+        <Button
+          className="btn-inscribir"
+          onClick={handleCambiarAsiento}
+          disabled={!selectedSeat || cambiandoAsientoLoading || inscripcionBloqueada(clase)}
+          title={inscripcionBloqueada(clase) ? 'Las inscripciones se cierran 2 horas antes de la clase' : !selectedSeat ? 'Selecciona un asiento disponible' : 'Cambiar a este asiento'}
+        >
+          {cambiandoAsientoLoading ? 'Cambiando asiento...' : !selectedSeat ? 'Selecciona un asiento' : 'Cambiar a este asiento'}
+        </Button>
+      ) : !loading && (
         <Button
           className="btn-inscribir"
           onClick={handlePagar}
-          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando || pagandoYape || procesandoPagoYape || inscripcionBloqueada(clase) || !!miReserva}
-          title={holdActive ? 'Completa el pago para continuar' : inscripcionBloqueada(clase) ? 'Las inscripciones se cierran 2 horas antes de la clase' : miReserva ? 'Ya tienes una reserva en esta clase' : 'Confirmar asiento y procesar el pago'}
+          disabled={!selectedSeat || !metodoPago || holdActive || holdExpired || procesando || pagandoYape || procesandoPagoYape || inscripcionBloqueada(clase)}
+          title={holdActive ? 'Completa el pago para continuar' : inscripcionBloqueada(clase) ? 'Las inscripciones se cierran 2 horas antes de la clase' : 'Confirmar asiento y procesar el pago'}
         >
-          {procesando ? 'Procesando...' : pagandoYape ? 'Abriendo Culqi...' : procesandoPagoYape ? 'Confirmando pago...' : holdActive ? 'Reserva en curso...' : inscripcionBloqueada(clase) ? 'Inscripciones cerradas' : miReserva ? 'Ya tienes una reserva' : 'Pagar e inscribirme'}
+          {procesando ? 'Procesando...' : pagandoYape ? 'Abriendo Culqi...' : procesandoPagoYape ? 'Confirmando pago...' : holdActive ? 'Reserva en curso...' : inscripcionBloqueada(clase) ? 'Inscripciones cerradas' : 'Pagar e inscribirme'}
         </Button>
       )}
 
