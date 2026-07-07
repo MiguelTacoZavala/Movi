@@ -20,6 +20,11 @@ function getFechaClase(monday, diaSemana, weekOffset) {
   return fecha
 }
 
+// Un asiento cuenta como ocupado y una persona como "inscrita" solo si su reserva está
+// CONFIRMADA (pagada). Las PENDIENTE (hold en curso), EXPIRADA o CANCELADA no ocupan cupo
+// ni cuentan como inscritos: contarlas hacía que el listado mostrara participantes fantasma.
+const RESERVA_OCUPADA = { estado: 'CONFIRMADA' }
+
 const includeBase = {
   horarioSemanal: {
     select: {
@@ -33,7 +38,7 @@ const includeBase = {
       },
     },
   },
-  _count: { select: { reservas: true } },
+  _count: { select: { reservas: { where: RESERVA_OCUPADA } } },
 }
 
 const includeDetalle = {
@@ -53,12 +58,12 @@ const includeDetalle = {
     orderBy: { numero: 'asc' },
     include: {
       reservas: {
-        where: { estado: { not: 'CANCELADA' } },
+        where: RESERVA_OCUPADA,
         select: { id: true, estado: true },
       },
     },
   },
-  _count: { select: { reservas: true } },
+  _count: { select: { reservas: { where: RESERVA_OCUPADA } } },
 }
 
 function formatear(clase) {
@@ -271,26 +276,80 @@ async function cancelarFuturasDeHorario(horarioId) {
   return { clasesCanceladas, creditosGenerados }
 }
 
-// Marca como FINALIZADA toda clase cuya fecha ya pasó y seguía activa
-async function finalizarClasesPasadas() {
+// Cierra las clases cuya hora de FIN ya pasó y seguían abiertas. A diferencia de mirar
+// solo la fecha, compara fecha + hora, así una clase de hoy que ya terminó también se cierra.
+// Regla de cierre:
+//   - alcanzó el mínimo de participantes  → FINALIZADA
+//   - no alcanzó el mínimo                → CANCELADA + créditos a las reservas confirmadas
+async function cerrarClasesVencidas() {
+  const ahora = new Date().toISOString()
+  const hoyStr = ahora.substring(0, 10)
+  const horaStr = ahora.substring(11, 19)
+
+  // Solo las clases de hoy o anteriores pueden haber terminado; las futuras se descartan.
   const hoy = new Date()
   hoy.setUTCHours(0, 0, 0, 0)
 
-  const { count } = await prisma.clase.updateMany({
-    where: {
-      fecha: { lt: hoy },
-      estado: { in: ['PROGRAMADA', 'EN_CURSO'] },
+  const abiertas = await prisma.clase.findMany({
+    where: { estado: { in: ['PROGRAMADA', 'EN_CURSO'] }, fecha: { lte: hoy } },
+    include: {
+      _count: { select: { reservas: { where: RESERVA_OCUPADA } } },
+      reservas: { where: RESERVA_OCUPADA, select: { id: true, usuarioId: true } },
     },
-    data: { estado: 'FINALIZADA', updatedAt: new Date() },
   })
 
-  if (count > 0) {
-    console.log(`Clases finalizadas automaticamente: ${count}`)
+  // Vencida = su fecha ya pasó, o es hoy pero su hora de fin ya quedó atrás.
+  const vencidas = abiertas.filter((c) => {
+    const fechaStr = c.fecha.toISOString().substring(0, 10)
+    const finStr = c.horaFin.toISOString().substring(11, 19)
+    return fechaStr < hoyStr || (fechaStr === hoyStr && finStr < horaStr)
+  })
+
+  const aFinalizar = vencidas.filter((c) => c._count.reservas >= c.minimoParticipantes)
+  const aCancelar = vencidas.filter((c) => c._count.reservas < c.minimoParticipantes)
+
+  if (aFinalizar.length) {
+    await prisma.clase.updateMany({
+      where: { id: { in: aFinalizar.map((c) => c.id) } },
+      data: { estado: 'FINALIZADA', updatedAt: new Date() },
+    })
+  }
+
+  for (const clase of aCancelar) {
+    await prisma.$transaction(async (tx) => {
+      await tx.clase.update({
+        where: { id: clase.id },
+        data: { estado: 'CANCELADA', updatedAt: new Date() },
+      })
+
+      // Las reservas confirmadas reciben un crédito (misma regla que cancelar a mano)
+      for (const reserva of clase.reservas) {
+        await tx.credito.create({
+          data: { usuarioId: reserva.usuarioId, claseId: clase.id, reservaId: reserva.id },
+        })
+        await tx.reserva.update({
+          where: { id: reserva.id },
+          data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
+        })
+      }
+
+      // Los holds PENDIENTE que quedaron sueltos también se cancelan (sin crédito, no pagaron)
+      await tx.reserva.updateMany({
+        where: { claseId: clase.id, estado: 'PENDIENTE' },
+        data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
+      })
+    })
+  }
+
+  if (aFinalizar.length || aCancelar.length) {
+    console.log(
+      `Clases cerradas automaticamente: ${aFinalizar.length} finalizadas, ${aCancelar.length} canceladas por no alcanzar el minimo`
+    )
   }
 }
 
 async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limit = 10 }) {
-  await finalizarClasesPasadas()
+  await cerrarClasesVencidas()
 
   const where = {}
 

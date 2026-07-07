@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, User, Phone, UserCheck, UserX, Mail, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, User, Phone, UserCheck, UserX, Mail, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
@@ -21,6 +21,7 @@ export default function Instructores() {
   const [editingInstructor, setEditingInstructor] = useState(null)
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [mensaje, setMensaje] = useFlashMessage()
 
   const cargar = async () => {
@@ -76,6 +77,9 @@ export default function Instructores() {
         <Button size="small" variant="ghost" onClick={() => handleToggleStatus(row)} title={row.estado ? 'Desactivar' : 'Activar'} className={row.estado ? 'icon-danger' : 'icon-success'}>
           {row.estado ? <UserX size={16} /> : <UserCheck size={16} />}
         </Button>
+        <Button size="small" variant="ghost" onClick={() => handleDelete(row)} title="Eliminar" className="icon-danger">
+          <Trash2 size={16} />
+        </Button>
       </div>
     )},
   ]
@@ -108,6 +112,26 @@ export default function Instructores() {
       setMensaje(`${data.instructor.nombres} ${data.instructor.apellidos} ${data.instructor.estado ? 'activado' : 'desactivado'}.`)
     } catch (e) {
       setError(mensajeError(e, 'No se pudo cambiar el estado del instructor.'))
+    }
+  }
+
+  const handleDelete = (instructor) => {
+    setDeleteTarget(instructor)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setError('')
+    const { id, nombres, apellidos } = deleteTarget
+    try {
+      await api.del(`/instructores/${id}`)
+      api.invalidateCache(CACHE_KEYS)
+      setInstructores(instructores.filter(inst => inst.id !== id))
+      setMensaje(`Instructor ${nombres} ${apellidos} eliminado.`)
+    } catch (e) {
+      setError(mensajeError(e, 'No se pudo eliminar el instructor.'))
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -182,6 +206,21 @@ export default function Instructores() {
           onSave={handleSave}
           onCancel={closeModal}
         />
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Eliminar instructor"
+      >
+        <p style={{ marginBottom: '1.5rem' }}>
+          ¿Seguro que deseas eliminar al instructor <strong>{deleteTarget?.nombres} {deleteTarget?.apellidos}</strong>? Esta acción es permanente y no se puede deshacer.
+          Si el instructor ya tiene horarios o clases asociadas, no podrá eliminarse; en ese caso desactívalo.
+        </p>
+        <div className="form-actions">
+          <Button variant="danger" onClick={confirmDelete}>Sí, eliminar</Button>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+        </div>
       </Modal>
     </div>
   )
