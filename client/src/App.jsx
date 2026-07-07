@@ -20,7 +20,6 @@ import MiPerfil from './pages/client/MiPerfil'
 import Registro from './pages/client/Registro'
 import InstructorLayout from './components/layout/InstructorLayout'
 import InstructorDashboard from './pages/instructor/Dashboard'
-import InstructorHorarios from './pages/instructor/Horarios'
 import InstructorClases from './pages/instructor/Clases'
 import InstructorDetalleClase from './pages/instructor/DetalleClase'
 import InstructorHistorial from './pages/instructor/Historial'
@@ -64,7 +63,6 @@ function App() {
           <Route path="/instructor" element={<ProtectedRoute instructorOnly><InstructorLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/instructor/dashboard" replace />} />
             <Route path="dashboard" element={<InstructorDashboard />} />
-            <Route path="horarios" element={<InstructorHorarios />} />
             <Route path="clases" element={<InstructorClases />} />
             <Route path="clases/:id" element={<InstructorDetalleClase />} />
             <Route path="historial" element={<InstructorHistorial />} />
