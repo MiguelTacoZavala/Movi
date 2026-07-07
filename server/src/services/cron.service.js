@@ -1,4 +1,5 @@
 const cron = require('node-cron')
+const prisma = require('../lib/prisma')
 const claseService = require('./clase.service')
 const { limpiarHoldsExpirados } = require('./reserva.service')
 const { CLASES_POR_HORARIO } = require('../lib/helpers')
@@ -48,7 +49,7 @@ function iniciarCron() {
   cron.schedule('0 3 * * *', async () => {
     console.log('[CRON] Iniciando mantenimiento diario...')
     try {
-      await claseService.finalizarClasesPasadas()
+      await claseService.cerrarClasesVencidas()
       await limpiarHoldsExpirados()
       const generadas = await mantenerRollingWindow()
       console.log(`[CRON] Mantenimiento completado. ${generadas} clases generadas.`)

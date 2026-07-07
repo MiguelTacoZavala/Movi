@@ -1563,6 +1563,9 @@ body {
   .filters {
     flex-direction: column;
     align-items: stretch;
+    /* El padre .page-header usa align-items: flex-start en móvil, así que sin esto
+       el bloque de filtros solo ocuparía el ancho de su contenido y no toda la fila. */
+    width: 100%;
   }
 }
 
@@ -1624,6 +1627,30 @@ body {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--primary-text);
+}
+
+/* En celular las 4 tarjetas de resumen se apilarían a 1 columna (minmax 200px),
+   ocupando demasiado alto. Las forzamos a una grilla 2×2 más compacta. */
+@media (max-width: 640px) {
+  .stats-summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .stats-summary .stat-card {
+    padding: 0.85rem 0.75rem;
+  }
+
+  .stats-summary .stat-card h3 {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .stats-summary .stat-card p {
+    font-size: 1.35rem;
+  }
 }
 
 /* ==============================
@@ -1736,10 +1763,28 @@ body {
 
   .table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
+  /* En móvil no comprimimos las columnas para que quepan (eso parte el texto en
+     varias líneas). En su lugar la tabla conserva un ancho mínimo cómodo y el
+     contenido no se envuelve: se lee deslizando la tabla en horizontal. */
+  .table {
+    min-width: 680px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.9rem;
+    white-space: nowrap;
+  }
+
+  /* Con la tabla desplazable en horizontal ya no hace falta apilar los botones de
+     acción en vertical (eso alargaba mucho las filas, sobre todo en Horarios con 4
+     botones). Se mantienen en una sola fila y la tabla se desliza para verlos. */
   .action-buttons {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
   }
 }
 

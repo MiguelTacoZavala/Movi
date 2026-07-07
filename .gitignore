@@ -44,6 +44,7 @@ vite.svg
 *.tsbuildinfo
 
 # Documentos de seguimiento (no versionar)
+*.md
 correcciones.md
 COMMITS_GUIDE.md
 historias_usuario_jira.txt

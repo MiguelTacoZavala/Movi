@@ -138,12 +138,15 @@ async function eliminar(req, res, next) {
       return res.status(404).json({ error: 'Instructor no encontrado' })
     }
 
+    // Un instructor con cualquier horario (activo o inactivo) tiene clases, reservas y
+    // pagos de clientes colgando de él; eliminarlo perdería historial legítimo. En ese
+    // caso solo se debe desactivar. Solo se puede borrar de verdad si no tiene historial.
     const horarios = await prisma.horarioSemanal.count({
-      where: { instructorId: id, activo: true },
+      where: { instructorId: id },
     })
     if (horarios > 0) {
       return res.status(409).json({
-        error: `No se puede eliminar porque tiene ${horarios} horario(s) activo(s)`,
+        error: 'No se puede eliminar: el instructor tiene horarios o clases asociadas. Desactívalo en su lugar.',
       })
     }
 
