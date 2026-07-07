@@ -1779,8 +1779,12 @@ body {
     white-space: nowrap;
   }
 
+  /* Con la tabla desplazable en horizontal ya no hace falta apilar los botones de
+     acción en vertical (eso alargaba mucho las filas, sobre todo en Horarios con 4
+     botones). Se mantienen en una sola fila y la tabla se desliza para verlos. */
   .action-buttons {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
   }
 }
 
