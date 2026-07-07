@@ -53,6 +53,7 @@ const includeDetalle = {
   horarioSemanal: {
     select: {
       diaSemana: true,
+      activo: true,
       categoria: { select: { id: true, nombre: true, precio: true } },
       instructor: {
         select: {
