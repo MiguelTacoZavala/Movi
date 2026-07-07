@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle, Printer } from 'lucide-react'
+import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle, Printer, ArrowLeft } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
@@ -136,40 +136,127 @@ export default function MisClases() {
     }
   }
 
-  const handleGuardarComprobante = () => {
+  const handleGuardarComprobante = async () => {
     if (!comprobante) return
     const r = comprobante
     const instrName = r.clase.instructor ? `${r.clase.instructor.nombres} ${r.clase.instructor.apellidos}` : ''
-    const w = window.open('', '_blank')
-    w.document.write(`<!DOCTYPE html><html><head><title>Comprobante MOVI</title><style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; max-width: 400px; margin: 0 auto; color: #1a1414; }
-      h2 { text-align: center; font-size: 1.25rem; margin-bottom: 0.25rem; }
-      .sub { text-align: center; color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }
-      .card { background: #f9fafb; border-radius: 12px; padding: 1rem; }
-      .row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
-      .row:last-child { border-bottom: none; }
-      .label { color: #6b7280; }
-      .value { font-weight: 600; }
-      .code { font-family: monospace; font-weight: 700; color: #8B4513; font-size: 0.95rem; }
-      .footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
-    </style></head><body>
-      <h2>Comprobante de inscripción</h2>
-      <p class="sub">${estadoLabel[estado(r)] || estado(r)}${r.codigoPago ? ` · <span class="code">${r.codigoPago}</span>` : ''}</p>
-      <div class="card">
-        <div class="row"><span class="label">Categoría</span><span class="value">${r.clase.categoria?.nombre || ''}</span></div>
-        ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${instrName}</span></div>` : ''}
-        <div class="row"><span class="label">Fecha</span><span class="value">${formatFechaBonita(r.clase.fecha)}</span></div>
-        <div class="row"><span class="label">Hora</span><span class="value">${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}</span></div>
-        ${r.asiento ? `<div class="row"><span class="label">Asiento</span><span class="value">#${r.asiento}</span></div>` : ''}
-        <div class="row"><span class="label">Monto</span><span class="value">S/ ${Number(r.monto || 15).toFixed(2)}</span></div>
-        <div class="row"><span class="label">Método de pago</span><span class="value">${r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'}</span></div>
-        <div class="row"><span class="label">Temática</span><span class="value">${r.clase.tematica || 'LIBRE'}</span></div>
-      </div>
-      <p class="footer">MOVI — Academia de Baile</p>
-      <script>window.onload = function() { window.print(); window.close(); }</script>
-    </body></html>`)
-    w.document.close()
+
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+
+    if (isMobile && navigator.canShare && navigator.share) {
+      const W = 400, H = 620
+      const canvas = document.createElement('canvas')
+      canvas.width = W * 2
+      canvas.height = H * 2
+      const ctx = canvas.getContext('2d')
+      ctx.scale(2, 2)
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, W, H)
+
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#1a1414'
+      ctx.font = 'bold 22px system-ui, sans-serif'
+      ctx.fillText('Comprobante de inscripción', W / 2, 50)
+
+      ctx.font = '16px system-ui, sans-serif'
+      ctx.fillStyle = '#059669'
+      ctx.fillText(estadoLabel[estado(r)] || estado(r), W / 2, 80)
+
+      if (r.codigoPago) {
+        ctx.font = 'bold 14px monospace'
+        ctx.fillStyle = '#8B4513'
+        ctx.fillText(r.codigoPago, W / 2, 105)
+      }
+
+      const rows = [['Categoría', r.clase.categoria?.nombre || '']]
+      if (instrName) rows.push(['Instructor', instrName])
+      rows.push(['Fecha', formatFechaBonita(r.clase.fecha)])
+      rows.push(['Hora', `${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}`])
+      if (r.asiento) rows.push(['Asiento', `#${r.asiento}`])
+      rows.push(['Monto', `S/ ${Number(r.monto || 15).toFixed(2)}`])
+      rows.push(['Método de pago', r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'])
+      rows.push(['Temática', r.clase.tematica || 'LIBRE'])
+
+      const cardX = 20, cardY = 135, cardW = W - 40
+      const rowH = 30, padTop = 20, padLeft = 20, padRight = 20
+      ctx.fillStyle = '#f9fafb'
+      ctx.beginPath()
+      ctx.roundRect(cardX, cardY, cardW, padTop + rows.length * rowH + 10, 12)
+      ctx.fill()
+
+      rows.forEach(([label, value], i) => {
+        const y = cardY + padTop + i * rowH
+        ctx.font = '13px system-ui, sans-serif'
+        ctx.fillStyle = '#6b7280'
+        ctx.textAlign = 'left'
+        ctx.fillText(label, cardX + padLeft, y + 10)
+
+        ctx.font = '600 13px system-ui, sans-serif'
+        ctx.fillStyle = '#1a1414'
+        ctx.textAlign = 'right'
+        ctx.fillText(value, cardX + cardW - padRight, y + 10)
+
+        if (i < rows.length - 1) {
+          ctx.strokeStyle = '#e5e7eb'
+          ctx.beginPath()
+          ctx.moveTo(cardX + 14, y + 25)
+          ctx.lineTo(cardX + cardW - 14, y + 25)
+          ctx.stroke()
+        }
+      })
+
+      ctx.fillStyle = '#9ca3af'
+      ctx.font = '11px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('MOVI — Academia de Baile', W / 2, H - 30)
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return
+        const file = new File([blob], `Comprobante-${r.codigoPago || r.id}.png`, { type: 'image/png' })
+        try {
+          await navigator.share({ files: [file], title: 'Comprobante MOVI' })
+        } catch {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `Comprobante-${r.codigoPago || r.id}.png`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+      }, 'image/png')
+    } else {
+      const w = window.open('', '_blank')
+      w.document.write(`<!DOCTYPE html><html><head><title>Comprobante MOVI</title><style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; max-width: 400px; margin: 0 auto; color: #1a1414; }
+        h2 { text-align: center; font-size: 1.25rem; margin-bottom: 0.25rem; }
+        .sub { text-align: center; color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }
+        .card { background: #f9fafb; border-radius: 12px; padding: 1rem; }
+        .row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
+        .row:last-child { border-bottom: none; }
+        .label { color: #6b7280; }
+        .value { font-weight: 600; }
+        .code { font-family: monospace; font-weight: 700; color: #8B4513; font-size: 0.95rem; }
+        .footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
+      </style></head><body>
+        <h2>Comprobante de inscripción</h2>
+        <p class="sub">${estadoLabel[estado(r)] || estado(r)}${r.codigoPago ? ` · <span class="code">${r.codigoPago}</span>` : ''}</p>
+        <div class="card">
+          <div class="row"><span class="label">Categoría</span><span class="value">${r.clase.categoria?.nombre || ''}</span></div>
+          ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${instrName}</span></div>` : ''}
+          <div class="row"><span class="label">Fecha</span><span class="value">${formatFechaBonita(r.clase.fecha)}</span></div>
+          <div class="row"><span class="label">Hora</span><span class="value">${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}</span></div>
+          ${r.asiento ? `<div class="row"><span class="label">Asiento</span><span class="value">#${r.asiento}</span></div>` : ''}
+          <div class="row"><span class="label">Monto</span><span class="value">S/ ${Number(r.monto || 15).toFixed(2)}</span></div>
+          <div class="row"><span class="label">Método de pago</span><span class="value">${r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'}</span></div>
+          <div class="row"><span class="label">Temática</span><span class="value">${r.clase.tematica || 'LIBRE'}</span></div>
+        </div>
+        <p class="footer">MOVI — Academia de Baile</p>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body></html>`)
+      w.document.close()
+    }
   }
 
   return (
@@ -206,78 +293,6 @@ export default function MisClases() {
               </Button>
             </div>
           </>
-        )}
-      </Modal>
-
-      <Modal isOpen={!!comprobante} onClose={() => setComprobante(null)} title="Comprobante de inscripción">
-        {comprobante && (
-          <div>
-            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <div style={{ background: '#d1fae5', borderRadius: '50%', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
-                <CheckCircle size={24} color="#059669" />
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--gray-900)' }}>
-                {estadoLabel[estado(comprobante)] || estado(comprobante)}
-              </div>
-              {comprobante.codigoPago && (
-                <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--primary-medium)', fontWeight: 600, marginTop: '0.25rem' }}>
-                  {comprobante.codigoPago}
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--gray-50)', borderRadius: '12px', padding: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Categoría</span>
-                <span style={{ fontWeight: 600 }}>{comprobante.clase.categoria?.nombre}</span>
-              </div>
-              {comprobante.clase.instructor && (
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Instructor</span>
-                  <span style={{ fontWeight: 600 }}>{comprobante.clase.instructor.nombres} {comprobante.clase.instructor.apellidos}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Fecha</span>
-                <span style={{ fontWeight: 600 }}>{formatFechaBonita(comprobante.clase.fecha)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Hora</span>
-                <span style={{ fontWeight: 600 }}>{formatHoraAMPM(comprobante.clase.horaInicio)} — {formatHoraAMPM(comprobante.clase.horaFin)}</span>
-              </div>
-              {comprobante.asiento && (
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento</span>
-                  <span style={{ fontWeight: 600 }}>#{comprobante.asiento}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Monto</span>
-                <span style={{ fontWeight: 600 }}>S/ {Number(comprobante.monto || 15).toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Método de pago</span>
-                <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  {comprobante.metodoPago === 'creditos' ? <><CreditCard size={14} /> Créditos</> : <><Smartphone size={14} /> Yape</>}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Temática</span>
-                <span style={{ fontWeight: 600 }}>{comprobante.clase.tematica || 'LIBRE'}</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-              {estado(comprobante) === 'CONFIRMADA' && (
-                <Button onClick={() => openCambioAsiento(comprobante)} size="small">
-                  Cambiar asiento
-                </Button>
-              )}
-              <Button variant="secondary" onClick={handleGuardarComprobante} size="small">
-                <Printer size={16} />
-                Guardar comprobante
-              </Button>
-            </div>
-          </div>
         )}
       </Modal>
 
@@ -385,7 +400,7 @@ export default function MisClases() {
               </div>
             )}
 
-            <div className="modal-actions" style={{ marginTop: '0.75rem' }}>
+            <div className="modal-actions" style={{ marginTop: '0.75rem', justifyContent: 'center' }}>
               <Button variant="secondary" onClick={closeCambioAsiento} disabled={cambioSubmitting}>
                 Cancelar
               </Button>
@@ -397,100 +412,178 @@ export default function MisClases() {
         )}
       </Modal>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <Button variant="secondary" size="small" className={filtro === 'proximas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('proximas')} title="Mostrar solo clases próximas">
-          Próximas
-        </Button>
-        <Button variant="secondary" size="small" className={filtro === 'pasadas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('pasadas')} title="Mostrar clases pasadas o canceladas">
-          Pasadas
-        </Button>
-      </div>
+      {comprobante ? (
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+          <button onClick={() => setComprobante(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            <ArrowLeft size={18} />
+            Volver a Mis Clases
+          </button>
 
-      {mensaje && (
-        <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
-          <CheckCircle size={18} />
-          <span>{mensaje}</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <div>
-        {loading ? (
-          <LoadingScreen />
-        ) : filtradas.length === 0 ? (
-          <div className="empty-state">
-            <Calendar size={48} className="icon-muted" />
-            <h3>No hay clases</h3>
-            <p>{filtro === 'proximas' ? 'No tienes clases próximas' : 'No tienes clases pasadas'}</p>
-          </div>
-        ) : filtradas.map((r, idx) => {
-          const st = estado(r)
-          const f = toDate(r.clase.fecha)
-          const esProxima = f >= hoy && st !== 'CANCELADA' && st !== 'EXPIRADA' && st !== 'FINALIZADA'
-          const cardClass = st === 'CANCELADA' ? 'cancelada' : !esProxima ? 'pasada' : 'proxima'
-
-          return (
-            <div
-              key={r.id}
-              className={`clase-card ${cardClass}`}
-              style={{ cursor: 'pointer', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}
-              onClick={() => setComprobante(r)}
-            >
-              <div className="clase-card-header">
-                <h3 className="clase-card-title">{r.clase.categoria?.nombre}</h3>
-                <span className={`status-badge ${estadoClass[st] || ''}`}>
-                  {(() => { const Icon = estadoIcon[st]; return Icon ? <Icon size={12} /> : null })()}
-                  {estadoLabel[st] || st}
-                </span>
-              </div>
-
-              <div className="clase-card-datetime">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Calendar size={16} className="icon-muted" />
-                  {formatFechaBonita(r.clase.fecha)}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Clock size={16} className="icon-muted" />
-                  {formatHoraAMPM(r.clase.horaInicio)} - {formatHoraAMPM(r.clase.horaFin)}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '1rem' }}>
-                {r.clase.instructor && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <User size={16} className="icon-muted" />
-                    {r.clase.instructor.nombres} {r.clase.instructor.apellidos}
-                  </div>
-                )}
-                {r.asiento && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: 'var(--gray-500)' }}>Asiento #{r.asiento}</span>
-                  </div>
-                )}
-              </div>
-
-              {esProxima && (
-                  <Button
-                    variant="danger"
-                    size="small"
-                    onClick={(e) => { e.stopPropagation(); setCancelando(r) }}
-                    style={{ width: '100%' }}
-                    title="Cancelar esta inscripción (no se puede deshacer)"
-                  >
-                    <X size={16} />
-                    Cancelar inscripción
-                  </Button>
-              )}
+          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ background: '#d1fae5', borderRadius: '50%', width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
+              <CheckCircle size={28} color="#059669" />
             </div>
-          )
-        })}
-      </div>
+            <h3 style={{ fontWeight: 700, fontSize: '1.25rem', color: 'var(--gray-900)' }}>
+              {estadoLabel[estado(comprobante)] || estado(comprobante)}
+            </h3>
+            {comprobante.codigoPago && (
+              <div style={{ fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--primary-medium)', fontWeight: 600, marginTop: '0.25rem' }}>
+                {comprobante.codigoPago}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--gray-50)', borderRadius: '12px', padding: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Categoría</span>
+              <span style={{ fontWeight: 600 }}>{comprobante.clase.categoria?.nombre}</span>
+            </div>
+            {comprobante.clase.instructor && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Instructor</span>
+                <span style={{ fontWeight: 600 }}>{comprobante.clase.instructor.nombres} {comprobante.clase.instructor.apellidos}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Fecha</span>
+              <span style={{ fontWeight: 600 }}>{formatFechaBonita(comprobante.clase.fecha)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Hora</span>
+              <span style={{ fontWeight: 600 }}>{formatHoraAMPM(comprobante.clase.horaInicio)} — {formatHoraAMPM(comprobante.clase.horaFin)}</span>
+            </div>
+            {comprobante.asiento && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Asiento</span>
+                <span style={{ fontWeight: 600 }}>#{comprobante.asiento}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Monto</span>
+              <span style={{ fontWeight: 600 }}>S/ {Number(comprobante.monto || 15).toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Método de pago</span>
+              <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                {comprobante.metodoPago === 'creditos' ? <><CreditCard size={14} /> Créditos</> : <><Smartphone size={14} /> Yape</>}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Temática</span>
+              <span style={{ fontWeight: 600 }}>{comprobante.clase.tematica || 'LIBRE'}</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
+            {estado(comprobante) === 'CONFIRMADA' && (
+              <Button onClick={() => openCambioAsiento(comprobante)}>
+                Cambiar asiento
+              </Button>
+            )}
+            <Button variant="secondary" onClick={handleGuardarComprobante}>
+              <Printer size={16} />
+              Guardar comprobante
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <Button variant="secondary" size="small" className={filtro === 'proximas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('proximas')} title="Mostrar solo clases próximas">
+              Próximas
+            </Button>
+            <Button variant="secondary" size="small" className={filtro === 'pasadas' ? 'btn-filter-active' : ''} onClick={() => setFiltro('pasadas')} title="Mostrar clases pasadas o canceladas">
+              Pasadas
+            </Button>
+          </div>
+
+          {mensaje && (
+            <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
+              <CheckCircle size={18} />
+              <span>{mensaje}</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div>
+            {loading ? (
+              <LoadingScreen />
+            ) : filtradas.length === 0 ? (
+              <div className="empty-state">
+                <Calendar size={48} className="icon-muted" />
+                <h3>No hay clases</h3>
+                <p>{filtro === 'proximas' ? 'No tienes clases próximas' : 'No tienes clases pasadas'}</p>
+              </div>
+            ) : filtradas.map((r, idx) => {
+              const st = estado(r)
+              const f = toDate(r.clase.fecha)
+              const esProxima = f >= hoy && st !== 'CANCELADA' && st !== 'EXPIRADA' && st !== 'FINALIZADA'
+              const cardClass = st === 'CANCELADA' ? 'cancelada' : !esProxima ? 'pasada' : 'proxima'
+
+              return (
+                <div
+                  key={r.id}
+                  className={`clase-card ${cardClass}`}
+                  style={{ cursor: 'pointer', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.06}s` }}
+                  onClick={() => setComprobante(r)}
+                >
+                  <div className="clase-card-header">
+                    <h3 className="clase-card-title">{r.clase.categoria?.nombre}</h3>
+                    <span className={`status-badge ${estadoClass[st] || ''}`}>
+                      {(() => { const Icon = estadoIcon[st]; return Icon ? <Icon size={12} /> : null })()}
+                      {estadoLabel[st] || st}
+                    </span>
+                  </div>
+
+                  <div className="clase-card-datetime">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Calendar size={16} className="icon-muted" />
+                      {formatFechaBonita(r.clase.fecha)}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Clock size={16} className="icon-muted" />
+                      {formatHoraAMPM(r.clase.horaInicio)} - {formatHoraAMPM(r.clase.horaFin)}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '1rem' }}>
+                    {r.clase.instructor && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <User size={16} className="icon-muted" />
+                        {r.clase.instructor.nombres} {r.clase.instructor.apellidos}
+                      </div>
+                    )}
+                    {r.asiento && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ color: 'var(--gray-500)' }}>Asiento #{r.asiento}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {esProxima && (
+                      <Button
+                        variant="danger"
+                        size="small"
+                        onClick={(e) => { e.stopPropagation(); setCancelando(r) }}
+                        style={{ width: '100%' }}
+                        title="Cancelar esta inscripción (no se puede deshacer)"
+                      >
+                        <X size={16} />
+                        Cancelar inscripción
+                      </Button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }

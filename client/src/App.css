@@ -2220,6 +2220,12 @@ body {
 }
 
 /* Tablet+ Adjustments */
+@media (max-width: 480px) {
+  .modal {
+    padding: 1.25rem;
+  }
+}
+
 @media (min-width: 768px) {
   .client-content {
     padding: 1.5rem;
