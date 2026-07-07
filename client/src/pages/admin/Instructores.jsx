@@ -27,6 +27,8 @@ export default function Instructores() {
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [toggling, setToggling] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const [mensaje, setMensaje] = useFlashMessage()
 
   useEffect(() => {
@@ -116,7 +118,9 @@ export default function Instructores() {
   }
 
   const handleToggleStatus = async (instructor) => {
+    if (toggling) return
     setError('')
+    setToggling(instructor.id)
     try {
       const data = await api.patch(`/instructores/${instructor.id}/estado`)
       api.invalidateCache(CACHE_KEYS)
@@ -126,6 +130,8 @@ export default function Instructores() {
       setMensaje(`${data.instructor.nombres} ${data.instructor.apellidos} ${data.instructor.estado ? 'activado' : 'desactivado'}.`)
     } catch (e) {
       setError(mensajeError(e, 'No se pudo cambiar el estado del instructor.'))
+    } finally {
+      setToggling(null)
     }
   }
 
@@ -134,8 +140,9 @@ export default function Instructores() {
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || deleting) return
     setError('')
+    setDeleting(true)
     const { id, nombres, apellidos } = deleteTarget
     try {
       await api.del(`/instructores/${id}`)
@@ -145,6 +152,7 @@ export default function Instructores() {
     } catch (e) {
       setError(mensajeError(e, 'No se pudo eliminar el instructor.'))
     } finally {
+      setDeleting(false)
       setDeleteTarget(null)
     }
   }
@@ -232,8 +240,8 @@ export default function Instructores() {
           Si el instructor ya tiene horarios o clases asociadas, no podrá eliminarse; en ese caso desactívalo.
         </p>
         <div className="form-actions">
-          <Button variant="danger" onClick={confirmDelete}>Sí, eliminar</Button>
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+          <Button variant="danger" onClick={confirmDelete} disabled={deleting}>{deleting ? 'Eliminando...' : 'Sí, eliminar'}</Button>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
         </div>
       </Modal>
     </div>

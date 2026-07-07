@@ -27,6 +27,8 @@ export default function Categorias() {
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [mensaje, setMensaje] = useFlashMessage()
 
   useEffect(() => {
@@ -98,8 +100,9 @@ export default function Categorias() {
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || deleting) return
     setError('')
+    setDeleting(true)
     const nombre = deleteTarget.nombre
     try {
       await api.del(`/categorias/${deleteTarget.id}`)
@@ -109,12 +112,14 @@ export default function Categorias() {
     } catch (e) {
       setError(mensajeError(e, 'No se pudo eliminar la categoría.'))
     } finally {
+      setDeleting(false)
       setDeleteTarget(null)
     }
   }
 
   const handleSave = async (formData) => {
     setFormError('')
+    setSaving(true)
     try {
       if (editing) {
         const data = await api.put(`/categorias/${editing.id}`, formData)
@@ -129,6 +134,8 @@ export default function Categorias() {
       closeModal()
     } catch (e) {
       setFormError(mensajeError(e, 'No se pudo guardar la categoría.'))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -193,8 +200,8 @@ export default function Categorias() {
           ¿Seguro que deseas eliminar la categoría <strong>{deleteTarget?.nombre}</strong>? Esta acción no se puede deshacer.
         </p>
         <div className="form-actions">
-          <Button variant="danger" onClick={confirmDelete}>Sí, eliminar</Button>
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+          <Button variant="danger" onClick={confirmDelete} disabled={deleting}>{deleting ? 'Eliminando...' : 'Sí, eliminar'}</Button>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
         </div>
       </Modal>
     </div>

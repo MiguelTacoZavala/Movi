@@ -409,7 +409,7 @@ async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limi
   }
 }
 
-async function obtener(id, { soloActivas = false } = {}) {
+async function obtener(id, { soloActivas = false, usuarioId = null } = {}) {
   await limpiarHoldsExpirados()
 
   const clase = await prisma.clase.findUnique({
@@ -424,7 +424,22 @@ async function obtener(id, { soloActivas = false } = {}) {
     return null
   }
 
-  return formatear(clase)
+  let miReserva = null
+  if (usuarioId) {
+    const reserva = await prisma.reserva.findFirst({
+      where: {
+        usuarioId,
+        claseId: id,
+        estado: { in: ['PENDIENTE', 'CONFIRMADA'] },
+      },
+      select: { id: true, posicionClase: { select: { numero: true } } },
+    })
+    if (reserva) {
+      miReserva = { id: reserva.id, asiento: reserva.posicionClase?.numero }
+    }
+  }
+
+  return { clase: formatear(clase), miReserva }
 }
 
 async function cancelar(id) {
@@ -446,6 +461,7 @@ async function cancelar(id) {
 
   if (clase.estado === 'CANCELADA') throw { yaCancelada: true }
   if (clase.estado === 'FINALIZADA') throw { yaFinalizada: true }
+  if (clase.estado === 'EN_CURSO') throw { enCurso: true }
 
   const creditosGenerados = clase.reservas.length
 

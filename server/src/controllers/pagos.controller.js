@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma')
 const culqiService = require('../services/culqi.service')
-const { yyyymmdd, hhmmss, haPasado } = require('../lib/helpers')
+const { yyyymmdd, hhmmss, haPasado, inscripcionBloqueada } = require('../lib/helpers')
 
 function generarCodigoPago() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -15,6 +15,10 @@ function claseHaPasado(clase) {
   return haPasado(clase)
 }
 
+function claseInscripcionBloqueada(clase) {
+  return inscripcionBloqueada(clase)
+}
+
 async function iniciarHold(req, res, next) {
   try {
     const { claseId, posicionClaseId } = req.body
@@ -26,11 +30,21 @@ async function iniciarHold(req, res, next) {
     })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
     if (claseHaPasado(clase)) return res.status(409).json({ error: 'La clase ya pasó' })
+    if (claseInscripcionBloqueada(clase)) {
+      return res.status(409).json({ error: 'Las inscripciones se cierran 2 horas antes de que inicie la clase' })
+    }
 
     const codigoPago = generarCodigoPago()
     const expiracion = new Date(Date.now() + 5 * 60 * 1000)
 
     const reserva = await prisma.$transaction(async (tx) => {
+      const yaTieneReserva = await tx.reserva.findFirst({
+        where: { usuarioId, claseId, estado: { in: ['PENDIENTE', 'CONFIRMADA'] } },
+      })
+      if (yaTieneReserva) {
+        throw Object.assign(new Error('Ya tienes una reserva en esta clase'), { statusCode: 409 })
+      }
+
       // Expirar holds vencidos de esta posición
       await tx.reserva.updateMany({
         where: { posicionClaseId, estado: 'PENDIENTE', expiracionReserva: { lt: new Date() } },
@@ -99,6 +113,13 @@ async function confirmarPago(req, res, next) {
         data: { estado: 'EXPIRADA', updatedAt: new Date() },
       })
       return res.status(409).json({ error: 'La clase ya pasó' })
+    }
+    if (claseInscripcionBloqueada(reserva.clase)) {
+      await prisma.reserva.update({
+        where: { id: holdId },
+        data: { estado: 'EXPIRADA', updatedAt: new Date() },
+      })
+      return res.status(409).json({ error: 'Las inscripciones se cierran 2 horas antes de que inicie la clase' })
     }
     if (reserva.expiracionReserva && new Date() > new Date(reserva.expiracionReserva)) {
       await prisma.reserva.update({
@@ -187,11 +208,21 @@ async function procesarPago(req, res, next) {
     })
     if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
     if (claseHaPasado(clase)) return res.status(409).json({ error: 'La clase ya pasó' })
+    if (claseInscripcionBloqueada(clase)) {
+      return res.status(409).json({ error: 'Las inscripciones se cierran 2 horas antes de que inicie la clase' })
+    }
 
     const precio = Number(clase.horarioSemanal.categoria.precio)
     const codigoPago = generarCodigoPago()
 
     const result = await prisma.$transaction(async (tx) => {
+      const yaTieneReserva = await tx.reserva.findFirst({
+        where: { usuarioId, claseId, estado: { in: ['PENDIENTE', 'CONFIRMADA'] } },
+      })
+      if (yaTieneReserva) {
+        throw Object.assign(new Error('Ya tienes una reserva en esta clase'), { statusCode: 409 })
+      }
+
       // Verificar disponibilidad dentro de la transacción
       const posicion = await tx.posicionClase.findUnique({ where: { id: posicionClaseId } })
       if (!posicion || posicion.claseId !== claseId) {

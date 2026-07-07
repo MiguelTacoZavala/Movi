@@ -19,6 +19,19 @@ export function formatDateStr(date) {
   return date.toISOString().split('T')[0]
 }
 
+export function inscripcionBloqueada(clase) {
+  if (!clase?.fecha || !clase?.horaInicio) return false
+  const ahora = new Date()
+  const hoyStr = ahora.toISOString().split('T')[0]
+  if (clase.fecha < hoyStr) return true
+  if (clase.fecha > hoyStr) return false
+  const [h, m] = clase.horaInicio.split(':').map(Number)
+  const inicio = new Date(ahora)
+  inicio.setHours(h, m, 0, 0)
+  const diffHoras = (inicio - ahora) / (1000 * 60 * 60)
+  return diffHoras < 2
+}
+
 // Construye un mensaje de error claro a partir de la respuesta del backend.
 // Si hay detalles de validación (campo + motivo), los lista; si no, usa el mensaje general.
 export function mensajeError(err, fallback = 'Ocurrió un error. Inténtalo de nuevo.') {
