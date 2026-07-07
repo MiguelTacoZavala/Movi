@@ -136,40 +136,127 @@ export default function MisClases() {
     }
   }
 
-  const handleGuardarComprobante = () => {
+  const handleGuardarComprobante = async () => {
     if (!comprobante) return
     const r = comprobante
     const instrName = r.clase.instructor ? `${r.clase.instructor.nombres} ${r.clase.instructor.apellidos}` : ''
-    const w = window.open('', '_blank')
-    w.document.write(`<!DOCTYPE html><html><head><title>Comprobante MOVI</title><style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; max-width: 400px; margin: 0 auto; color: #1a1414; }
-      h2 { text-align: center; font-size: 1.25rem; margin-bottom: 0.25rem; }
-      .sub { text-align: center; color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }
-      .card { background: #f9fafb; border-radius: 12px; padding: 1rem; }
-      .row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
-      .row:last-child { border-bottom: none; }
-      .label { color: #6b7280; }
-      .value { font-weight: 600; }
-      .code { font-family: monospace; font-weight: 700; color: #8B4513; font-size: 0.95rem; }
-      .footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
-    </style></head><body>
-      <h2>Comprobante de inscripción</h2>
-      <p class="sub">${estadoLabel[estado(r)] || estado(r)}${r.codigoPago ? ` · <span class="code">${r.codigoPago}</span>` : ''}</p>
-      <div class="card">
-        <div class="row"><span class="label">Categoría</span><span class="value">${r.clase.categoria?.nombre || ''}</span></div>
-        ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${instrName}</span></div>` : ''}
-        <div class="row"><span class="label">Fecha</span><span class="value">${formatFechaBonita(r.clase.fecha)}</span></div>
-        <div class="row"><span class="label">Hora</span><span class="value">${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}</span></div>
-        ${r.asiento ? `<div class="row"><span class="label">Asiento</span><span class="value">#${r.asiento}</span></div>` : ''}
-        <div class="row"><span class="label">Monto</span><span class="value">S/ ${Number(r.monto || 15).toFixed(2)}</span></div>
-        <div class="row"><span class="label">Método de pago</span><span class="value">${r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'}</span></div>
-        <div class="row"><span class="label">Temática</span><span class="value">${r.clase.tematica || 'LIBRE'}</span></div>
-      </div>
-      <p class="footer">MOVI — Academia de Baile</p>
-      <script>window.onload = function() { window.print(); window.close(); }</script>
-    </body></html>`)
-    w.document.close()
+
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+
+    if (isMobile && navigator.canShare && navigator.share) {
+      const W = 400, H = 620
+      const canvas = document.createElement('canvas')
+      canvas.width = W * 2
+      canvas.height = H * 2
+      const ctx = canvas.getContext('2d')
+      ctx.scale(2, 2)
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, W, H)
+
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#1a1414'
+      ctx.font = 'bold 22px system-ui, sans-serif'
+      ctx.fillText('Comprobante de inscripción', W / 2, 50)
+
+      ctx.font = '16px system-ui, sans-serif'
+      ctx.fillStyle = '#059669'
+      ctx.fillText(estadoLabel[estado(r)] || estado(r), W / 2, 80)
+
+      if (r.codigoPago) {
+        ctx.font = 'bold 14px monospace'
+        ctx.fillStyle = '#8B4513'
+        ctx.fillText(r.codigoPago, W / 2, 105)
+      }
+
+      const rows = [['Categoría', r.clase.categoria?.nombre || '']]
+      if (instrName) rows.push(['Instructor', instrName])
+      rows.push(['Fecha', formatFechaBonita(r.clase.fecha)])
+      rows.push(['Hora', `${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}`])
+      if (r.asiento) rows.push(['Asiento', `#${r.asiento}`])
+      rows.push(['Monto', `S/ ${Number(r.monto || 15).toFixed(2)}`])
+      rows.push(['Método de pago', r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'])
+      rows.push(['Temática', r.clase.tematica || 'LIBRE'])
+
+      const cardX = 20, cardY = 135, cardW = W - 40
+      const rowH = 30, padTop = 20, padLeft = 20, padRight = 20
+      ctx.fillStyle = '#f9fafb'
+      ctx.beginPath()
+      ctx.roundRect(cardX, cardY, cardW, padTop + rows.length * rowH + 10, 12)
+      ctx.fill()
+
+      rows.forEach(([label, value], i) => {
+        const y = cardY + padTop + i * rowH
+        ctx.font = '13px system-ui, sans-serif'
+        ctx.fillStyle = '#6b7280'
+        ctx.textAlign = 'left'
+        ctx.fillText(label, cardX + padLeft, y + 10)
+
+        ctx.font = '600 13px system-ui, sans-serif'
+        ctx.fillStyle = '#1a1414'
+        ctx.textAlign = 'right'
+        ctx.fillText(value, cardX + cardW - padRight, y + 10)
+
+        if (i < rows.length - 1) {
+          ctx.strokeStyle = '#e5e7eb'
+          ctx.beginPath()
+          ctx.moveTo(cardX + 14, y + 25)
+          ctx.lineTo(cardX + cardW - 14, y + 25)
+          ctx.stroke()
+        }
+      })
+
+      ctx.fillStyle = '#9ca3af'
+      ctx.font = '11px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('MOVI — Academia de Baile', W / 2, H - 30)
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return
+        const file = new File([blob], `Comprobante-${r.codigoPago || r.id}.png`, { type: 'image/png' })
+        try {
+          await navigator.share({ files: [file], title: 'Comprobante MOVI' })
+        } catch {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `Comprobante-${r.codigoPago || r.id}.png`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+      }, 'image/png')
+    } else {
+      const w = window.open('', '_blank')
+      w.document.write(`<!DOCTYPE html><html><head><title>Comprobante MOVI</title><style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; max-width: 400px; margin: 0 auto; color: #1a1414; }
+        h2 { text-align: center; font-size: 1.25rem; margin-bottom: 0.25rem; }
+        .sub { text-align: center; color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }
+        .card { background: #f9fafb; border-radius: 12px; padding: 1rem; }
+        .row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
+        .row:last-child { border-bottom: none; }
+        .label { color: #6b7280; }
+        .value { font-weight: 600; }
+        .code { font-family: monospace; font-weight: 700; color: #8B4513; font-size: 0.95rem; }
+        .footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
+      </style></head><body>
+        <h2>Comprobante de inscripción</h2>
+        <p class="sub">${estadoLabel[estado(r)] || estado(r)}${r.codigoPago ? ` · <span class="code">${r.codigoPago}</span>` : ''}</p>
+        <div class="card">
+          <div class="row"><span class="label">Categoría</span><span class="value">${r.clase.categoria?.nombre || ''}</span></div>
+          ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${instrName}</span></div>` : ''}
+          <div class="row"><span class="label">Fecha</span><span class="value">${formatFechaBonita(r.clase.fecha)}</span></div>
+          <div class="row"><span class="label">Hora</span><span class="value">${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}</span></div>
+          ${r.asiento ? `<div class="row"><span class="label">Asiento</span><span class="value">#${r.asiento}</span></div>` : ''}
+          <div class="row"><span class="label">Monto</span><span class="value">S/ ${Number(r.monto || 15).toFixed(2)}</span></div>
+          <div class="row"><span class="label">Método de pago</span><span class="value">${r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'}</span></div>
+          <div class="row"><span class="label">Temática</span><span class="value">${r.clase.tematica || 'LIBRE'}</span></div>
+        </div>
+        <p class="footer">MOVI — Academia de Baile</p>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body></html>`)
+      w.document.close()
+    }
   }
 
   return (
