@@ -9,13 +9,29 @@ export default function Registro() {
   const { registerClient } = useAuth()
   const navigate = useNavigate()
 
-  const [formData, setFormData] = useState({
-    nombres: '',
-    apellidos: '',
-    dni: '',
-    telefono: '',
-    password: '',
-    confirmPassword: '',
+  const STORAGE_KEY = 'movi-registro-draft'
+
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : {
+        nombres: '',
+        apellidos: '',
+        dni: '',
+        telefono: '',
+        password: '',
+        confirmPassword: '',
+      }
+    } catch {
+      return {
+        nombres: '',
+        apellidos: '',
+        dni: '',
+        telefono: '',
+        password: '',
+        confirmPassword: '',
+      }
+    }
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -33,7 +49,9 @@ export default function Registro() {
   const handleChange = (e) => {
     const { name, value } = e.target
     const cleaned = ['nombres', 'apellidos'].includes(name) ? value.replace(/\d/g, '') : value
-    setFormData({ ...formData, [name]: cleaned })
+    const next = { ...formData, [name]: cleaned }
+    setFormData(next)
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     if (errors[name]) setErrors({ ...errors, [name]: '' })
   }
 
@@ -66,6 +84,7 @@ export default function Registro() {
         password: formData.password,
       })
       if (result.success) {
+        sessionStorage.removeItem(STORAGE_KEY)
         setSuccess('¡Cuenta creada! Redirigiendo...')
         setTimeout(() => navigate('/cliente/dashboard'), 1500)
       }

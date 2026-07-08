@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { User, Moon, Sun, Camera, AlertCircle, Type, AlignLeft, ChevronDown, CaseSensitive, CheckCircle } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { User, Moon, Sun, Camera, AlertCircle, Type, AlignLeft, ChevronDown, CaseSensitive, CheckCircle, Loader } from 'lucide-react'
 import Ayuda from '../../components/common/Ayuda'
 import { useAuth } from '../../context/useAuth'
 import { useTheme } from '../../context/useTheme'
@@ -8,6 +8,7 @@ import api from '../../services/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Input from '../../components/common/Input'
+import { useAutoSave } from '../../hooks/useAutoSave'
 import '../../App.css'
 
 export default function MiPerfil() {
@@ -52,10 +53,30 @@ export default function MiPerfil() {
     setModalOpen(true)
   }
 
+  const autoSaveFn = useCallback(async (data) => {
+    if (!data.nombres.trim() || !data.apellidos.trim()) return
+    try {
+      await api.updateProfile({
+        nombres: data.nombres.trim(),
+        apellidos: data.apellidos.trim(),
+        telefono: data.telefono.trim(),
+      })
+      updateUser({
+        nombres: data.nombres.trim(),
+        apellidos: data.apellidos.trim(),
+        telefono: data.telefono.trim(),
+      })
+    } catch {}
+  }, [updateUser])
+
+  const { saving: autoSaving, saved: autoSaved, triggerSave } = useAutoSave(autoSaveFn)
+
   const handleEditChange = (e) => {
     const { name, value } = e.target
     const cleaned = ['nombres', 'apellidos'].includes(name) ? value.replace(/\d/g, '') : value
-    setEditData({ ...editData, [name]: cleaned })
+    const newData = { ...editData, [name]: cleaned }
+    setEditData(newData)
+    triggerSave(newData)
   }
 
   const handleSave = async () => {
@@ -156,6 +177,18 @@ export default function MiPerfil() {
             value={editData.telefono}
             onChange={handleEditChange}
           />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem', minHeight: '1.5rem' }}>
+            {autoSaving && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Loader size={14} className="spinning" /> Guardando...
+              </span>
+            )}
+            {autoSaved && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <CheckCircle size={14} /> Guardado
+              </span>
+            )}
+          </div>
           <div className="modal-actions" style={{ marginTop: '0.5rem' }}>
             <Button onClick={handleSave} disabled={saveLoading}>
               {saveLoading ? 'Guardando...' : 'Guardar cambios'}

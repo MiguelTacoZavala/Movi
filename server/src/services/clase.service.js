@@ -357,7 +357,7 @@ async function cerrarClasesVencidas() {
   }
 }
 
-async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limit = 10, soloActivas = false }) {
+async function listar({ estado, fecha, categoriaId, instructorId, search, page = 1, limit = 10, soloActivas = false }) {
   await cerrarClasesVencidas()
 
   const where = {}
@@ -372,11 +372,19 @@ async function listar({ estado, fecha, categoriaId, instructorId, page = 1, limi
     where.fecha = { gte: d, lt: siguiente }
   }
 
-  if (categoriaId || instructorId || soloActivas) {
+  if (categoriaId || instructorId || soloActivas || search) {
     where.horarioSemanal = {}
     if (categoriaId) where.horarioSemanal.categoriaId = Number(categoriaId)
     if (instructorId) where.horarioSemanal.instructorId = Number(instructorId)
     if (soloActivas) where.horarioSemanal.activo = true
+    if (search) {
+      where.OR = [
+        { tematica: { contains: search } },
+        { horarioSemanal: { categoria: { nombre: { contains: search } } } },
+        { horarioSemanal: { instructor: { usuario: { nombres: { contains: search } } } } },
+        { horarioSemanal: { instructor: { usuario: { apellidos: { contains: search } } } } },
+      ]
+    }
   }
 
   const skip = (Number(page) - 1) * Number(limit)

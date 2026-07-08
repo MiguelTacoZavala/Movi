@@ -18,7 +18,17 @@ function formatearInstructor(inst) {
 
 async function listar(req, res, next) {
   try {
+    const { search } = req.query
+    const where = search ? {
+      OR: [
+        { usuario: { nombres: { contains: search } } },
+        { usuario: { apellidos: { contains: search } } },
+        { usuario: { email: { contains: search } } },
+        { especialidad: { contains: search } },
+      ],
+    } : undefined
     const instructores = await prisma.instructor.findMany({
+      where,
       include: { usuario: true },
       orderBy: { usuario: { nombres: 'asc' } },
     })

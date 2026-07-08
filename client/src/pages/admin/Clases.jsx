@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react'
+import { Music, Users, Clock, Calendar, XCircle, UserCheck, AlertTriangle, AlertCircle, CheckCircle, Search } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Select from '../../components/common/Select'
+import Input from '../../components/common/Input'
 import Alert from '../../components/common/Alert'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../services/api'
@@ -45,6 +46,7 @@ export default function Clases() {
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroInstructor, setFiltroInstructor] = useState('')
+  const [busquedaTexto, setBusquedaTexto] = useState('')
   const [pagina, setPagina] = useState(1)
   const POR_PAGINA = 10
   const [selectedClase, setSelectedClase] = useState(null)
@@ -83,6 +85,19 @@ export default function Clases() {
     }
   }
 
+  // Debounce para búsqueda por texto (consulta al servidor)
+  useEffect(() => {
+    if (!busquedaTexto) return
+    const timer = setTimeout(() => {
+      let mounted = true
+      api.get(`/clases?search=${encodeURIComponent(busquedaTexto)}&limit=500`)
+        .then(res => { if (mounted) setClases(res.clases) })
+        .catch(() => {})
+      return () => { mounted = false }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [busquedaTexto])
+
   const filteredClases = useMemo(() => {
     // Orden por estado: Programadas/activas (0) arriba, Canceladas (1) en medio, Finalizadas (2) al fondo
     const rango = (c) => {
@@ -96,6 +111,13 @@ export default function Clases() {
         if (filtroEstado && c.estado !== filtroEstado) return false
         if (filtroFecha && c.fecha !== filtroFecha) return false
         if (filtroInstructor && c.instructor?.id !== parseInt(filtroInstructor)) return false
+        if (busquedaTexto) {
+          const q = busquedaTexto.toLowerCase()
+          const cat = c.categoria?.nombre?.toLowerCase() || ''
+          const instr = c.instructor ? `${c.instructor.nombres} ${c.instructor.apellidos}`.toLowerCase() : ''
+          const tema = (c.tematica || '').toLowerCase()
+          if (!cat.includes(q) && !instr.includes(q) && !tema.includes(q)) return false
+        }
         return true
       })
       .sort((a, b) => {
@@ -106,9 +128,9 @@ export default function Clases() {
         const cmp = a.fecha.localeCompare(b.fecha) || (a.horaInicio || '').localeCompare(b.horaInicio || '')
         return ra === 0 ? cmp : -cmp
       })
-  }, [clases, filtroEstado, filtroFecha, filtroInstructor])
+  }, [clases, filtroEstado, filtroFecha, filtroInstructor, busquedaTexto])
 
-  useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor]) // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => { setPagina(1) }, [filtroEstado, filtroFecha, filtroInstructor, busquedaTexto]) // eslint-disable-line react-hooks/set-state-in-effect
 
   const totalPaginas = Math.max(1, Math.ceil(filteredClases.length / POR_PAGINA))
   const clasesPagina = filteredClases.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
@@ -296,6 +318,15 @@ export default function Clases() {
           <h3>Canceladas</h3>
           <p style={{ color: 'var(--info)' }}>{clases.filter(c => c.estado === 'CANCELADA').length}</p>
         </div>
+      </div>
+
+      <div style={{ marginBottom: '1rem', marginTop: '0.5rem' }}>
+        <Input
+          type="search"
+          placeholder="Buscar por categoría, instructor o temática..."
+          value={busquedaTexto}
+          onChange={(e) => setBusquedaTexto(e.target.value)}
+        />
       </div>
 
       <Table columns={columns} data={clasesPagina} emptyMessage="No hay clases generadas" />

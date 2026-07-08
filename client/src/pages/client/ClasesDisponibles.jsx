@@ -1,11 +1,20 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Clock, Sun, Sunset, Moon, Users, ChevronLeft, ChevronRight, AlertCircle, ChevronDown, CheckCircle } from 'lucide-react'
 import api from '../../services/api'
 import { formatHoraAMPM } from '../../utils/helpers'
 import Button from '../../components/common/Button'
 import LoadingScreen from '../../components/common/LoadingScreen'
+import Stepper from '../../components/common/Stepper'
+import { usePullToRefresh } from '../../hooks/usePullToRefresh'
 import '../../App.css'
+
+const STEPS = [
+  { label: 'Categoría' },
+  { label: 'Fecha y horario' },
+  { label: 'Asiento' },
+  { label: 'Confirmación' },
+]
 
 const CATEGORIA_APARIENCIA = {
   Salsa: { icon: 'Flame', color: '#E74C3C', bgColor: '#FEF2F2', gradient: 'linear-gradient(135deg, #E74C3C, #c0392b)', desc: 'Ritmo y energía' },
@@ -99,9 +108,11 @@ function fetchClasesData() {
   return Promise.all([
     api.cachedGet('/categorias'),
     api.cachedGet('/clases?limit=500&soloActivas=true'),
-  ]).then(([catData, clsData]) => ({
+    api.cachedGet('/reservas/mis-reservas').catch(() => ({ reservas: [] })),
+  ]).then(([catData, clsData, resData]) => ({
     categorias: catData.categorias || [],
     clases: clsData.clases || [],
+    reservas: resData.reservas || [],
   }))
 }
 
@@ -110,6 +121,7 @@ const DIAS_LABEL = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB']
 export default function ClasesDisponibles() {
   const [categorias, setCategorias] = useState([])
   const [clases, setClases] = useState([])
+  const [reservas, setReservas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [semanaOffset, setSemanaOffset] = useState(0)
@@ -117,6 +129,50 @@ export default function ClasesDisponibles() {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedCategoria = searchParams.get('cat')
   const selectedDate = searchParams.get('fecha')
+  const [swiping, setSwiping] = useState(null)
+  const dateCarouselRef = useRef(null)
+  const claseIdsInscritas = useMemo(() => new Set(
+    reservas
+      .filter(r => r.estado !== 'CANCELADA' && r.estado !== 'EXPIRADA' && r.estado !== 'FINALIZADA')
+      .map(r => r.clase?.id)
+  ), [reservas])
+
+  const cargar = useCallback(() => {
+    setLoading(true)
+    setError('')
+    fetchClasesData()
+      .then(data => { setCategorias(data.categorias); setClases(data.clases); setReservas(data.reservas) })
+      .catch(() => { setCategorias([]); setClases([]); setReservas([]); setError('No pudimos cargar las clases. Revisa tu conexión.') })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const {
+    containerRef: pullRef,
+    pullDistance,
+    refreshing,
+    onTouchStart: onPullStart,
+    onTouchMove: onPullMove,
+    onTouchEnd: onPullEnd,
+    THRESHOLD,
+  } = usePullToRefresh(cargar)
+
+  const handleCarouselTouchStart = (e) => {
+    setSwiping({ startX: e.touches[0].clientX, startY: e.touches[0].clientY })
+  }
+
+  const handleCarouselTouchEnd = (e) => {
+    if (!swiping) return
+    const diffX = e.changedTouches[0].clientX - swiping.startX
+    const diffY = Math.abs(e.changedTouches[0].clientY - swiping.startY)
+    if (Math.abs(diffX) > 50 && diffY < 50) {
+      if (diffX > 0 && semanaOffset > 0) {
+        setSemanaOffset(prev => Math.max(0, prev - 1))
+      } else if (diffX < 0 && semanaOffset < 3) {
+        setSemanaOffset(prev => Math.min(3, prev + 1))
+      }
+    }
+    setSwiping(null)
+  }
 
   // Guardamos categoría y día en la URL para que, al volver desde el detalle
   // de una clase, se restaure la vista de horarios en lugar de reiniciarse.
@@ -134,19 +190,10 @@ export default function ClasesDisponibles() {
     setLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
     setError('')
     fetchClasesData()
-      .then(data => { if (mounted) { setCategorias(data.categorias); setClases(data.clases) } })
-      .catch(() => { if (mounted) { setCategorias([]); setClases([]); setError('No pudimos cargar las clases. Revisa tu conexión.') } })
+      .then(data => { if (mounted) { setCategorias(data.categorias); setClases(data.clases); setReservas(data.reservas) } })
+      .catch(() => { if (mounted) { setCategorias([]); setClases([]); setReservas([]); setError('No pudimos cargar las clases. Revisa tu conexión.') } })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
-  }, [])
-
-  const cargar = useCallback(() => {
-    setLoading(true)
-    setError('')
-    fetchClasesData()
-      .then(data => { setCategorias(data.categorias); setClases(data.clases) })
-      .catch(() => { setCategorias([]); setClases([]); setError('No pudimos cargar las clases. Revisa tu conexión.') })
-      .finally(() => setLoading(false))
   }, [])
 
   // Al cambiar de semana, si la fecha seleccionada no está en el rango visible, auto-seleccionar el lunes
@@ -198,7 +245,23 @@ export default function ClasesDisponibles() {
 
   if (!selectedCategoria) {
     return (
-      <div>
+      <div
+        ref={pullRef}
+        onTouchStart={onPullStart}
+        onTouchMove={onPullMove}
+        onTouchEnd={onPullEnd}
+      >
+        <Stepper steps={STEPS} currentStep={0} />
+        {pullDistance > 0 && (
+          <div className="pull-indicator" style={{ height: Math.min(pullDistance, 60) }}>
+            {refreshing ? (
+              <div className="pull-spinner" />
+            ) : (
+              <ChevronDown size={20} className={`pull-indicator-arrow${pullDistance >= THRESHOLD ? ' ready' : ''}`} />
+            )}
+            <span>{pullDistance >= THRESHOLD ? 'Suelta para actualizar' : 'Tira para actualizar'}</span>
+          </div>
+        )}
         <h2 className="client-section-title">Elige tu estilo</h2>
         <p className="client-section-subtitle">Selecciona el tipo de baile que deseas practicar</p>
         <div className="category-selector">
@@ -237,15 +300,37 @@ export default function ClasesDisponibles() {
   }
 
   return (
-    <div key={selectedCategoria}>
+    <div
+      key={selectedCategoria}
+      ref={pullRef}
+      onTouchStart={onPullStart}
+      onTouchMove={onPullMove}
+      onTouchEnd={onPullEnd}
+    >
+      <Stepper steps={STEPS} currentStep={1} onStepClick={(i) => i === 0 && updateSeleccion(null, null)} />
+      {pullDistance > 0 && (
+        <div className="pull-indicator" style={{ height: Math.min(pullDistance, 60) }}>
+          {refreshing ? (
+            <div className="pull-spinner" />
+          ) : (
+            <ChevronDown size={20} className={`pull-indicator-arrow${pullDistance >= THRESHOLD ? ' ready' : ''}`} />
+          )}
+          <span>{pullDistance >= THRESHOLD ? 'Suelta para actualizar' : 'Tira para actualizar'}</span>
+        </div>
+      )}
+
+      <div className="breadcrumb">
+        <span className="breadcrumb-item clickable" onClick={() => updateSeleccion(null, null)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && updateSeleccion(null, null)}>
+          Categoría
+        </span>
+        <span className="breadcrumb-sep">›</span>
+        <span className="breadcrumb-item">{selectedCategoria}</span>
+      </div>
+
       <button className="back-btn" onClick={() => updateSeleccion(null, null)}>
         <ArrowLeft size={20} />
         <span>Todos los estilos</span>
       </button>
-
-      <div className="category-active-header" style={{ color: apariencia.color }}>
-        <h2>{selectedCategoria}</h2>
-      </div>
 
       <div className="date-carousel-header">
         <button
@@ -267,7 +352,12 @@ export default function ClasesDisponibles() {
         </button>
       </div>
 
-      <div className="date-carousel">
+      <div
+        className="date-carousel"
+        ref={dateCarouselRef}
+        onTouchStart={handleCarouselTouchStart}
+        onTouchEnd={handleCarouselTouchEnd}
+      >
         {diasSemana.map((fecha) => {
           const fs = formatLocalDate(fecha)
           const dia = DIAS_LABEL[fecha.getDay()]
@@ -312,12 +402,19 @@ export default function ClasesDisponibles() {
                 <div className="time-section-content">
                   {clases.map(clase => {
                     const cupos = clase.capacidadMaxima - (clase.inscritos || 0)
+                    const estaInscrito = claseIdsInscritas.has(clase.id)
                     const idx = animIdx++
                     return (
                       <div
                         key={clase.id}
-                        className={`clase-card-slim${cupos === 0 ? ' full' : ''}`}
-                        style={{ animationDelay: `${idx * 0.05}s`, opacity: cupos === 0 ? 0.55 : 1, pointerEvents: cupos === 0 ? 'none' : 'auto' }}
+                        className={`clase-card-slim${cupos === 0 && !estaInscrito ? ' full' : ''}`}
+                        style={{
+                          position: 'relative',
+                          animationDelay: `${idx * 0.05}s`,
+                          opacity: cupos === 0 && !estaInscrito ? 0.55 : 1,
+                          pointerEvents: cupos === 0 ? 'none' : 'auto',
+                          ...(estaInscrito && { borderLeft: '3px solid #059669', background: 'rgba(5, 150, 105, 0.06)' }),
+                        }}
                         onClick={() => cupos > 0 && navigate(`/cliente/clases/${clase.id}`)}
                       >
                         <div className="clase-card-slim-time">
@@ -335,15 +432,21 @@ export default function ClasesDisponibles() {
                           <div className="clase-card-slim-name">{clase.instructor?.nombres} {clase.instructor?.apellidos}</div>
                         </div>
                         <div className="clase-card-slim-meta">
-                          <div className="price-badge">
-                            S/ {clase.precio ?? 15}
-                          </div>
+                          {estaInscrito ? (
+                            <div className="price-badge" style={{ background: '#059669', color: '#fff' }}>
+                              <CheckCircle size={13} /> Inscrito
+                            </div>
+                          ) : (
+                            <div className="price-badge">
+                              S/ {clase.precio ?? 15}
+                            </div>
+                          )}
                           <div className="clase-card-slim-participants">
                             <Users size={13} />
                             <span>{clase.inscritos || 0}/{clase.capacidadMaxima}</span>
                           </div>
-                          <div className={`clase-card-slim-cupos-text${cupos === 0 ? ' agotado' : ''}${cupos > 0 && cupos <= 3 ? ' pocos' : ''}`}>
-                            {cupos === 0 ? 'Completa' : `quedan ${cupos}`}
+                          <div className={`clase-card-slim-cupos-text${cupos === 0 && !estaInscrito ? ' agotado' : ''}${cupos > 0 && cupos <= 3 && !estaInscrito ? ' pocos' : ''}`}>
+                            {estaInscrito ? '' : cupos === 0 ? 'Completa' : `quedan ${cupos}`}
                           </div>
                         </div>
                       </div>

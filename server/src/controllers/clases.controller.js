@@ -13,12 +13,13 @@ async function generar(req, res, next) {
 
 async function listar(req, res, next) {
   try {
-    const { estado, fecha, categoriaId, instructorId, page, limit, soloActivas } = req.query
+    const { estado, fecha, categoriaId, instructorId, search, page, limit, soloActivas } = req.query
     const resultado = await claseService.listar({
       estado,
       fecha,
       categoriaId,
       instructorId,
+      search,
       page,
       limit,
       soloActivas: soloActivas === 'true',
