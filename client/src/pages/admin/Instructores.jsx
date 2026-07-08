@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, User, Phone, UserCheck, UserX, Mail, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, User, Phone, UserCheck, UserX, Mail, AlertCircle, CheckCircle, Search } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import Alert from '../../components/common/Alert'
+import Input from '../../components/common/Input'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import InstructorForm from './InstructorForm'
 import api from '../../services/api'
@@ -31,6 +32,7 @@ export default function Instructores() {
   const [toggling, setToggling] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [mensaje, setMensaje] = useFlashMessage()
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -41,6 +43,27 @@ export default function Instructores() {
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
   }, [])
+
+  useEffect(() => {
+    if (!search) return
+    const timer = setTimeout(() => {
+      let mounted = true
+      api.get(`/instructores?search=${encodeURIComponent(search)}`)
+        .then(res => { if (mounted) setInstructores(res.instructores) })
+        .catch(() => {})
+      return () => { mounted = false }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const instructoresFiltrados = search
+    ? instructores.filter(inst =>
+        inst.nombres?.toLowerCase().includes(search.toLowerCase()) ||
+        inst.apellidos?.toLowerCase().includes(search.toLowerCase()) ||
+        inst.email?.toLowerCase().includes(search.toLowerCase()) ||
+        inst.especialidad?.toLowerCase().includes(search.toLowerCase())
+      )
+    : instructores
 
   const cargar = async () => {
     try {
@@ -207,7 +230,16 @@ export default function Instructores() {
         </Alert>
       )}
 
-      <Table columns={columns} data={instructores} emptyMessage="No hay instructores registrados" />
+      <div style={{ marginBottom: '1rem' }}>
+        <Input
+          type="search"
+          placeholder="Buscar por nombre, email o especialidad..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <Table columns={columns} data={instructoresFiltrados} emptyMessage="No hay instructores registrados" />
 
       <Modal
         isOpen={modalOpen}

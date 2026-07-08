@@ -1,14 +1,23 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '../../context/useAuth'
-import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, AlertCircle, CheckCircle, Timer, User, Tag, Calendar, Clock } from 'lucide-react'
+import { CreditCard, Smartphone, ArrowLeft, AlertTriangle, AlertCircle, CheckCircle, Timer, User, Tag } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import culqi from '../../services/culqi'
 import LoadingScreen from '../../components/common/LoadingScreen'
+import Stepper from '../../components/common/Stepper'
+import Confetti from '../../components/common/Confetti'
 import { formatFechaBonita, formatHoraAMPM, inscripcionBloqueada } from '../../utils/helpers'
 import '../../App.css'
+
+const STEPS = [
+  { label: 'Categoría' },
+  { label: 'Fecha y horario' },
+  { label: 'Asiento' },
+  { label: 'Confirmación' },
+]
 
 const HOLD_DURATION = 300
 
@@ -34,8 +43,17 @@ export default function DetalleClase() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const STORAGE_KEY = `inscripcionExitosa_${id}`
+
+  const savedSuccess = useMemo(() => {
+    try {
+      const d = sessionStorage.getItem(STORAGE_KEY)
+      return d ? JSON.parse(d) : null
+    } catch { return null }
+  }, [STORAGE_KEY])
+
   const [clase, setClase] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!savedSuccess)
   const [selectedSeat, setSelectedSeat] = useState(null)
   const [metodoPago, setMetodoPago] = useState(null)
   const [holdSeconds, setHoldSeconds] = useState(HOLD_DURATION)
@@ -44,8 +62,8 @@ export default function DetalleClase() {
   const [holdCodigoPago, setHoldCodigoPago] = useState(null)
   const [holdExpired, setHoldExpired] = useState(false)
   const [showResumenModal, setShowResumenModal] = useState(false)
-  const [inscripcionExitosa, setInscripcionExitosa] = useState(false)
-  const [inscripcionData, setInscripcionData] = useState(null)
+  const [inscripcionExitosa, setInscripcionExitosa] = useState(!!savedSuccess)
+  const [inscripcionData, setInscripcionData] = useState(savedSuccess)
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState('')
   const [claseError, setClaseError] = useState(null)
@@ -56,8 +74,11 @@ export default function DetalleClase() {
   const [miReserva, setMiReserva] = useState(null)
   const [cambiandoAsientoLoading, setCambiandoAsientoLoading] = useState(false)
   const [cambioExitoso, setCambioExitoso] = useState(null)
+  const [tooltipSeat, setTooltipSeat] = useState(null)
+  const longPressRef = useRef(null)
 
   useEffect(() => {
+    if (savedSuccess) return
     api.get(`/clases/${id}?soloActivas=true`).then(res => {
       setClase(res.clase)
       if (res.miReserva) {
@@ -184,7 +205,8 @@ export default function DetalleClase() {
       })
 
       api.invalidateCache()
-      setInscripcionData({
+      const exitoData = {
+        claseId: id,
         categoria: clase.categoria?.nombre,
         instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
         fecha: clase.fecha,
@@ -194,7 +216,9 @@ export default function DetalleClase() {
         tematica: clase.tematica || 'LIBRE',
         codigoPago: result.codigoPago,
         monto: result.monto,
-      })
+      }
+      setInscripcionData(exitoData)
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(exitoData))
       setHoldActive(false)
       setInscripcionExitosa(true)
     } catch (e) {
@@ -226,7 +250,8 @@ export default function DetalleClase() {
         })
 
         api.invalidateCache()
-        setInscripcionData({
+        const exitoData = {
+          claseId: id,
           categoria: clase.categoria?.nombre,
           instructor: clase.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : '',
           fecha: clase.fecha,
@@ -236,7 +261,9 @@ export default function DetalleClase() {
           tematica: clase.tematica || 'LIBRE',
           codigoPago: result.codigoPago,
           monto: result.monto,
-        })
+        }
+        setInscripcionData(exitoData)
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(exitoData))
         setInscripcionExitosa(true)
       } catch (e) {
         setError(e.data?.error || e.message || 'No pudimos procesar el pago con tus créditos. Intenta de nuevo.')
@@ -273,7 +300,7 @@ export default function DetalleClase() {
     setShowResumenModal(false)
   }
 
-  if (!clase && !loading) {
+  if (!clase && !loading && !inscripcionExitosa) {
     return (
       <div className="empty-state">
         <AlertCircle size={48} className="icon-muted" />
@@ -289,14 +316,27 @@ export default function DetalleClase() {
   if (inscripcionExitosa && inscripcionData) {
     const esCambio = inscripcionData.tipo === 'cambio'
     return (
-      <div className="empty-state" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-        <div style={{ background: '#d1fae5', borderRadius: '50%', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-          <CheckCircle size={40} color="#059669" />
+      <div style={{ position: 'relative' }}>
+        <Confetti />
+        <Stepper steps={STEPS} currentStep={4} />
+        <div className="breadcrumb">
+          <span className="breadcrumb-item">{inscripcionData.categoria}</span>
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-item">{formatFechaBonita(inscripcionData.fecha)}</span>
+        </div>
+        <div className="empty-state" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+        <div className="success-check-container">
+          <div className="success-check-bg">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <circle cx="20" cy="20" r="18" stroke="#059669" strokeWidth="3" fill="none" className="success-check-circle" />
+              <path d="M12 20 L18 26 L28 14" stroke="#059669" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" className="success-check-path" />
+            </svg>
+          </div>
         </div>
         <h3>{esCambio ? 'Asiento cambiado exitosamente' : 'Inscripción confirmada'}</h3>
         <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>{esCambio ? 'Tu asiento fue actualizado correctamente' : 'Tu inscripción fue confirmada correctamente'}</p>
 
-        <div style={{ marginTop: '1.5rem', textAlign: 'left', background: 'var(--gray-50)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="success-card-animate" style={{ marginTop: '1.5rem', textAlign: 'left', background: 'var(--gray-50)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>Categoría</span>
             <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{inscripcionData.categoria}</span>
@@ -349,13 +389,14 @@ export default function DetalleClase() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
-          <Button onClick={() => navigate('/cliente/mis-clases')}>
+          <Button onClick={() => { sessionStorage.removeItem(STORAGE_KEY); navigate('/cliente/mis-clases') }}>
             Ir a Mis Clases
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/cliente/clases')}>
+          <Button variant="secondary" onClick={() => { sessionStorage.removeItem(STORAGE_KEY); navigate('/cliente/clases') }}>
             {esCambio ? 'Ver otras clases' : 'Reservar otra clase'}
           </Button>
         </div>
+      </div>
       </div>
     )
   }
@@ -363,10 +404,7 @@ export default function DetalleClase() {
   const instrName = clase?.instructor ? `${clase.instructor.nombres} ${clase.instructor.apellidos}` : ''
 
   const volverAClases = () => {
-    if (miReserva) {
-      navigate('/cliente/mis-clases')
-      return
-    }
+    sessionStorage.removeItem(STORAGE_KEY)
     if (clase?.categoria?.nombre && clase?.fecha) {
       const params = new URLSearchParams({ cat: clase.categoria.nombre, fecha: clase.fecha })
       navigate(`/cliente/clases?${params.toString()}`)
@@ -377,26 +415,24 @@ export default function DetalleClase() {
 
   return (
     <div className="detalle-clase" style={{ animation: 'fadeIn 0.3s ease' }}>
+      <Stepper steps={STEPS} currentStep={2} onStepClick={(i) => i < 2 && volverAClases()} />
+
+      {clase?.categoria?.nombre && clase?.fecha && (
+        <div className="breadcrumb">
+          <span className="breadcrumb-item clickable" onClick={volverAClases} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && volverAClases()}>
+            Clases
+          </span>
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-item">{clase.categoria.nombre}</span>
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-item">{formatFechaBonita(clase.fecha)} · {formatHoraAMPM(clase.horaInicio)}</span>
+        </div>
+      )}
+
       <button onClick={volverAClases} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-600)', fontSize: '0.9rem', marginBottom: '1rem' }}>
         <ArrowLeft size={18} />
         Volver a Clases
       </button>
-
-      <div className="detalle-header">
-        <h2>{clase?.categoria?.nombre || <span className="skeleton skeleton-inline" style={{ width: 120, height: 24 }} />}</h2>
-        {clase && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Calendar size={15} className="icon-muted" />
-              {formatFechaBonita(clase.fecha)}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Clock size={15} className="icon-muted" />
-              {formatHoraAMPM(clase.horaInicio)} — {formatHoraAMPM(clase.horaFin)}
-            </span>
-          </div>
-        )}
-      </div>
 
       {holdActive && metodoPago === 'yape' && !inscripcionExitosa && (
         <div className="hold-timer" style={{ marginTop: '0.75rem' }}>
@@ -491,7 +527,7 @@ export default function DetalleClase() {
               <span>Instructor</span>
             </div>
 
-            <div className="seat-legend">
+            <div className="seat-legend" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', justifyItems: 'center' }}>
               <div className="seat-legend-item">
                 <div className="seat-legend-dot disponible" />
                 <span>Disponible</span>
@@ -527,12 +563,30 @@ export default function DetalleClase() {
                     seatClass += 'disponible'
                   }
                   if (isSelected) seatClass += ' selected'
+
+                  const handleTouchStart = () => {
+                    longPressRef.current = setTimeout(() => {
+                      setTooltipSeat({ asiento, isOcupado, isActual })
+                    }, 500)
+                  }
+                  const handleTouchEnd = () => {
+                    if (longPressRef.current) {
+                      clearTimeout(longPressRef.current)
+                      longPressRef.current = null
+                    }
+                    setTooltipSeat(null)
+                  }
+
                   return (
                     <button
                       key={asiento.id}
                       className={seatClass}
                       disabled={isOcupado || isActual || holdActive || procesando || procesandoPagoYape || inscripcionBloqueada(clase) || cambiandoAsientoLoading}
                       onClick={() => handleSelectSeat(asiento)}
+                      onMouseEnter={() => setTooltipSeat({ asiento, isOcupado, isActual })}
+                      onMouseLeave={() => setTooltipSeat(null)}
+                      onTouchStart={handleTouchStart}
+                      onTouchEnd={handleTouchEnd}
                       aria-label={`Asiento ${asiento.numero}, ${isOcupado ? 'ocupado' : isActual ? 'tu asiento' : 'disponible'}`}
                       style={{ gridRow: fi + 1, gridColumn: asiento.columna }}
                     >
@@ -540,6 +594,17 @@ export default function DetalleClase() {
                         <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>TÚ</span>
                       ) : (
                         <User size={22} />
+                      )}
+                      {tooltipSeat?.asiento?.id === asiento.id && (
+                        <div className="seat-tooltip">
+                          <span className="seat-tooltip-num">Asiento #{asiento.numero}</span>
+                          <span className={`seat-tooltip-status ${isOcupado ? 'ocupado' : isActual ? 'actual' : 'disponible'}`}>
+                            {isOcupado ? 'Ocupado' : isActual ? 'Tu asiento' : 'Disponible'}
+                          </span>
+                          {!isOcupado && !isActual && (
+                            <span className="seat-tooltip-price">S/ {(clase?.precio || 15).toFixed(2)}</span>
+                          )}
+                        </div>
                       )}
                     </button>
                   )

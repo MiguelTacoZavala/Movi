@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle, Printer, ArrowLeft } from 'lucide-react'
+import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle, Printer, ArrowLeft, ChevronDown } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
+import { usePullToRefresh } from '../../hooks/usePullToRefresh'
 import '../../App.css'
 
 function toDate(fechaStr) {
@@ -21,6 +22,21 @@ function estado(r) { return r.estadoDisplay || r.estado }
 export default function MisClases() {
   const [reservas, setReservas] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const recargar = async () => {
+    const data = await api.cachedGet('/reservas/mis-reservas')
+    setReservas(data.reservas || [])
+  }
+
+  const {
+    containerRef: pullRef,
+    pullDistance,
+    refreshing,
+    onTouchStart: onPullStart,
+    onTouchMove: onPullMove,
+    onTouchEnd: onPullEnd,
+    THRESHOLD,
+  } = usePullToRefresh(recargar)
   const [filtro, setFiltro] = useState('proximas')
   const [cancelando, setCancelando] = useState(null)
   const [cancelandoLoading, setCancelandoLoading] = useState(false)
@@ -260,7 +276,22 @@ export default function MisClases() {
   }
 
   return (
-    <div>
+    <div
+      ref={pullRef}
+      onTouchStart={onPullStart}
+      onTouchMove={onPullMove}
+      onTouchEnd={onPullEnd}
+    >
+      {pullDistance > 0 && (
+        <div className="pull-indicator" style={{ height: Math.min(pullDistance, 60) }}>
+          {refreshing ? (
+            <div className="pull-spinner" />
+          ) : (
+            <ChevronDown size={20} className={`pull-indicator-arrow${pullDistance >= THRESHOLD ? ' ready' : ''}`} />
+          )}
+          <span>{pullDistance >= THRESHOLD ? 'Suelta para actualizar' : 'Tira para actualizar'}</span>
+        </div>
+      )}
       <Modal isOpen={!!cancelando} onClose={() => !cancelandoLoading && setCancelando(null)} title="¿Cancelar inscripción?">
         {cancelando && (
           <>
