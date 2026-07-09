@@ -182,11 +182,13 @@ model Reserva {
   fechaCancelacion  DateTime?     @map("fecha_cancelacion")
   canceladoPor      Int?          @map("cancelado_por")
   usoCredito        Boolean       @default(false) @map("uso_credito")
+  asistio           Boolean       @default(false)
+  fechaCheckIn      DateTime?     @map("fecha_check_in")
   updatedAt         DateTime?     @map("updated_at")
 
   usuario       Usuario         @relation(fields: [usuarioId], references: [id])
-  clase         Clase           @relation(fields: [claseId], references: [id])
-  posicionClase PosicionClase   @relation(fields: [posicionClaseId], references: [id])
+  clase         Clase           @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  posicionClase PosicionClase   @relation(fields: [posicionClaseId], references: [id], onDelete: Cascade)
   canceladoPorUsuario Usuario?  @relation("usuarioCancelador", fields: [canceladoPor], references: [id])
   pago          Pago?
   creditos      Credito[]
