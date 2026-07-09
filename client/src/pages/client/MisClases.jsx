@@ -6,6 +6,7 @@ import api from '../../services/api'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import { usePullToRefresh } from '../../hooks/usePullToRefresh'
+import QRCode from 'qrcode'
 import '../../App.css'
 
 function toDate(fechaStr) {
@@ -157,10 +158,33 @@ export default function MisClases() {
     const r = comprobante
     const instrName = r.clase.instructor ? `${r.clase.instructor.nombres} ${r.clase.instructor.apellidos}` : ''
 
+    let qrDataUrl = null
+    if (r.codigoPago) {
+      try {
+        qrDataUrl = await QRCode.toDataURL(r.codigoPago, { width: 80, margin: 1, color: { dark: '#1a1414', light: '#ffffff' } })
+      } catch {}
+    }
+
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
 
     if (isMobile && navigator.canShare && navigator.share) {
-      const W = 400, H = 620
+      const rows = [['Categoría', r.clase.categoria?.nombre || '']]
+      if (instrName) rows.push(['Instructor', instrName])
+      rows.push(['Fecha', formatFechaBonita(r.clase.fecha)])
+      rows.push(['Hora', `${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}`])
+      if (r.asiento) rows.push(['Asiento', `#${r.asiento}`])
+      rows.push(['Monto', `S/ ${Number(r.monto || 15).toFixed(2)}`])
+      rows.push(['Método de pago', r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'])
+      rows.push(['Temática', r.clase.tematica || 'LIBRE'])
+
+      const W = 400
+      const cardY = 135, rowH = 30, padTop = 20
+      const cardH = padTop + rows.length * rowH + 10
+      const qrSize = 80
+      const qrY = cardY + cardH + 20
+      const footerY = qrY + (qrDataUrl ? qrSize + 15 : 0) + 30
+      const H = footerY + 40
+
       const canvas = document.createElement('canvas')
       canvas.width = W * 2
       canvas.height = H * 2
@@ -185,20 +209,10 @@ export default function MisClases() {
         ctx.fillText(r.codigoPago, W / 2, 105)
       }
 
-      const rows = [['Categoría', r.clase.categoria?.nombre || '']]
-      if (instrName) rows.push(['Instructor', instrName])
-      rows.push(['Fecha', formatFechaBonita(r.clase.fecha)])
-      rows.push(['Hora', `${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}`])
-      if (r.asiento) rows.push(['Asiento', `#${r.asiento}`])
-      rows.push(['Monto', `S/ ${Number(r.monto || 15).toFixed(2)}`])
-      rows.push(['Método de pago', r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'])
-      rows.push(['Temática', r.clase.tematica || 'LIBRE'])
-
-      const cardX = 20, cardY = 135, cardW = W - 40
-      const rowH = 30, padTop = 20, padLeft = 20, padRight = 20
+      const cardX = 20, cardW = W - 40, padLeft = 20, padRight = 20
       ctx.fillStyle = '#f9fafb'
       ctx.beginPath()
-      ctx.roundRect(cardX, cardY, cardW, padTop + rows.length * rowH + 10, 12)
+      ctx.roundRect(cardX, cardY, cardW, cardH, 12)
       ctx.fill()
 
       rows.forEach(([label, value], i) => {
@@ -222,10 +236,20 @@ export default function MisClases() {
         }
       })
 
+      if (qrDataUrl) {
+        const qrImg = new Image()
+        await new Promise((resolve, reject) => {
+          qrImg.onload = resolve
+          qrImg.onerror = reject
+          qrImg.src = qrDataUrl
+        })
+        ctx.drawImage(qrImg, W / 2 - qrSize / 2, qrY, qrSize, qrSize)
+      }
+
       ctx.fillStyle = '#9ca3af'
       ctx.font = '11px system-ui, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('MOVI — Academia de Baile', W / 2, H - 30)
+      ctx.fillText('MOVI — Academia de Baile', W / 2, footerY)
 
       canvas.toBlob(async (blob) => {
         if (!blob) return
@@ -254,10 +278,12 @@ export default function MisClases() {
         .label { color: #6b7280; }
         .value { font-weight: 600; }
         .code { font-family: monospace; font-weight: 700; color: #8B4513; font-size: 0.95rem; }
+        .qr { text-align: center; margin: 1rem 0; }
         .footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
       </style></head><body>
         <h2>Comprobante de inscripción</h2>
         <p class="sub">${estadoLabel[estado(r)] || estado(r)}${r.codigoPago ? ` · <span class="code">${r.codigoPago}</span>` : ''}</p>
+        ${qrDataUrl ? `<div class="qr"><img src="${qrDataUrl}" style="width:120px;height:120px" alt="Código QR"/></div>` : ''}
         <div class="card">
           <div class="row"><span class="label">Categoría</span><span class="value">${r.clase.categoria?.nombre || ''}</span></div>
           ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${instrName}</span></div>` : ''}

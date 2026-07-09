@@ -37,6 +37,8 @@ function formatear(reserva) {
     fechaReserva: reserva.fechaReserva,
     expiracionReserva: reserva.expiracionReserva,
     fechaConfirmacion: reserva.fechaConfirmacion,
+    asistio: reserva.asistio,
+    fechaCheckIn: reserva.fechaCheckIn,
     usoCredito: reserva.usoCredito,
     monto: reserva.pago ? Number(reserva.pago.monto) : null,
     metodoPago: reserva.pago?.metodoPago || null,

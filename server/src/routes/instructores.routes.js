@@ -3,7 +3,7 @@ const { z } = require('zod')
 const { validate } = require('../middleware/validate')
 const { auth } = require('../middleware/auth')
 const { authorize } = require('../middleware/authorize')
-const { listar, crear, actualizar, eliminar, toggleEstado, dashboard, misHorarios, misClases, obtenerParticipantes, actualizarTematica, historial } = require('../controllers/instructores.controller')
+const { listar, crear, actualizar, eliminar, toggleEstado, dashboard, misHorarios, misClases, obtenerParticipantes, actualizarTematica, historial, registrarCheckIn, toggleAsistencia } = require('../controllers/instructores.controller')
 
 const router = Router()
 
@@ -41,5 +41,7 @@ router.get('/mis-clases', auth, authorize('INSTRUCTOR'), misClases)
 router.get('/historial', auth, authorize('INSTRUCTOR'), historial)
 router.get('/clases/:id/participantes', auth, authorize('INSTRUCTOR'), obtenerParticipantes)
 router.patch('/clases/:id/tematica', auth, authorize('INSTRUCTOR'), actualizarTematica)
+router.post('/clases/:id/check-in', auth, authorize('INSTRUCTOR'), registrarCheckIn)
+router.patch('/reservas/:reservaId/asistencia', auth, authorize('INSTRUCTOR'), toggleAsistencia)
 
 module.exports = router

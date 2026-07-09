@@ -36,7 +36,6 @@ async function verificarOverlap({ instructorId, diaSemana, horaInicio, horaFin, 
   const where = {
     instructorId,
     diaSemana,
-    activo: true,
     horaInicio: { lt: horaFin },
     horaFin: { gt: horaInicio },
   }
@@ -172,30 +171,13 @@ async function eliminar(id) {
 
   // Verificar si hay clases futuras
   const clasesFuturas = await prisma.clase.count({
-    where: { horarioSemanalId: id, fecha: { gte: hoy } },
+    where: { horarioSemanalId: id, fecha: { gte: hoy }, estado: 'PROGRAMADA' },
   })
 
   if (clasesFuturas > 0) {
     throw { clasesFuturas, message: 'No se puede eliminar un horario con clases futuras programadas. Cancela las clases primero.' }
   }
 
-  // Solo se pueden eliminar horarios sin clases (pasadas se conservan como historial)
-  // Primero desactivar el horario para que el cron no genere nuevas clases
-  await prisma.horarioSemanal.update({
-    where: { id },
-    data: { activo: false, updatedAt: new Date() },
-  })
-
-  // Contar clases totales (pasadas) — si tiene historial, solo se desactiva
-  const clasesTotales = await prisma.clase.count({
-    where: { horarioSemanalId: id },
-  })
-
-  if (clasesTotales > 0) {
-    return { eliminado: false, desactivado: true, message: 'Horario desactivado. Tiene clases pasadas que se conservan como historial.' }
-  }
-
-  // Si no tiene ninguna clase (ni pasada ni futura), se puede borrar el horario
   await prisma.horarioSemanal.delete({ where: { id } })
   return { eliminado: true, message: 'Horario eliminado correctamente.' }
 }

@@ -355,6 +355,8 @@ async function obtenerParticipantes(req, res, next) {
       email: r.usuario.email,
       asiento: r.posicionClase?.numero,
       estado: r.estado,
+      asistio: r.asistio,
+      codigoPago: r.codigoPago,
     }))
 
     res.json({
@@ -428,4 +430,85 @@ async function historial(req, res, next) {
   }
 }
 
-module.exports = { listar, crear, actualizar, eliminar, toggleEstado, dashboard, misHorarios, misClases, obtenerParticipantes, actualizarTematica, historial }
+async function registrarCheckIn(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const claseId = safeId(req.params.id)
+    if (!claseId) return res.status(400).json({ error: 'ID inválido' })
+
+    const { codigoPago } = req.body
+    if (!codigoPago) return res.status(400).json({ error: 'Código de pago requerido' })
+
+    const clase = await prisma.clase.findUnique({
+      where: { id: claseId },
+      include: { horarioSemanal: { select: { instructorId: true } } },
+    })
+    if (!clase) return res.status(404).json({ error: 'Clase no encontrada' })
+    if (clase.horarioSemanal.instructorId !== instructor.id) {
+      return res.status(403).json({ error: 'No eres el instructor de esta clase' })
+    }
+
+    const reserva = await prisma.reserva.findFirst({
+      where: { claseId, codigoPago },
+    })
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' })
+    if (reserva.estado !== 'CONFIRMADA') {
+      return res.status(409).json({ error: `La reserva está en estado ${reserva.estado}, no se puede registrar asistencia` })
+    }
+    if (reserva.asistio) {
+      return res.status(409).json({ error: 'El participante ya registró su asistencia' })
+    }
+
+    const updated = await prisma.reserva.update({
+      where: { id: reserva.id },
+      data: { asistio: true, fechaCheckIn: new Date(), updatedAt: new Date() },
+    })
+
+    res.json({ asistio: true, codigoPago: updated.codigoPago, fechaCheckIn: updated.fechaCheckIn })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function toggleAsistencia(req, res, next) {
+  try {
+    const instructor = await prisma.instructor.findUnique({ where: { usuarioId: req.user.id } })
+    if (!instructor) return res.status(404).json({ error: 'Instructor no encontrado' })
+
+    const reservaId = safeId(req.params.reservaId)
+    if (!reservaId) return res.status(400).json({ error: 'ID inválido' })
+
+    const reserva = await prisma.reserva.findUnique({
+      where: { id: reservaId },
+      include: {
+        clase: {
+          include: { horarioSemanal: { select: { instructorId: true } } },
+        },
+      },
+    })
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' })
+    if (reserva.clase.horarioSemanal.instructorId !== instructor.id) {
+      return res.status(403).json({ error: 'No eres el instructor de esta clase' })
+    }
+    if (reserva.estado !== 'CONFIRMADA') {
+      return res.status(409).json({ error: 'La reserva no está confirmada' })
+    }
+
+    const updated = await prisma.reserva.update({
+      where: { id: reservaId },
+      data: {
+        asistio: !reserva.asistio,
+        fechaCheckIn: !reserva.asistio ? new Date() : null,
+        updatedAt: new Date(),
+      },
+    })
+
+    res.json({ asistio: updated.asistio, fechaCheckIn: updated.fechaCheckIn })
+  } catch (error) {
+    next(error)
+  }
+}
+
+module.exports = { listar, crear, actualizar, eliminar, toggleEstado, dashboard, misHorarios, misClases, obtenerParticipantes, actualizarTematica, historial, registrarCheckIn, toggleAsistencia }

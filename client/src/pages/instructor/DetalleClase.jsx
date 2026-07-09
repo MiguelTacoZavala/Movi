@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, Clock, Users, User, Edit3, Check, X } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Users, Edit3, Check, X, QrCode, Camera, Search } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
+import { Html5Qrcode } from 'html5-qrcode'
 import '../../App.css'
 
 function fetchParticipantes(id) {
@@ -24,6 +25,15 @@ export default function DetalleClase() {
   const [guardandoTematica, setGuardandoTematica] = useState(false)
   const [error, setError] = useState(null)
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [codigoInput, setCodigoInput] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [qrError, setQrError] = useState(null)
+  const [checkInLoading, setCheckInLoading] = useState(false)
+  const [successMsg, setSuccessMsg] = useState(null)
+  const qrRef = useRef(null)
+  const html5QrRef = useRef(null)
+  const lastScannedRef = useRef(null)
 
   useEffect(() => {
     let mounted = true
@@ -74,6 +84,71 @@ export default function DetalleClase() {
 
   const cancelarEdicion = () => {
     setEditandoTematica(false)
+  }
+
+  const registrarCheckIn = async (codigoPago) => {
+    if (!codigoPago.trim()) return
+    setCheckInLoading(true)
+    setQrError(null)
+    lastScannedRef.current = codigoPago.trim().toUpperCase()
+    try {
+      const res = await api.post(`/instructores/clases/${id}/check-in`, { codigoPago: codigoPago.trim().toUpperCase() })
+      setParticipantes(prev => prev.map(p =>
+        p.codigoPago === codigoPago.trim().toUpperCase() ? { ...p, asistio: true } : p
+      ))
+      api.invalidateCache([`/instructores/clases/${id}/participantes`])
+      setCodigoInput('')
+      setSuccessMsg(`✔ ${res.codigoPago || 'Asistencia registrada'}`)
+      setTimeout(() => setSuccessMsg(null), 2000)
+    } catch (err) {
+      setQrError(err.error || 'Error al registrar asistencia')
+    } finally {
+      setCheckInLoading(false)
+    }
+  }
+
+  const iniciarEscaneo = async () => {
+    setQrError(null)
+    setSuccessMsg(null)
+    setScanning(true)
+    lastScannedRef.current = null
+    try {
+      if (!html5QrRef.current) {
+        html5QrRef.current = new Html5Qrcode('qr-reader')
+      }
+      await html5QrRef.current.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        async (decodedText) => {
+          if (decodedText !== lastScannedRef.current) {
+            await registrarCheckIn(decodedText)
+          }
+        },
+        () => {}
+      )
+    } catch {
+      setQrError('No se pudo acceder a la cámara. Ingresa el código manualmente.')
+      setScanning(false)
+    }
+  }
+
+  const detenerEscaneo = async () => {
+    setScanning(false)
+    if (html5QrRef.current) {
+      try { await html5QrRef.current.stop() } catch {}
+    }
+  }
+
+  const abrirQrModal = () => {
+    setCodigoInput('')
+    setQrError(null)
+    setScanning(false)
+    setQrModalOpen(true)
+  }
+
+  const cerrarQrModal = async () => {
+    await detenerEscaneo()
+    setQrModalOpen(false)
   }
 
   if (loading) return <LoadingScreen />
@@ -167,6 +242,10 @@ export default function DetalleClase() {
             <Users size={20} className="icon-primary" aria-hidden="true" />
             Participantes ({participantes.length})
           </div>
+          <Button size="small" variant="ghost" onClick={abrirQrModal} title="Escanear QR o ingresar código">
+            <QrCode size={16} />
+            Registrar asistencia
+          </Button>
         </div>
         <div className="client-card-content">
           {participantes.length === 0 ? (
@@ -175,15 +254,25 @@ export default function DetalleClase() {
             </p>
           ) : (
             participantes.map((p, i) => (
-              <div key={p.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${i * 0.05}s` }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-medium)', fontWeight: 600, fontSize: '0.85rem' }} aria-hidden="true">
+              <div key={p.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: p.asistio ? 'var(--success-soft, #d1fae5)' : 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${i * 0.05}s`, borderLeft: p.asistio ? '3px solid var(--success, #10b981)' : '3px solid var(--gray-300)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: p.asistio ? 'var(--success-soft, #d1fae5)' : 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: p.asistio ? 'var(--success, #10b981)' : 'var(--primary-medium)', fontWeight: 600, fontSize: '0.85rem' }} aria-hidden="true">
                   {p.nombres?.charAt(0) || '?'}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 500, fontSize: '0.95rem', color: 'var(--gray-900)' }}>{p.nombres} {p.apellidos}</div>
+                  <div style={{ fontWeight: 500, fontSize: '0.95rem', color: 'var(--gray-900)' }}>
+                    {p.nombres} {p.apellidos}
+                  </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>Asiento {p.asiento}</div>
                 </div>
-                <User size={16} className="icon-muted" aria-hidden="true" />
+                {p.asistio ? (
+                  <span style={{ color: 'var(--success, #10b981)', fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                    ✔ Asistió
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                    ● Ausente
+                  </span>
+                )}
               </div>
             ))
           )}
@@ -217,6 +306,74 @@ export default function DetalleClase() {
               Cancelar
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={qrModalOpen} onClose={cerrarQrModal} title="Registrar asistencia">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+          {!scanning ? (
+            <>
+              {successMsg && (
+                <Alert type="success">{successMsg}</Alert>
+              )}
+              {qrError && <Alert type="danger">{qrError}</Alert>}
+
+              <Button onClick={iniciarEscaneo} style={{ width: '100%', padding: '0.75rem' }}>
+                <Camera size={18} style={{ marginRight: '0.5rem' }} />
+                Escanear QR
+              </Button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-400)' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--gray-200)' }} />
+                <span style={{ fontSize: '0.85rem' }}>o ingresa el código</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--gray-200)' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  value={codigoInput}
+                  onChange={e => setCodigoInput(e.target.value.toUpperCase())}
+                  placeholder="MOV-AB3X9K"
+                  style={{
+                    flex: 1, padding: '0.6rem 0.75rem', borderRadius: '8px',
+                    border: '1px solid var(--gray-300)', fontSize: '0.95rem',
+                    fontFamily: 'monospace', letterSpacing: '0.5px'
+                  }}
+                  onKeyDown={e => { if (e.key === 'Enter' && codigoInput.trim()) registrarCheckIn(codigoInput) }}
+                  aria-label="Ingresar código de pago"
+                />
+                <Button
+                  onClick={() => registrarCheckIn(codigoInput)}
+                  disabled={!codigoInput.trim() || checkInLoading}
+                >
+                  {checkInLoading ? '...' : <Search size={16} />}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <div
+                id="qr-reader"
+                ref={qrRef}
+                style={{ width: '300px', maxWidth: '100%', margin: '0 auto', borderRadius: '8px', overflow: 'hidden' }}
+              />
+              {successMsg && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <Alert type="success">{successMsg}</Alert>
+                </div>
+              )}
+              {qrError && <Alert type="danger">{qrError}</Alert>}
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem' }}>
+                <Button variant="secondary" onClick={cerrarQrModal}>
+                  Listo
+                </Button>
+                <Button variant="ghost" onClick={detenerEscaneo}>
+                  Cancelar escaneo
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </div>
