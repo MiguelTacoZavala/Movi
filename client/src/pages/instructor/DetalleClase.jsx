@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Clock, Users, Edit3, Check, X, QrCode, Camera, Search } from 'lucide-react'
 import Button from '../../components/common/Button'
@@ -86,8 +86,48 @@ export default function DetalleClase() {
     setEditandoTematica(false)
   }
 
+  // Inicializar/limpiar escáner QR cuando scanning cambie
+  useEffect(() => {
+    if (!scanning) return
+
+    lastScannedRef.current = null
+    let cancelled = false
+
+    const start = async () => {
+      try {
+        if (!html5QrRef.current) {
+          html5QrRef.current = new Html5Qrcode('qr-reader')
+        }
+        await html5QrRef.current.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText) => {
+            if (decodedText !== lastScannedRef.current) {
+              await registrarCheckIn(decodedText)
+            }
+          },
+          () => {}
+        )
+      } catch {
+        if (!cancelled) {
+          setQrError('No se pudo acceder a la cámara. Ingresa el código manualmente.')
+          setScanning(false)
+        }
+      }
+    }
+
+    start()
+
+    return () => {
+      cancelled = true
+      if (html5QrRef.current) {
+        try { html5QrRef.current.stop() } catch {}
+      }
+    }
+  }, [scanning])
+
   const registrarCheckIn = async (codigoPago) => {
-    if (!codigoPago.trim()) return
+    if (!codigoPago || !codigoPago.trim()) return
     setCheckInLoading(true)
     setQrError(null)
     lastScannedRef.current = codigoPago.trim().toUpperCase()
@@ -107,36 +147,14 @@ export default function DetalleClase() {
     }
   }
 
-  const iniciarEscaneo = async () => {
+  const iniciarEscaneo = () => {
     setQrError(null)
     setSuccessMsg(null)
     setScanning(true)
-    lastScannedRef.current = null
-    try {
-      if (!html5QrRef.current) {
-        html5QrRef.current = new Html5Qrcode('qr-reader')
-      }
-      await html5QrRef.current.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decodedText) => {
-          if (decodedText !== lastScannedRef.current) {
-            await registrarCheckIn(decodedText)
-          }
-        },
-        () => {}
-      )
-    } catch {
-      setQrError('No se pudo acceder a la cámara. Ingresa el código manualmente.')
-      setScanning(false)
-    }
   }
 
-  const detenerEscaneo = async () => {
+  const detenerEscaneo = () => {
     setScanning(false)
-    if (html5QrRef.current) {
-      try { await html5QrRef.current.stop() } catch {}
-    }
   }
 
   const abrirQrModal = () => {
@@ -146,10 +164,10 @@ export default function DetalleClase() {
     setQrModalOpen(true)
   }
 
-  const cerrarQrModal = async () => {
-    await detenerEscaneo()
+  const cerrarQrModal = useCallback(() => {
+    setScanning(false)
     setQrModalOpen(false)
-  }
+  }, [])
 
   if (loading) return <LoadingScreen />
 
