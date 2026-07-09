@@ -34,6 +34,8 @@ export default function DetalleClase() {
   const qrRef = useRef(null)
   const html5QrRef = useRef(null)
   const lastScannedRef = useRef(null)
+  const scannedInSessionRef = useRef(false)
+  const autoCloseRef = useRef(null)
 
   useEffect(() => {
     let mounted = true
@@ -130,6 +132,7 @@ export default function DetalleClase() {
     if (!codigoPago || !codigoPago.trim()) return
     setCheckInLoading(true)
     setQrError(null)
+    setSuccessMsg(null)
     lastScannedRef.current = codigoPago.trim().toUpperCase()
     try {
       const res = await api.post(`/instructores/clases/${id}/check-in`, { codigoPago: codigoPago.trim().toUpperCase() })
@@ -138,8 +141,12 @@ export default function DetalleClase() {
       ))
       api.invalidateCache([`/instructores/clases/${id}/participantes`])
       setCodigoInput('')
+      scannedInSessionRef.current = true
       setSuccessMsg(`✔ ${res.codigoPago || 'Asistencia registrada'}`)
-      setTimeout(() => setSuccessMsg(null), 2000)
+      if (scanning) {
+        setScanning(false)
+        autoCloseRef.current = setTimeout(() => setQrModalOpen(false), 3000)
+      }
     } catch (err) {
       setQrError(err.error || 'Error al registrar asistencia')
     } finally {
@@ -161,13 +168,23 @@ export default function DetalleClase() {
     setCodigoInput('')
     setQrError(null)
     setScanning(false)
+    scannedInSessionRef.current = false
     setQrModalOpen(true)
   }
 
   const cerrarQrModal = useCallback(() => {
+    if (autoCloseRef.current) {
+      clearTimeout(autoCloseRef.current)
+      autoCloseRef.current = null
+    }
     setScanning(false)
-    setQrModalOpen(false)
-  }, [])
+    if (!scannedInSessionRef.current && !qrError) {
+      setQrError('No se registraron asistencias')
+      setTimeout(() => setQrModalOpen(false), 1500)
+    } else {
+      setQrModalOpen(false)
+    }
+  }, [qrError])
 
   if (loading) return <LoadingScreen />
 
@@ -332,7 +349,12 @@ export default function DetalleClase() {
           {!scanning ? (
             <>
               {successMsg && (
-                <Alert type="success">{successMsg}</Alert>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <Alert type="success">{successMsg}</Alert>
+                  <Button variant="secondary" onClick={cerrarQrModal} style={{ width: '100%' }}>
+                    Cerrar
+                  </Button>
+                </div>
               )}
               {qrError && <Alert type="danger">{qrError}</Alert>}
 
@@ -383,9 +405,6 @@ export default function DetalleClase() {
               )}
               {qrError && <Alert type="danger">{qrError}</Alert>}
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem' }}>
-                <Button variant="secondary" onClick={cerrarQrModal}>
-                  Listo
-                </Button>
                 <Button variant="ghost" onClick={detenerEscaneo}>
                   Cancelar escaneo
                 </Button>
