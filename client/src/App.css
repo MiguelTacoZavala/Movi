@@ -2029,6 +2029,25 @@ body {
   gap: 0.75rem;
 }
 
+.client-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  flex-shrink: 0;
+}
+
+.client-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .client-user-name {
   font-weight: 500;
   color: var(--gray-700);
@@ -2228,10 +2247,61 @@ body {
 
 .clase-card-datetime {
   display: flex;
+  justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.75rem;
   font-size: 0.9rem;
   color: var(--gray-600);
+}
+
+.clase-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--gray-100);
+}
+
+.clase-card-action-comprobante {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--gray-500);
+  font-size: 0.82rem;
+  transition: color 0.2s;
+}
+
+.clase-card-action-comprobante:hover {
+  color: var(--primary-medium);
+}
+
+.clase-card-action-arrow {
+  color: var(--gray-400);
+  transition: transform 0.2s;
+}
+
+.clase-card:hover .clase-card-action-arrow {
+  transform: translateX(3px);
+}
+
+.clase-card-btn-cancel {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: background 0.2s;
+}
+
+.clase-card-btn-cancel:hover {
+  background: rgba(220, 38, 38, 0.08);
 }
 
 /* Profile Section */

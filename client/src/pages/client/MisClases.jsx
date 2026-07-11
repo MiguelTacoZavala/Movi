@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle, Printer, ArrowLeft, ChevronDown } from 'lucide-react'
+import { Calendar, Clock, User, X, CheckCircle, CreditCard, Smartphone, AlertTriangle, Timer, AlertCircle, Printer, ArrowLeft, ChevronDown, Receipt, ChevronRight } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
@@ -74,9 +74,10 @@ export default function MisClases() {
   const filtradas = reservas.filter(r => {
     if (!r.clase) return false
     const st = estado(r)
+    if (st === 'EXPIRADA') return false
     const f = toDate(r.clase.fecha)
-    if (filtro === 'proximas') return f >= hoy && st !== 'CANCELADA' && st !== 'EXPIRADA' && st !== 'FINALIZADA'
-    if (filtro === 'pasadas') return f < hoy || st === 'CANCELADA' || st === 'EXPIRADA' || st === 'FINALIZADA'
+    if (filtro === 'proximas') return f >= hoy && st !== 'CANCELADA' && st !== 'FINALIZADA'
+    if (filtro === 'pasadas') return f < hoy || st === 'CANCELADA' || st === 'FINALIZADA'
     return true
   })
 
@@ -615,10 +616,12 @@ export default function MisClases() {
                 >
                   <div className="clase-card-header">
                     <h3 className="clase-card-title">{r.clase.categoria?.nombre}</h3>
-                    <span className={`status-badge ${estadoClass[st] || ''}`}>
-                      {(() => { const Icon = estadoIcon[st]; return Icon ? <Icon size={12} /> : null })()}
-                      {estadoLabel[st] || st}
-                    </span>
+                    {filtro !== 'proximas' && (
+                      <span className={`status-badge ${estadoClass[st] || ''}`}>
+                        {(() => { const Icon = estadoIcon[st]; return Icon ? <Icon size={12} /> : null })()}
+                        {estadoLabel[st] || st}
+                      </span>
+                    )}
                   </div>
 
                   <div className="clase-card-datetime">
@@ -632,7 +635,7 @@ export default function MisClases() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--gray-600)', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                     {r.clase.instructor && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <User size={16} className="icon-muted" />
@@ -646,18 +649,24 @@ export default function MisClases() {
                     )}
                   </div>
 
-                  {esProxima && (
-                      <Button
-                        variant="danger"
-                        size="small"
+                  <div className="clase-card-actions">
+                    <div className="clase-card-action-comprobante">
+                      <Receipt size={14} />
+                      <span>Ver comprobante</span>
+                    </div>
+                    {esProxima ? (
+                      <button
+                        className="clase-card-btn-cancel"
                         onClick={(e) => { e.stopPropagation(); setCancelando(r) }}
-                        style={{ width: '100%' }}
-                        title="Cancelar esta inscripción (no se puede deshacer)"
+                        title="Cancelar inscripción"
                       >
-                        <X size={16} />
-                        Cancelar inscripción
-                      </Button>
-                  )}
+                        <X size={14} />
+                        Cancelar
+                      </button>
+                    ) : (
+                      <ChevronRight size={14} className="clase-card-action-arrow" />
+                    )}
+                  </div>
                 </div>
               )
             })}
