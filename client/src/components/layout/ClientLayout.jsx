@@ -74,6 +74,13 @@ export default function ClientLayout() {
         <div className="client-header-content">
           <h1 className="client-logo">MOVI</h1>
           <div className="client-user-menu">
+            <div className="client-user-avatar">
+              {user?.fotoUrl ? (
+                <img src={user.fotoUrl} alt={user.nombres} />
+              ) : (
+                <User size={18} />
+              )}
+            </div>
             <span className="client-user-name">{user?.nombres}</span>
             <button onClick={() => setShowLogoutModal(true)} className="btn btn-ghost btn-small" title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogOut size={18} />
