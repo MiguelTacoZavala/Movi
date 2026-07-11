@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth'
 import api from '../../services/api'
-import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
+import { User, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import Button from '../../components/common/Button'
 import '../../App.css'
 
@@ -62,23 +62,26 @@ export default function Login() {
   }
 
   return (
-    <div className="login-container">
+    <div className="login-container login-page">
+      <div className="login-branding">
+        <h2>Mueve tu cuerpo,<br />vive la música</h2>
+      </div>
       <div className="login-box">
         <img src="/MOVI_LOGO.svg" alt="MOVI" className="login-logo" />
 
-        <h1>Bienvenido</h1>
-        <p className="login-subtitle">Inicia sesión para acceder al sistema</p>
+        <h1>Iniciar sesión</h1>
+        <p className="login-subtitle">Accede a tu espacio de baile</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           {error && (
-            <div className="alert alert-danger" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <div className="alert alert-danger login-alert">
               <AlertCircle size={18} />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <div className="alert alert-success login-alert">
               <CheckCircle size={18} />
               <span>{success}</span>
             </div>
@@ -86,7 +89,7 @@ export default function Login() {
 
           <div className="form-group">
             <label htmlFor="identifier">
-              <Mail size={16} />
+              <User size={16} />
               Usuario
             </label>
             <input
@@ -98,7 +101,6 @@ export default function Login() {
               placeholder="Email, DNI o teléfono"
               required
               autoComplete="username"
-              style={{ width: '100%' }}
             />
           </div>
 
@@ -117,9 +119,8 @@ export default function Login() {
                 placeholder="Ingresa tu contraseña"
                 required
                 autoComplete="current-password"
-                className="password-input"
-                style={{ width: '100%' }}
-              />
+              className="password-input"
+            />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -140,14 +141,15 @@ export default function Login() {
           </Button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link to="/registro" style={{ color: 'var(--primary-medium)', textDecoration: 'none', fontSize: '0.9rem' }}>
-            ¿No tienes cuenta? Regístrate
+        <p className="login-register-text">
+          ¿No tienes cuenta?{' '}
+          <Link to="/registro" className="login-register-link">
+            Regístrate aquí
           </Link>
-        </div>
+        </p>
 
         <div className="login-footer">
-          <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#9ca3af' }}>
+          <p className="login-copyright">
             © 2026 MOVI. Todos los derechos reservados.
           </p>
         </div>

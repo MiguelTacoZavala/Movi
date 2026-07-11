@@ -1,10 +1,11 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth'
+import LoadingScreen from './LoadingScreen'
 
 export default function ProtectedRoute({ children, adminOnly, clienteOnly, instructorOnly }) {
   const { isAuthenticated, isAdmin, isCliente, isInstructor, loading } = useAuth()
 
-  if (loading) return null
+  if (loading) return <LoadingScreen />
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />

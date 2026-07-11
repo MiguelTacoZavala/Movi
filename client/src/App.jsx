@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { useAuth } from './hooks/useAuth'
 import { ThemeProvider } from './context/ThemeContext'
 import { AccesibilidadProvider } from './context/AccesibilidadContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
@@ -27,6 +28,27 @@ import InstructorPerfil from './pages/instructor/Perfil'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import './App.css'
 
+function AuthGuard({ children }) {
+  const { isAuthenticated, isAdmin, isCliente, isInstructor, loading } = useAuth()
+  if (loading) return null
+  if (isAuthenticated) {
+    if (isAdmin) return <Navigate to="/admin/dashboard" replace />
+    if (isCliente) return <Navigate to="/cliente/dashboard" replace />
+    if (isInstructor) return <Navigate to="/instructor/dashboard" replace />
+  }
+  return children
+}
+
+function CatchAll() {
+  const { isAuthenticated, isAdmin, isCliente, isInstructor, loading } = useAuth()
+  if (loading) return null
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (isAdmin) return <Navigate to="/admin/dashboard" replace />
+  if (isCliente) return <Navigate to="/cliente/dashboard" replace />
+  if (isInstructor) return <Navigate to="/instructor/dashboard" replace />
+  return <Navigate to="/login" replace />
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -35,8 +57,8 @@ function App() {
       <AuthProvider>
         <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
+          <Route path="/login" element={<AuthGuard><Login /></AuthGuard>} />
+          <Route path="/registro" element={<AuthGuard><Registro /></AuthGuard>} />
           
           {/* Admin Routes */}
           <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
@@ -69,7 +91,7 @@ function App() {
             <Route path="perfil" element={<InstructorPerfil />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<CatchAll />} />
         </Routes>
         </Router>
       </AuthProvider>

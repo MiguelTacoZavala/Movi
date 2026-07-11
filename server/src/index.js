@@ -21,7 +21,10 @@ const notificacionesRoutes = require('./routes/notificaciones.routes')
 
 const app = express()
 
-app.use(cors())
+app.use(cors({
+  origin: env.CORS_ORIGIN === '*' ? '*' : env.CORS_ORIGIN.split(',').map(s => s.trim()),
+  credentials: true,
+}))
 app.use(express.json())
 
 // Log de cada petición: método, ruta, status y duración

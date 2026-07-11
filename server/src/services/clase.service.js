@@ -254,7 +254,7 @@ async function cancelarFuturasDeHorario(horarioId) {
   const clases = await prisma.clase.findMany({
     where: { horarioSemanalId: horarioId, fecha: { gte: hoy }, estado: 'PROGRAMADA' },
     include: {
-      reservas: { where: { estado: 'CONFIRMADA' }, select: { id: true, usuarioId: true } },
+      reservas: { where: { estado: 'CONFIRMADA' }, select: { id: true, usuarioId: true, usoCredito: true } },
     },
   })
 
@@ -269,9 +269,16 @@ async function cancelarFuturasDeHorario(horarioId) {
       })
 
       for (const reserva of clase.reservas) {
-        await tx.credito.create({
-          data: { usuarioId: reserva.usuarioId, claseId: clase.id, reservaId: reserva.id },
-        })
+        if (reserva.usoCredito) {
+          await tx.credito.updateMany({
+            where: { reservaId: reserva.id, usado: true },
+            data: { usado: false, fechaUso: null, reservaId: null, claseId: null },
+          })
+        } else {
+          await tx.credito.create({
+            data: { usuarioId: reserva.usuarioId, claseId: clase.id, reservaId: reserva.id },
+          })
+        }
         await tx.reserva.update({
           where: { id: reserva.id },
           data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
@@ -309,7 +316,7 @@ async function cerrarClasesVencidas() {
     where: { estado: 'PROGRAMADA', fecha: { lte: hoy } },
     include: {
       _count: { select: { reservas: { where: RESERVA_OCUPADA } } },
-      reservas: { where: RESERVA_OCUPADA, select: { id: true, usuarioId: true } },
+      reservas: { where: RESERVA_OCUPADA, select: { id: true, usuarioId: true, usoCredito: true } },
     },
   })
 
@@ -339,9 +346,16 @@ async function cerrarClasesVencidas() {
 
       // Las reservas confirmadas reciben un crédito (misma regla que cancelar a mano)
       for (const reserva of clase.reservas) {
-        await tx.credito.create({
-          data: { usuarioId: reserva.usuarioId, claseId: clase.id, reservaId: reserva.id },
-        })
+        if (reserva.usoCredito) {
+          await tx.credito.updateMany({
+            where: { reservaId: reserva.id, usado: true },
+            data: { usado: false, fechaUso: null, reservaId: null, claseId: null },
+          })
+        } else {
+          await tx.credito.create({
+            data: { usuarioId: reserva.usuarioId, claseId: clase.id, reservaId: reserva.id },
+          })
+        }
         await tx.reserva.update({
           where: { id: reserva.id },
           data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
@@ -358,8 +372,6 @@ async function cerrarClasesVencidas() {
 }
 
 async function listar({ estado, fecha, categoriaId, instructorId, search, page = 1, limit = 10, soloActivas = false }) {
-  await cerrarClasesVencidas()
-
   const where = {}
 
   if (estado) where.estado = estado
@@ -412,8 +424,6 @@ async function listar({ estado, fecha, categoriaId, instructorId, search, page =
 }
 
 async function obtener(id, { soloActivas = false, usuarioId = null } = {}) {
-  await limpiarHoldsExpirados()
-
   const clase = await prisma.clase.findUnique({
     where: { id },
     include: includeDetalle,
@@ -450,7 +460,7 @@ async function cancelar(id) {
     include: {
       reservas: {
         where: { estado: 'CONFIRMADA' },
-        select: { id: true, usuarioId: true },
+        select: { id: true, usuarioId: true, usoCredito: true },
       },
     },
   })
@@ -473,15 +483,22 @@ async function cancelar(id) {
       data: { estado: 'CANCELADA', updatedAt: new Date() },
     })
 
-    for (const reserva of clase.reservas) {
-      await tx.credito.create({
-        data: { usuarioId: reserva.usuarioId, claseId: id, reservaId: reserva.id },
-      })
-      await tx.reserva.update({
-        where: { id: reserva.id },
-        data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
-      })
-    }
+      for (const reserva of clase.reservas) {
+        if (reserva.usoCredito) {
+          await tx.credito.updateMany({
+            where: { reservaId: reserva.id, usado: true },
+            data: { usado: false, fechaUso: null, reservaId: null, claseId: null },
+          })
+        } else {
+          await tx.credito.create({
+            data: { usuarioId: reserva.usuarioId, claseId: id, reservaId: reserva.id },
+          })
+        }
+        await tx.reserva.update({
+          where: { id: reserva.id },
+          data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
+        })
+      }
 
     // Cancelar también las reservas PENDIENTE (sin crédito, no han pagado)
     await tx.reserva.updateMany({

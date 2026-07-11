@@ -24,10 +24,14 @@ const culqi = {
           this.loaded = true
           resolve()
         } else {
+          this.initPromise = null
           reject(new Error('Culqi no se cargó correctamente'))
         }
       }
-      script.onerror = () => reject(new Error('Error al cargar Culqi'))
+      script.onerror = () => {
+        this.initPromise = null
+        reject(new Error('Error al cargar Culqi'))
+      }
       document.body.appendChild(script)
     })
 

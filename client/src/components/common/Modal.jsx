@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export default function Modal({ isOpen, onClose, title, children, size = 'medium' }) {
   const modalRef = useRef(null)
   const titleId = useId()
@@ -7,15 +9,32 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
   useEffect(() => {
     if (!isOpen) return
 
-    // Recordamos el elemento que tenía el foco para devolvérselo al cerrar.
     const focoPrevio = document.activeElement
 
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key !== 'Tab' || !modalRef.current) return
+
+      const elementos = modalRef.current.querySelectorAll(FOCUSABLE)
+      if (elementos.length === 0) return
+
+      const primero = elementos[0]
+      const ultimo = elementos[elementos.length - 1]
+
+      if (e.shiftKey) {
+        if (document.activeElement === primero) {
+          e.preventDefault()
+          ultimo.focus()
+        }
+      } else {
+        if (document.activeElement === ultimo) {
+          e.preventDefault()
+          primero.focus()
+        }
+      }
     }
     document.addEventListener('keydown', onKeyDown)
 
-    // Movemos el foco dentro del modal al abrirlo.
     modalRef.current?.focus()
 
     return () => {

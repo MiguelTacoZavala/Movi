@@ -109,9 +109,10 @@ const api = {
 
   // Borra del caché las entradas cuya clave empieza por alguno de los patrones dados.
   // Acepta un string, un array de strings, o nada (limpia todo el caché).
+  // Normaliza patrones: si no empiezan con "GET ", se los agrega automáticamente.
   invalidateCache(patterns) {
     if (!patterns) { _cache.clear(); return }
-    const list = Array.isArray(patterns) ? patterns : [patterns]
+    const list = (Array.isArray(patterns) ? patterns : [patterns]).map(p => p.startsWith('GET ') ? p : `GET ${p}`)
     for (const key of _cache.keys()) {
       if (list.some(p => key.startsWith(p))) _cache.delete(key)
     }
@@ -183,6 +184,13 @@ const api = {
       headers,
       body: formData,
     })
+
+    if (res.status === 401) {
+      api.removeToken()
+      api.removeUser()
+      window.location.href = '/login'
+      throw new Error('Sesión expirada')
+    }
 
     let data
     try {

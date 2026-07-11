@@ -56,16 +56,18 @@ const upload = multer({
 
 // Middleware post-upload: valida magic bytes del archivo ya escrito en disco
 function validateFileContent(req, res, next) {
-  if (!req.file) return next()
+  const files = req.files
+  if (!files) return next()
 
-  const buffer = fs.readFileSync(req.file.path)
-  const detected = detectMimetype(buffer)
-
-  if (!detected || !['image/jpeg', 'image/png', 'image/webp'].includes(detected)) {
-    // Eliminar archivo inválido
-    fs.unlink(req.file.path, () => {})
-    req.file = null
-    return res.status(400).json({ error: 'El archivo no es una imagen válida (jpeg, png, webp)' })
+  for (const fieldFiles of Object.values(files)) {
+    for (const file of fieldFiles) {
+      const buffer = fs.readFileSync(file.path)
+      const detected = detectMimetype(buffer)
+      if (!detected || !['image/jpeg', 'image/png', 'image/webp'].includes(detected)) {
+        fs.unlink(file.path, () => {})
+        return res.status(400).json({ error: 'El archivo no es una imagen válida (jpeg, png, webp)' })
+      }
+    }
   }
 
   next()

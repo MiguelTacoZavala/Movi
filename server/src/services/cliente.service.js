@@ -56,6 +56,18 @@ async function obtener(id) {
 
   if (!usuario || usuario.role.nombre !== 'CLIENTE') return null
 
+  const { role: _, ...datos } = usuario
+  return datos
+}
+
+async function obtenerEstadisticas(id) {
+  const usuario = await prisma.usuario.findUnique({
+    where: { id },
+    select: { role: { select: { nombre: true } } },
+  })
+
+  if (!usuario || usuario.role.nombre !== 'CLIENTE') return null
+
   const [
     totalReservas,
     confirmadas,
@@ -74,7 +86,6 @@ async function obtener(id) {
     prisma.credito.count({ where: { usuarioId: id, usado: true } }),
   ])
 
-  // Próximas 5 reservas del cliente
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
 
@@ -111,10 +122,7 @@ async function obtener(id) {
     take: 5,
   })
 
-  const { role: _, ...datos } = usuario
-
   return {
-    ...datos,
     stats: {
       totalReservas,
       confirmadas,
@@ -129,23 +137,39 @@ async function obtener(id) {
       codigoPago: r.codigoPago,
       asiento: r.posicionClase?.numero,
       estado: r.estado,
-      clase: {
-        id: r.clase.id,
-        fecha: r.clase.fecha,
-        horaInicio: r.clase.horaInicio,
-        horaFin: r.clase.horaFin,
-        estado: r.clase.estado,
-        categoria: r.clase.horarioSemanal?.categoria,
-        instructor: r.clase.horarioSemanal?.instructor
-          ? {
-              id: r.clase.horarioSemanal.instructor.id,
-              nombres: r.clase.horarioSemanal.instructor.usuario.nombres,
-              apellidos: r.clase.horarioSemanal.instructor.usuario.apellidos,
-            }
-          : undefined,
-      },
+      clase: r.clase.horarioSemanal
+        ? {
+            id: r.clase.id,
+            fecha: r.clase.fecha,
+            horaInicio: r.clase.horaInicio,
+            horaFin: r.clase.horaFin,
+            estado: r.clase.estado,
+            categoria: r.clase.horarioSemanal.categoria,
+            instructor: r.clase.horarioSemanal.instructor
+              ? {
+                  id: r.clase.horarioSemanal.instructor.id,
+                  nombres: r.clase.horarioSemanal.instructor.usuario.nombres,
+                  apellidos: r.clase.horarioSemanal.instructor.usuario.apellidos,
+                }
+              : undefined,
+          }
+        : undefined,
     })),
   }
 }
 
-module.exports = { listar, obtener }
+async function editar(id, data) {
+  const campos = {}
+  if (data.nombres !== undefined) campos.nombres = data.nombres
+  if (data.apellidos !== undefined) campos.apellidos = data.apellidos
+  if (data.telefono !== undefined) campos.telefono = data.telefono
+
+  const usuario = await prisma.usuario.update({
+    where: { id },
+    data: campos,
+    select,
+  })
+  return usuario
+}
+
+module.exports = { listar, obtener, editar, obtenerEstadisticas }

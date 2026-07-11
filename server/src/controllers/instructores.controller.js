@@ -449,6 +449,9 @@ async function registrarCheckIn(req, res, next) {
     if (clase.horarioSemanal.instructorId !== instructor.id) {
       return res.status(403).json({ error: 'No eres el instructor de esta clase' })
     }
+    if (clase.estado !== 'EN_CURSO') {
+      return res.status(409).json({ error: 'La clase no está en curso' })
+    }
 
     const reserva = await prisma.reserva.findFirst({
       where: { claseId, codigoPago },

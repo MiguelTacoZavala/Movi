@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react'
 import { Calendar, Clock, Users, Music } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth'
 import api from '../../services/api'
 import Alert from '../../components/common/Alert'
+import Button from '../../components/common/Button'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import { formatHoraAMPM, formatFechaBonita } from '../../utils/helpers'
 import '../../App.css'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
+  const cargar = () => {
+    setLoading(true)
+    setError(null)
     api.cachedGet('/instructores/dashboard').then(res => {
       setData(res)
       setError(null)
@@ -21,7 +26,9 @@ export default function Dashboard() {
       setData(null)
       setError('No logramos cargar la información de tu panel. Por favor, intenta de nuevo en unos momentos.')
     }).finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(cargar, [])
 
   if (loading) return <LoadingScreen />
 
@@ -36,10 +43,15 @@ export default function Dashboard() {
         </h2>
       </div>
 
-      {error && <Alert type="danger">{error}</Alert>}
+      {error && (
+        <Alert type="danger">
+          <span style={{ flex: 1 }}>{error}</span>
+          <Button size="small" variant="secondary" onClick={cargar}>Reintentar</Button>
+        </Alert>
+      )}
 
       {proximaClase ? (
-        <div className="client-card" style={{ borderLeft: '4px solid var(--success)', marginBottom: '1rem' }}>
+        <div className="client-card" style={{ borderLeft: '4px solid var(--success)', marginBottom: '1rem', cursor: 'pointer' }} onClick={() => navigate(`/instructor/clases/${proximaClase.id}`)}>
           <div className="client-card-title">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Music size={20} className="icon-primary" aria-hidden="true" />
@@ -90,7 +102,7 @@ export default function Dashboard() {
             </p>
           ) : (
             clasesHoy.map((clase, idx) => (
-              <div key={clase.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.08}s` }}>
+              <div key={clase.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', marginBottom: '0.5rem', cursor: 'pointer', animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.08}s` }} onClick={() => navigate(`/instructor/clases/${clase.id}`)}>
                 <div style={{ fontWeight: 600, color: 'var(--gray-900)', marginBottom: '0.25rem' }}>
                   {clase.categoria?.nombre}
                 </div>

@@ -130,6 +130,7 @@ model HorarioSemanal {
   clases      Clase[]
 
   @@unique([instructorId, diaSemana, horaInicio, horaFin])
+  @@index([activo])
   @@map("horarios_semanales")
 }
 
@@ -195,6 +196,8 @@ model Reserva {
 
   @@index([usuarioId])
   @@index([claseId])
+  @@index([posicionClaseId])
+  @@index([estado])
   @@map("reservas")
 }
 
