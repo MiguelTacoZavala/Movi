@@ -20,12 +20,18 @@ const estadoIcon = { CONFIRMADA: CheckCircle, FINALIZADA: CheckCircle, CANCELADA
 
 function estado(r) { return r.estadoDisplay || r.estado }
 
+function escapeHtml(str) {
+  if (typeof str !== 'string') return ''
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 export default function MisClases() {
   const [reservas, setReservas] = useState([])
   const [loading, setLoading] = useState(true)
 
   const recargar = async () => {
-    const data = await api.cachedGet('/reservas/mis-reservas')
+    api.invalidateCache(['GET /reservas/mis-reservas'])
+    const data = await api.get('/reservas/mis-reservas')
     setReservas(data.reservas || [])
   }
 
@@ -82,7 +88,13 @@ export default function MisClases() {
       setReservas(reservas.map(r => r.id === cancelando.id ? data.reserva : r))
       setCancelando(null)
       api.invalidateCache()
-      setMensaje('Reserva cancelada. Se generó un crédito para futuras inscripciones.')
+      setMensaje(
+        cancelando.estado === 'PENDIENTE'
+          ? 'Reserva cancelada. No se generó crédito porque el pago no fue completado.'
+          : cancelando.usoCredito
+            ? 'Reserva cancelada. Se restauró tu crédito.'
+            : 'Reserva cancelada. Se generó un crédito para futuras inscripciones.'
+      )
       setTimeout(() => setMensaje(''), 5000)
     } catch {
       setError('No se pudo cancelar la reserva. Intenta de nuevo.')
@@ -238,12 +250,16 @@ export default function MisClases() {
 
       if (qrDataUrl) {
         const qrImg = new Image()
-        await new Promise((resolve, reject) => {
-          qrImg.onload = resolve
-          qrImg.onerror = reject
-          qrImg.src = qrDataUrl
-        })
-        ctx.drawImage(qrImg, W / 2 - qrSize / 2, qrY, qrSize, qrSize)
+        try {
+          await new Promise((resolve, reject) => {
+            qrImg.onload = resolve
+            qrImg.onerror = reject
+            qrImg.src = qrDataUrl
+          })
+          ctx.drawImage(qrImg, W / 2 - qrSize / 2, qrY, qrSize, qrSize)
+        } catch {
+          // QR no se pudo dibujar, continuar sin él
+        }
       }
 
       ctx.fillStyle = '#9ca3af'
@@ -267,6 +283,11 @@ export default function MisClases() {
       }, 'image/png')
     } else {
       const w = window.open('', '_blank')
+      if (!w) {
+        setError('Permite ventanas emergentes para ver el comprobante o usa un dispositivo móvil.')
+        setTimeout(() => setError(''), 5000)
+        return
+      }
       w.document.write(`<!DOCTYPE html><html><head><title>Comprobante MOVI</title><style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; max-width: 400px; margin: 0 auto; color: #1a1414; }
@@ -282,17 +303,17 @@ export default function MisClases() {
         .footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
       </style></head><body>
         <h2>Comprobante de inscripción</h2>
-        <p class="sub">${estadoLabel[estado(r)] || estado(r)}${r.codigoPago ? ` · <span class="code">${r.codigoPago}</span>` : ''}</p>
+        <p class="sub">${escapeHtml(estadoLabel[estado(r)] || estado(r))}${r.codigoPago ? ` · <span class="code">${escapeHtml(r.codigoPago)}</span>` : ''}</p>
         ${qrDataUrl ? `<div class="qr"><img src="${qrDataUrl}" style="width:120px;height:120px" alt="Código QR"/></div>` : ''}
         <div class="card">
-          <div class="row"><span class="label">Categoría</span><span class="value">${r.clase.categoria?.nombre || ''}</span></div>
-          ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${instrName}</span></div>` : ''}
-          <div class="row"><span class="label">Fecha</span><span class="value">${formatFechaBonita(r.clase.fecha)}</span></div>
-          <div class="row"><span class="label">Hora</span><span class="value">${formatHoraAMPM(r.clase.horaInicio)} — ${formatHoraAMPM(r.clase.horaFin)}</span></div>
+          <div class="row"><span class="label">Categoría</span><span class="value">${escapeHtml(r.clase.categoria?.nombre || '')}</span></div>
+          ${instrName ? `<div class="row"><span class="label">Instructor</span><span class="value">${escapeHtml(instrName)}</span></div>` : ''}
+          <div class="row"><span class="label">Fecha</span><span class="value">${escapeHtml(formatFechaBonita(r.clase.fecha))}</span></div>
+          <div class="row"><span class="label">Hora</span><span class="value">${escapeHtml(formatHoraAMPM(r.clase.horaInicio))} — ${escapeHtml(formatHoraAMPM(r.clase.horaFin))}</span></div>
           ${r.asiento ? `<div class="row"><span class="label">Asiento</span><span class="value">#${r.asiento}</span></div>` : ''}
           <div class="row"><span class="label">Monto</span><span class="value">S/ ${Number(r.monto || 15).toFixed(2)}</span></div>
           <div class="row"><span class="label">Método de pago</span><span class="value">${r.metodoPago === 'creditos' ? 'Créditos' : 'Yape'}</span></div>
-          <div class="row"><span class="label">Temática</span><span class="value">${r.clase.tematica || 'LIBRE'}</span></div>
+          <div class="row"><span class="label">Temática</span><span class="value">${escapeHtml(r.clase.tematica || 'LIBRE')}</span></div>
         </div>
         <p class="footer">MOVI — Academia de Baile</p>
         <script>window.onload = function() { window.print(); window.close(); }</script>
@@ -336,9 +357,11 @@ export default function MisClases() {
             <p className="modal-subtitle">
               {cancelandoLoading
                 ? 'Cancelando tu inscripción...'
-                : cancelando.usoCredito
-                  ? 'Se restaurará tu crédito al cancelar.'
-                  : 'Se generará un crédito de devolución. Esta acción no se puede deshacer.'
+                : cancelando.estado === 'PENDIENTE'
+                  ? 'Se cancelará el proceso de pago. No se generará crédito porque aún no has pagado.'
+                  : cancelando.usoCredito
+                    ? 'Se restaurará tu crédito al cancelar.'
+                    : 'Se generará un crédito de devolución. Esta acción no se puede deshacer.'
               }
             </p>
             <div className="modal-actions">

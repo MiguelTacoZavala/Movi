@@ -49,6 +49,9 @@ async function register(req, res, next) {
     }
 
     const rolCliente = await prisma.role.findUnique({ where: { nombre: 'CLIENTE' } })
+    if (!rolCliente) {
+      return res.status(500).json({ error: 'Error de configuración: rol CLIENTE no encontrado' })
+    }
 
     const usuario = await authService.crearUsuario({
       nombres,

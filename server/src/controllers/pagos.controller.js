@@ -76,6 +76,11 @@ async function iniciarHold(req, res, next) {
           expiracionReserva: expiracion,
           usoCredito: false,
         },
+      }).catch(e => {
+        if (e.code === 'P2002') {
+          throw Object.assign(new Error('El asiento fue tomado por otro usuario. Intenta con otro asiento.'), { statusCode: 409 })
+        }
+        throw e
       })
     })
 
@@ -168,22 +173,30 @@ async function confirmarPago(req, res, next) {
       return res.status(402).json({ error: 'Error al procesar el pago con Culqi' })
     }
 
-    await prisma.$transaction([
-      prisma.pago.create({
-        data: {
-          reservaId: holdId,
-          metodoPago: 'yape',
-          monto: precio,
-          estado: 'PAGADO',
-          fechaPago: new Date(),
-          culqiChargeId: chargeId,
-        },
-      }),
-      prisma.reserva.update({
-        where: { id: holdId },
-        data: { estado: 'CONFIRMADA', fechaConfirmacion: new Date(), updatedAt: new Date() },
-      }),
-    ])
+    try {
+      await prisma.$transaction([
+        prisma.pago.create({
+          data: {
+            reservaId: holdId,
+            metodoPago: 'yape',
+            monto: precio,
+            estado: 'PAGADO',
+            fechaPago: new Date(),
+            culqiChargeId: chargeId,
+          },
+        }),
+        prisma.reserva.update({
+          where: { id: holdId },
+          data: { estado: 'CONFIRMADA', fechaConfirmacion: new Date(), updatedAt: new Date() },
+        }),
+      ])
+    } catch (dbError) {
+      console.error(`Pago Culqi ${chargeId} exitoso pero DB falló para reserva ${holdId}:`, dbError)
+      return res.status(500).json({
+        error: 'Tu pago fue procesado. Si no ves tu inscripción en unos minutos, contacta a soporte con tu código de pago.',
+        codigoPago: reserva.codigoPago,
+      })
+    }
 
     res.status(200).json({
       success: true,

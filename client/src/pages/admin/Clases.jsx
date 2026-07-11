@@ -162,7 +162,7 @@ export default function Clases() {
       <div>
         <div>{row.inscritos}/{row.capacidadMaxima}</div>
         <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
-          {Math.round((row.inscritos / row.capacidadMaxima) * 100)}%
+          {Math.round((row.inscritos / (row.capacidadMaxima || 1)) * 100)}%
         </div>
       </div>
     )},
@@ -413,7 +413,7 @@ export default function Clases() {
 
             <p className="modal-subtitle" style={{ textAlign: 'center' }}>
               {cancelLoading
-                ? 'Cancelando tu inscripción...'
+                ? 'Cancelando la clase...'
                 : cancelTargetClase.inscritos > 0
                   ? `Hay ${cancelTargetClase.inscritos} participante(s) registrados. Se generarán créditos automáticamente.`
                   : 'No hay participantes registrados para esta clase.'}

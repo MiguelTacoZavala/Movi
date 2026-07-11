@@ -69,6 +69,7 @@ export default function DetalleClase() {
   const [claseError, setClaseError] = useState(null)
   const [pagandoYape, setPagandoYape] = useState(false)
   const [procesandoPagoYape, setProcesandoPagoYape] = useState(false)
+  const holdIdRef = useRef(null)
   const [creditos, setCreditos] = useState(0)
   const [creditosError, setCreditosError] = useState(false)
   const [miReserva, setMiReserva] = useState(null)
@@ -101,7 +102,12 @@ export default function DetalleClase() {
   }, [])
 
   useEffect(() => {
-    return () => { culqi.close() }
+    return () => {
+      culqi.close()
+      if (holdIdRef.current) {
+        api.patch(`/reservas/${holdIdRef.current}/cancelar`).catch(() => {})
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -223,8 +229,8 @@ export default function DetalleClase() {
       setInscripcionExitosa(true)
     } catch (e) {
       setError(e.data?.error || e.message || 'No pudimos completar el pago con Yape. Intenta de nuevo.')
+      setHoldActive(false)
       if (e.status === 410 || e.status === 409 || e.status === 402) {
-        setHoldActive(false)
         setHoldId(null)
         setHoldCodigoPago(null)
         setSelectedSeat(null)
@@ -232,8 +238,10 @@ export default function DetalleClase() {
         setHoldExpired(true)
       }
     } finally {
+      holdIdRef.current = null
       setPagandoYape(false)
       setProcesandoPagoYape(false)
+      setProcesando(false)
     }
   }
 
@@ -280,11 +288,11 @@ export default function DetalleClase() {
           posicionClaseId: selectedSeat.id,
         })
 
+        holdIdRef.current = result.holdId
         setHoldId(result.holdId)
         setHoldCodigoPago(result.codigoPago)
         setHoldActive(true)
         setHoldSeconds(HOLD_DURATION)
-        setProcesando(false)
 
         openCulqiYape(result.holdId, precio)
       } catch (e) {
@@ -548,6 +556,11 @@ export default function DetalleClase() {
               </div>
             </div>
 
+            {asientosAgrupados.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '2rem 0', fontSize: '0.9rem' }}>
+                No hay asientos disponibles para esta clase
+              </p>
+            ) : (
             <div className="seat-grid" style={{ '--columnas': columnas }}>
               {asientosAgrupados.map((fila, fi) =>
                 fila.map(asiento => {
@@ -611,6 +624,7 @@ export default function DetalleClase() {
                 })
               )}
             </div>
+            )}
           </div>
 
           {!miReserva && (
@@ -641,7 +655,7 @@ export default function DetalleClase() {
         </>
       )}
 
-      {holdActive && metodoPago === 'yape' && error && (
+      {holdId && metodoPago === 'yape' && error && (
         <Button
           onClick={() => { setError(''); openCulqiYape(holdId, precio) }}
           disabled={pagandoYape}

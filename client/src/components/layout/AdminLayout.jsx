@@ -17,7 +17,11 @@ export default function AdminLayout() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = 'light'
-    api.preloadAdminData().then(() => setPreloadReady(true))
+    const fallback = setTimeout(() => setPreloadReady(true), 5000)
+    api.preloadAdminData()
+      .then(() => { clearTimeout(fallback); setPreloadReady(true) })
+      .catch(() => { clearTimeout(fallback); setPreloadReady(true) })
+    return () => clearTimeout(fallback)
   }, [])
 
   const ADMIN_SHORTCUTS = [

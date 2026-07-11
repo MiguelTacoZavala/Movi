@@ -13,6 +13,7 @@ const envSchema = z.object({
   DEFAULT_CLASE_PRECIO: z.coerce.number().default(15),
   DEFAULT_MIN_PARTICIPANTES: z.coerce.number().default(7),
   CLASES_POR_HORARIO: z.coerce.number().default(4),
+  CORS_ORIGIN: z.string().default('*'),
 })
 
 const parsed = envSchema.safeParse(process.env)

@@ -38,7 +38,8 @@ function inscripcionBloqueada(clase) {
   const fechaStr = yyyymmdd(clase.fecha)
   const hoyStr = yyyymmdd(ahora)
   if (fechaStr !== hoyStr) return false
-  const [hInicio, mInicio] = clase.horaInicio.split(':').map(Number)
+  const hInicio = clase.horaInicio instanceof Date ? clase.horaInicio.getHours() : parseInt(String(clase.horaInicio).split(':')[0], 10)
+  const mInicio = clase.horaInicio instanceof Date ? clase.horaInicio.getMinutes() : parseInt(String(clase.horaInicio).split(':')[1], 10)
   const inicioClase = new Date(ahora)
   inicioClase.setHours(hInicio, mInicio, 0, 0)
   const diffMs = inicioClase - ahora

@@ -32,6 +32,7 @@ export default function DetalleClase() {
   const [checkInLoading, setCheckInLoading] = useState(false)
   const [successMsg, setSuccessMsg] = useState(null)
   const qrRef = useRef(null)
+  const qrErrorRef = useRef(null)
   const html5QrRef = useRef(null)
   const lastScannedRef = useRef(null)
   const scannedInSessionRef = useRef(false)
@@ -65,6 +66,7 @@ export default function DetalleClase() {
   }
 
   const guardarTematica = async () => {
+    if (guardandoTematica) return
     const val = tematicaInput.trim() || 'LIBRE'
     setGuardandoTematica(true)
     try {
@@ -97,9 +99,10 @@ export default function DetalleClase() {
 
     const start = async () => {
       try {
-        if (!html5QrRef.current) {
-          html5QrRef.current = new Html5Qrcode('qr-reader')
+        if (html5QrRef.current) {
+          try { html5QrRef.current.clear() } catch {}
         }
+        html5QrRef.current = new Html5Qrcode('qr-reader')
         await html5QrRef.current.start(
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -148,7 +151,7 @@ export default function DetalleClase() {
         autoCloseRef.current = setTimeout(() => setQrModalOpen(false), 3000)
       }
     } catch (err) {
-      setQrError(err.error || 'Error al registrar asistencia')
+      setQrError(err.data?.error || err.message || 'Error al registrar asistencia')
     } finally {
       setCheckInLoading(false)
     }
@@ -172,19 +175,21 @@ export default function DetalleClase() {
     setQrModalOpen(true)
   }
 
+  useEffect(() => { qrErrorRef.current = qrError }, [qrError])
+
   const cerrarQrModal = useCallback(() => {
     if (autoCloseRef.current) {
       clearTimeout(autoCloseRef.current)
       autoCloseRef.current = null
     }
     setScanning(false)
-    if (!scannedInSessionRef.current && !qrError) {
+    if (!scannedInSessionRef.current && !qrErrorRef.current) {
       setQrError('No se registraron asistencias')
       setTimeout(() => setQrModalOpen(false), 1500)
     } else {
       setQrModalOpen(false)
     }
-  }, [qrError])
+  }, [])
 
   if (loading) return <LoadingScreen />
 
@@ -244,13 +249,14 @@ export default function DetalleClase() {
                     type="text"
                     value={tematicaInput}
                     onChange={e => setTematicaInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') guardarTematica(); if (e.key === 'Escape') cancelarEdicion() }}
                     maxLength={100}
                     style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid var(--gray-300)', fontSize: '0.9rem', width: '180px' }}
                     placeholder="LIBRE"
                     autoFocus
                     aria-label="Campo temática de clase"
                   />
-                  <button onClick={() => setConfirmModalOpen(true)} style={{ background: 'var(--success)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }} aria-label="Confirmar cambio de temática" title="Confirmar cambio de temática">
+                  <button onClick={guardarTematica} disabled={guardandoTematica} style={{ background: 'var(--success)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }} aria-label="Guardar temática" title="Guardar temática">
                     <Check size={14} aria-hidden="true" />
                   </button>
                   <button onClick={cancelarEdicion} style={{ background: 'var(--gray-200)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--gray-600)' }} aria-label="Cancelar edición de temática" title="Cancelar edición de temática">
@@ -277,10 +283,16 @@ export default function DetalleClase() {
             <Users size={20} className="icon-primary" aria-hidden="true" />
             Participantes ({participantes.length})
           </div>
-          <Button size="small" variant="ghost" onClick={abrirQrModal} title="Escanear QR o ingresar código">
-            <QrCode size={16} />
-            Registrar asistencia
-          </Button>
+          {clase?.estado === 'EN_CURSO' ? (
+            <Button size="small" variant="ghost" onClick={abrirQrModal} title="Escanear QR o ingresar código">
+              <QrCode size={16} />
+              Registrar asistencia
+            </Button>
+          ) : (
+            <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>
+              {clase?.estado === 'PROGRAMADA' ? 'Clase aún no iniciada' : 'Clase finalizada'}
+            </span>
+          )}
         </div>
         <div className="client-card-content">
           {participantes.length === 0 ? (
@@ -313,36 +325,6 @@ export default function DetalleClase() {
           )}
         </div>
       </div>
-
-      <Modal
-        isOpen={confirmModalOpen}
-        onClose={() => setConfirmModalOpen(false)}
-        title="Confirmar Cambio de Temática"
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
-          <p style={{ color: 'var(--gray-600)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-            ¿Estás seguro de que deseas cambiar la temática de la clase a <strong>"{tematicaInput}"</strong>? 
-            Este cambio será visible inmediatamente para todos los alumnos inscritos.
-          </p>
-          <div className="modal-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-            <Button 
-              onClick={async () => {
-                try {
-                  await guardarTematica()
-                } finally {
-                  setConfirmModalOpen(false)
-                }
-              }}
-              disabled={guardandoTematica}
-            >
-              {guardandoTematica ? 'Guardando...' : 'Confirmar'}
-            </Button>
-            <Button variant="secondary" onClick={() => setConfirmModalOpen(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       <Modal isOpen={qrModalOpen} onClose={cerrarQrModal} title="Registrar asistencia">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>

@@ -150,6 +150,7 @@ export default function HorarioSemanalForm({ initialData, onSave, onCancel, inst
           required
         />
       </div>
+      {errors.horaInicio && <p className="form-error">{errors.horaInicio}</p>}
       {errors.horaFin && <p className="form-error">{errors.horaFin}</p>}
 
       <Input

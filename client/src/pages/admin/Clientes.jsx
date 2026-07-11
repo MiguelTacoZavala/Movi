@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Eye, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX, AlertCircle, CheckCircle, Clock, Timer, X } from 'lucide-react'
+import { Eye, Edit2, User, IdCard, Phone, CreditCard, Calendar, UserCheck, UserX, AlertCircle, CheckCircle, Clock, Timer, X, Save, Loader2 } from 'lucide-react'
 import Table from '../../components/common/Table'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -28,6 +28,13 @@ export default function Clientes() {
   const [paginacion, setPaginacion] = useState(() => cachedData?.paginacion || null)
   const [selectedCliente, setSelectedCliente] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [loadingStats, setLoadingStats] = useState(false)
+  const [statsData, setStatsData] = useState(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editCliente, setEditCliente] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [editErrors, setEditErrors] = useState({})
+  const [savingEdit, setSavingEdit] = useState(false)
   const [error, setError] = useState('')
   const [detailError, setDetailError] = useState('')
   const POR_PAGINA = 20
@@ -70,8 +77,37 @@ export default function Clientes() {
     return () => clearTimeout(timeout)
   }, [search])
 
+  const handleAbrirEdicion = (cliente) => {
+    setEditCliente(cliente)
+    setEditForm({ nombres: cliente.nombres, apellidos: cliente.apellidos, telefono: cliente.telefono || '' })
+    setEditErrors({})
+    setEditOpen(true)
+  }
+
+  const handleGuardarEdicion = async () => {
+    setSavingEdit(true)
+    setEditErrors({})
+    try {
+      const data = await api.patch(`/clientes/${editCliente.id}`, editForm)
+      setClientes(clientes.map(c => c.id === editCliente.id ? { ...c, ...data.cliente } : c))
+      setEditOpen(false)
+      api.invalidateCache('/clientes')
+    } catch (e) {
+      if (e.data?.detalles) {
+        const errs = {}
+        e.data.detalles.forEach(d => { errs[d.campo] = d.mensaje })
+        setEditErrors(errs)
+      } else {
+        setEditErrors({ general: e.data?.error || e.message || 'Error al guardar' })
+      }
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   const handleVerDetalle = async (cliente) => {
     setSelectedCliente({ ...cliente, stats: null })
+    setStatsData(null)
     setDetailError('')
     setDetailOpen(true)
     try {
@@ -79,6 +115,19 @@ export default function Clientes() {
       setSelectedCliente(data.cliente)
     } catch (e) {
       setDetailError(mensajeError(e, 'No se pudo cargar el detalle del cliente.'))
+    }
+  }
+
+  const handleCargarEstadisticas = async () => {
+    setLoadingStats(true)
+    setDetailError('')
+    try {
+      const data = await api.get(`/clientes/${selectedCliente.id}/estadisticas`)
+      setStatsData(data)
+    } catch (e) {
+      setDetailError(mensajeError(e, 'No se pudieron cargar las estadísticas.'))
+    } finally {
+      setLoadingStats(false)
     }
   }
 
@@ -115,9 +164,14 @@ export default function Clientes() {
       </span>
     )},
     { key: 'acciones', label: 'Acciones', render: (_, row) => (
-      <Button size="small" variant="ghost" onClick={() => handleVerDetalle(row)} title="Ver detalle">
-        <Eye size={16} />
-      </Button>
+      <div className="action-buttons">
+        <Button size="small" variant="ghost" onClick={() => handleAbrirEdicion(row)} title="Editar cliente">
+          <Edit2 size={16} />
+        </Button>
+        <Button size="small" variant="ghost" onClick={() => handleVerDetalle(row)} title="Ver detalle">
+          <Eye size={16} />
+        </Button>
+      </div>
     )},
   ]
 
@@ -171,7 +225,7 @@ export default function Clientes() {
 
       <Modal
         isOpen={detailOpen}
-        onClose={() => setDetailOpen(false)}
+        onClose={() => { setDetailOpen(false); setStatsData(null) }}
         title={`Detalle: ${selectedCliente ? `${selectedCliente.nombres} ${selectedCliente.apellidos}` : ''}`}
       >
         {detailError && (
@@ -184,6 +238,8 @@ export default function Clientes() {
           <div className="cliente-detalle">
             <p><strong>DNI:</strong> {selectedCliente.dni || '—'}</p>
             <p><strong>Email:</strong> {selectedCliente.email || '—'}</p>
+            <p><strong>Nombres:</strong> {selectedCliente.nombres}</p>
+            <p><strong>Apellidos:</strong> {selectedCliente.apellidos}</p>
             <p><strong>Teléfono:</strong> {selectedCliente.telefono || '—'}</p>
             <p>
               <strong>Estado:</strong>{' '}
@@ -192,66 +248,126 @@ export default function Clientes() {
               </span>
             </p>
 
-            {selectedCliente.stats ? (
-              <div className="stats-summary" style={{ marginTop: '1rem' }}>
-                <div className="stat-card">
-                  <h3><CreditCard size={14} /> Créditos</h3>
-                  <p>{selectedCliente.stats.creditosDisponibles}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>{selectedCliente.stats.creditosUsados} usados</p>
-                </div>
-                <div className="stat-card">
-                  <h3><Calendar size={14} /> Reservas</h3>
-                  <p>{selectedCliente.stats.totalReservas}</p>
-                </div>
-                <div className="stat-card">
-                  <h3><CheckCircle size={14} /> Confirmadas</h3>
-                  <p style={{ color: 'var(--success, #27AE60)' }}>{selectedCliente.stats.confirmadas}</p>
-                </div>
-                <div className="stat-card">
-                  <h3><Clock size={14} /> Pendientes</h3>
-                  <p style={{ color: 'var(--warning, #f59e0b)' }}>{selectedCliente.stats.pendientes}</p>
-                </div>
-                <div className="stat-card">
-                  <h3><Timer size={14} /> Expiradas</h3>
-                  <p style={{ color: 'var(--gray-500)' }}>{selectedCliente.stats.expiradas}</p>
-                </div>
-                <div className="stat-card">
-                  <h3><X size={14} /> Canceladas</h3>
-                  <p style={{ color: 'var(--danger, #dc2626)' }}>{selectedCliente.stats.canceladas}</p>
-                </div>
+            {!statsData ? (
+              <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                <Button onClick={handleCargarEstadisticas} disabled={loadingStats} style={{ width: '100%' }}>
+                  {loadingStats ? <><Loader2 size={16} className="spin" /> Cargando estadísticas...</> : <>Ver estadísticas del cliente</>}
+                </Button>
               </div>
             ) : (
-              <p style={{ color: 'var(--gray-500)', marginTop: '1rem' }}>Cargando estadísticas...</p>
-            )}
-
-            {selectedCliente.proximasReservas && selectedCliente.proximasReservas.length > 0 && (
-              <div style={{ marginTop: '1rem' }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--gray-700)', marginBottom: '0.5rem' }}>Próximas reservas</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {selectedCliente.proximasReservas.map(r => (
-                    <div key={r.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', fontSize: '0.85rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600 }}>{r.clase.categoria?.nombre}</span>
-                        <span className={`status-badge ${r.estado === 'CONFIRMADA' ? 'status-active' : 'status-warning'}`}>
-                          {r.estado === 'CONFIRMADA' ? 'Confirmada' : 'Pendiente'}
-                        </span>
-                      </div>
-                      <div style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                        {formatFechaBonita(r.clase.fecha)} · {formatHoraAMPM(r.clase.horaInicio)}
-                      </div>
-                      {r.clase.instructor && (
-                        <div style={{ color: 'var(--gray-500)', marginTop: '0.15rem' }}>
-                          {r.clase.instructor.nombres} {r.clase.instructor.apellidos}
-                          {r.asiento && ` · Asiento #${r.asiento}`}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+              <>
+                <div className="stats-summary" style={{ marginTop: '1rem' }}>
+                  <div className="stat-card">
+                    <h3><CreditCard size={14} /> Créditos</h3>
+                    <p>{statsData.stats.creditosDisponibles}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>{statsData.stats.creditosUsados} usados</p>
+                  </div>
+                  <div className="stat-card">
+                    <h3><Calendar size={14} /> Reservas</h3>
+                    <p>{statsData.stats.totalReservas}</p>
+                  </div>
+                  <div className="stat-card">
+                    <h3><CheckCircle size={14} /> Confirmadas</h3>
+                    <p style={{ color: 'var(--success, #27AE60)' }}>{statsData.stats.confirmadas}</p>
+                  </div>
+                  <div className="stat-card">
+                    <h3><Clock size={14} /> Pendientes</h3>
+                    <p style={{ color: 'var(--warning, #f59e0b)' }}>{statsData.stats.pendientes}</p>
+                  </div>
+                  <div className="stat-card">
+                    <h3><Timer size={14} /> Expiradas</h3>
+                    <p style={{ color: 'var(--gray-500)' }}>{statsData.stats.expiradas}</p>
+                  </div>
+                  <div className="stat-card">
+                    <h3><X size={14} /> Canceladas</h3>
+                    <p style={{ color: 'var(--danger, #dc2626)' }}>{statsData.stats.canceladas}</p>
+                  </div>
                 </div>
-              </div>
+
+                {statsData.proximasReservas && statsData.proximasReservas.length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--gray-700)', marginBottom: '0.5rem' }}>Próximas reservas</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {statsData.proximasReservas.map(r => (
+                        <div key={r.id} style={{ padding: '0.75rem', background: 'var(--gray-50)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 600 }}>{r.clase?.categoria?.nombre}</span>
+                            <span className={`status-badge ${r.estado === 'CONFIRMADA' ? 'status-active' : 'status-warning'}`}>
+                              {r.estado === 'CONFIRMADA' ? 'Confirmada' : 'Pendiente'}
+                            </span>
+                          </div>
+                          {r.clase && (
+                            <div style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>
+                              {formatFechaBonita(r.clase.fecha)} · {formatHoraAMPM(r.clase.horaInicio)}
+                            </div>
+                          )}
+                          {r.clase?.instructor && (
+                            <div style={{ color: 'var(--gray-500)', marginTop: '0.15rem' }}>
+                              {r.clase.instructor.nombres} {r.clase.instructor.apellidos}
+                              {r.asiento && ` · Asiento #${r.asiento}`}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        title={`Editar: ${editCliente ? `${editCliente.nombres} ${editCliente.apellidos}` : ''}`}
+      >
+        {editErrors.general && (
+          <Alert type="danger">
+            <AlertCircle size={18} />
+            <span>{editErrors.general}</span>
+          </Alert>
+        )}
+        <div className="form-container">
+          <div style={{ marginBottom: '1rem' }}>
+            <Input
+              label="Nombres"
+              name="nombres"
+              value={editForm.nombres}
+              onChange={e => setEditForm(f => ({ ...f, nombres: e.target.value }))}
+              placeholder="Nombres del cliente"
+            />
+            {editErrors.nombres && <small style={{ color: 'var(--danger)' }}>{editErrors.nombres}</small>}
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <Input
+              label="Apellidos"
+              name="apellidos"
+              value={editForm.apellidos}
+              onChange={e => setEditForm(f => ({ ...f, apellidos: e.target.value }))}
+              placeholder="Apellidos del cliente"
+            />
+            {editErrors.apellidos && <small style={{ color: 'var(--danger)' }}>{editErrors.apellidos}</small>}
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <Input
+              label="Teléfono"
+              name="telefono"
+              type="tel"
+              value={editForm.telefono}
+              onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 9); setEditForm(f => ({ ...f, telefono: v })) }}
+              placeholder="Ej: 999888777 (9 dígitos)"
+            />
+            {editErrors.telefono && <small style={{ color: 'var(--danger)' }}>{editErrors.telefono}</small>}
+          </div>
+          <div className="form-actions">
+            <Button onClick={handleGuardarEdicion} disabled={savingEdit}>
+              {savingEdit ? <><Loader2 size={16} className="spin" /> Guardando...</> : <><Save size={16} /> Guardar cambios</>}
+            </Button>
+            <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancelar</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

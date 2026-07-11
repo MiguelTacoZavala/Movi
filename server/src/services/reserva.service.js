@@ -97,6 +97,15 @@ async function cancelar(reservaId, usuarioId) {
   if (reserva.estado === 'EXPIRADA') throw { yaExpirada: true }
   if (haPasado(reserva.clase)) throw { claseYaPasada: true }
 
+  if (reserva.estado === 'PENDIENTE') {
+    await prisma.reserva.update({
+      where: { id: reservaId },
+      data: { estado: 'CANCELADA', fechaCancelacion: new Date(), updatedAt: new Date() },
+    })
+    const updated = await prisma.reserva.findUnique({ where: { id: reservaId }, include: includeClase })
+    return formatear(updated)
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.reserva.update({
       where: { id: reservaId },
