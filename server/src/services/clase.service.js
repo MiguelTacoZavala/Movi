@@ -7,18 +7,23 @@ const DIA_OFFSET = {
   VIERNES: 4, SABADO: 5, DOMINGO: 6,
 }
 
+// La fecha de la clase se calcula SIEMPRE en UTC para que no dependa de la zona
+// horaria de la máquina que ejecuta (servidor en UTC vs. local en Perú). Antes se
+// usaba hora local: la misma clase se guardaba como 00:00Z o 05:00Z según dónde se
+// generara, y eso rompía el chequeo de "¿ya existe?" (findUnique por fecha exacta),
+// duplicando clases. Con UTC la fecha es canónica y @@unique([horario, fecha]) funciona.
 function getMondayOfCurrentWeek() {
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const day = today.getDay()
+  today.setUTCHours(0, 0, 0, 0)
+  const day = today.getUTCDay()
   const diasDesdeLunes = day === 0 ? 6 : day - 1
-  today.setDate(today.getDate() - diasDesdeLunes)
+  today.setUTCDate(today.getUTCDate() - diasDesdeLunes)
   return today
 }
 
 function getFechaClase(monday, diaSemana, weekOffset) {
   const fecha = new Date(monday)
-  fecha.setDate(monday.getDate() + weekOffset * 7 + DIA_OFFSET[diaSemana])
+  fecha.setUTCDate(monday.getUTCDate() + weekOffset * 7 + DIA_OFFSET[diaSemana])
   return fecha
 }
 
@@ -28,8 +33,10 @@ function getFechaClase(monday, diaSemana, weekOffset) {
 const RESERVA_OCUPADA = { estado: 'CONFIRMADA' }
 
 function combinarFechaHora(fecha, horaRef) {
+  // horaRef proviene de parsearHora() que usa setUTCHours; leemos y escribimos en
+  // UTC para que la hora almacenada sea la misma sin importar la zona del proceso.
   const d = new Date(fecha)
-  d.setHours(horaRef.getHours(), horaRef.getMinutes(), 0, 0)
+  d.setUTCHours(horaRef.getUTCHours(), horaRef.getUTCMinutes(), 0, 0)
   return d
 }
 
@@ -107,7 +114,7 @@ async function generar({ semanas }) {
   const monday = getMondayOfCurrentWeek()
 
   const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
+  hoy.setUTCHours(0, 0, 0, 0)
 
   let creadas = 0
   let omitidas = 0
@@ -175,10 +182,10 @@ async function crearSesionesHorario(horario, hastaStr) {
   const monday = getMondayOfCurrentWeek()
 
   const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
+  hoy.setUTCHours(0, 0, 0, 0)
 
   const hasta = new Date(hastaStr)
-  hasta.setHours(0, 0, 0, 0)
+  hasta.setUTCHours(0, 0, 0, 0)
 
   let creadas = 0
   let omitidas = 0
